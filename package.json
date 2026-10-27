@@ -34,7 +34,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/suking459/persona-memory-.git"
+    "url": "git+https://github.com/suking459/persona-memory.git"
   },
   "scripts": {
     "test": "node --test test/core.test.mjs",
