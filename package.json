@@ -1,0 +1,44 @@
+﻿{
+  "name": "persona-memory",
+  "version": "0.1.0",
+  "description": "Social state layer for conversational agents: affinity that decays, tags that expire, styles learned locally, and prompt blocks that respect a budget.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./adapters/onebot": "./adapters/onebot/index.js",
+    "./adapters/discord": "./adapters/discord/index.js",
+    "./adapters/generic": "./adapters/generic/index.js"
+  },
+  "files": [
+    "src",
+    "adapters",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "agent-memory",
+    "persona",
+    "affinity",
+    "relationship",
+    "chatbot",
+    "llm",
+    "ai-companion",
+    "social-simulation",
+    "npc",
+    "memory"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PLACEHOLDER/persona-memory.git"
+  },
+  "scripts": {
+    "test": "node --test test/core.test.mjs",
+    "mcp": "node adapters/mcp/server.js",
+    "http": "node adapters/http/server.js"
+  }
+}
