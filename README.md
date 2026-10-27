@@ -1,4 +1,4 @@
-# persona-memory
+﻿# persona-memory
 
 [![npm version](https://img.shields.io/npm/v/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
 [![npm downloads](https://img.shields.io/npm/dm/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
@@ -135,6 +135,20 @@ setInterval(() => pm.maintain(), 10 * 60 * 1000);
 **关于 MCP 的实话**：MCP 是「模型主动调用」，而这个库的核心价值是「框架自动注入」——在模型看到消息**之前**就把关系信息拼好。MCP 版本只能做到「模型想起来时查一下」，体验差一截。详见 [docs/API.md](docs/API.md)。
 
 ---
+
+
+## 先例（诚实说明）
+
+好感度系统不新，这几个项目做得比我深或更早：
+
+| 项目 | 是什么 | 和这里的区别 |
+|---|---|---|
+| [etherfunlab/eros-engine](https://github.com/etherfunlab/eros-engine) | **六轴**好感度向量 + decay + tier drop | 更精细，但依赖 LLM judge、是完整引擎不是库 |
+| [koishi-plugin-chatluna-affinity](https://www.npmjs.com/package/koishi-plugin-chatluna-affinity) | Koishi 的好感度/关系/黑名单 | 绑 Koishi + onebot，无标签生命周期、无预算 |
+| [suis077/dsh-companion](https://github.com/suis077/dsh-companion) | DSH 人设卡 + 跨会话记忆 + 好感度 | 绑 DSH，好感度单一值，不支持多人 |
+
+**这里不试图做得更深，只想做得更轻**：库而不是引擎、零 LLM 调用、标签会过期、
+提示词有硬预算。这几件事的组合我没找到现成的。
 
 ## 和同类方案的区别
 
