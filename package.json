@@ -1,7 +1,7 @@
 ﻿{
     "name":  "persona-memory",
     "version":  "0.1.0",
-    "description":  "Social state layer for conversational agents: affinity that decays, tags that expire, styles learned locally, and prompt blocks that respect a budget.",
+    "description":  "Social state layer for conversational agents: decaying affinity, expiring tags, local style stats, budgeted prompt blocks. Zero LLM calls, zero deps. Memory for chatbots, AI companions, NPCs and customer support.",
     "type":  "module",
     "main":  "src/index.js",
     "exports":  {
@@ -26,6 +26,8 @@
                      "ai-companion",
                      "social-simulation",
                      "npc",
+                     "user-profile",
+                     "character-ai",
                      "memory"
                  ],
     "engines":  {

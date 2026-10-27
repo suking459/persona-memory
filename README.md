@@ -172,6 +172,16 @@ setInterval(() => pm.maintain(), 10 * 60 * 1000);
 - **客服 agent**：客户状态标签（比价中 / 情绪不好 / 上次没解决）48 小时自动过期
 - **游戏 NPC**：NPC 记得玩家，关系随互动变化
 
+
+## 关键词 / Keywords
+
+**英文**：agent memory · persona memory · relationship memory · affinity system ·
+AI companion memory · chatbot user profile · NPC relationship · social simulation ·
+LLM long-term memory · decaying affinity · tag lifecycle · prompt budget
+
+**中文**：AI 记忆 · agent 记忆 · 好感度系统 · 关系记忆 · 用户画像 ·
+陪伴 AI 记忆 · NPC 记忆 · 群聊机器人记忆 · 长期记忆 · 状态标签
+
 ## License
 
 MIT
