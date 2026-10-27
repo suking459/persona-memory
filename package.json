@@ -7,7 +7,6 @@
     "exports":  {
                     ".":  "./src/index.js",
                     "./adapters/onebot":  "./adapters/onebot/index.js",
-                    "./adapters/discord":  "./adapters/discord/index.js",
                     "./adapters/generic":  "./adapters/generic/index.js"
                 },
     "files":  [
