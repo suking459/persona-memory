@@ -1,5 +1,10 @@
 # persona-memory
 
+[![npm version](https://img.shields.io/npm/v/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
+[![npm downloads](https://img.shields.io/npm/dm/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
+[![license](https://img.shields.io/npm/l/persona-memory.svg)](LICENSE)
+[![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](package.json)
+
 > 给对话 agent 的**社交状态层**：谁跟你熟、他最近什么状态、该用什么语气。
 
 不是"记住用户说过什么"，是"记住你和这个人处到哪一步了"。
