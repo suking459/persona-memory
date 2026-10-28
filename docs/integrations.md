@@ -4,7 +4,7 @@
 
 | 接入 | 开发验证版本 | 验证内容 | 尚未验证 |
 |---|---|---|---|
-| 核心、HTTP、MCP | Node 24.16.0 | 消息语义、预览、确认、HTTP 请求与协议处理 | Node 18/20/22 的完整矩阵 |
+| 核心、HTTP、MCP | Node 24.16.0 | 消息语义、预览、确认、HTTP 请求与协议处理 | 完整矩阵以 GitHub CI 记录为准 |
 | Discord | discord.js 14.27.0 | 消息形状、@、回复、机器人过滤的离线用例 | 真实登录、权限和断线重连 |
 | LangChain | @langchain/core 1.3.1 | 真实 Runnable 接收关系上下文 | 外部模型 API 与所有框架版本 |
 | LlamaIndex TS | @llamaindex/core 0.6.23 | 真实 Memory.add/get 及上下文组合 | 外部模型与后续替代框架 |
@@ -35,7 +35,7 @@ TS 官方参考：https://developers.llamaindex.ai/typescript/framework-api-refe
 
 ## 运行要求
 
-核心仅使用 Node 内置模块，面向 Node 18+。可选 LangChain 开发验证依赖要求 Node 20+，不等于核心新增了运行时依赖。当前只在本机 Node 24 上完成验证，其他版本需 CI 矩阵确认。
+核心仅使用 Node 内置模块，面向 Node 18+。可选 LangChain 开发验证依赖要求 Node 20+，不等于核心新增了运行时依赖。本机开发基线为 Node 24；CI 覆盖 Node 18 核心及 Node 20/22/24 在 Windows、Linux 上的完整集成，实际结果见 GitHub 检查记录。
 
 ## 故障降级
 

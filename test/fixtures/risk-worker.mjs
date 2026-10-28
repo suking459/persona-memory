@@ -4,7 +4,9 @@ import {createTurnRunner} from '../../src/turns.js';
 import {createLangChainBridge} from '../../adapters/langchain/index.js';
 const mode=process.argv[2];
 if(mode==='quotes'){
+  const started=performance.now();
   for(const text of ['“'.repeat(100000),'“'.repeat(99998)+'好累','「'.repeat(100000)])assert.deepEqual(matchTags(text),[]);
+  assert.ok(performance.now()-started<1000,'quote filtering exceeded its processing budget');
 }else if(mode==='repetition'){
   assert.throws(()=>matchTags('不加班'.repeat(25000)),/excessive repeated/);
   assert.throws(()=>matchTags('hi',{x:{words:['']}}),/keyword/);

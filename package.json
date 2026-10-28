@@ -77,7 +77,7 @@
     "url": "git+https://github.com/suking459/persona-memory.git"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs",
+    "test": "node tools/run-tests.mjs",
     "demo": "node demo/server.js",
     "http": "node adapters/http/server.js",
     "mcp": "node adapters/mcp/server.js",
