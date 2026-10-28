@@ -5,3 +5,10 @@ data/
 .env
 demo/.data
 .fixtures/
+
+.local-backup/
+.shadow/
+.artifacts/
+
+docs/WORKING-AGREEMENT.md
+docs/DEVELOPMENT.md

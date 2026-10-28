@@ -1,251 +1,101 @@
 # persona-memory
 
-[![npm version](https://img.shields.io/npm/v/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
-[![npm downloads](https://img.shields.io/npm/dm/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
-[![license](https://img.shields.io/npm/l/persona-memory.svg)](LICENSE)
-[![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](package.json)
+给对话应用的关系状态层：管理熟悉程度、临时状态和沟通风格，生成有预算、可解释的上下文。核心不调用模型，没有运行时依赖。
 
-> 给对话 agent 的**社交状态层**：谁跟你熟、他最近什么状态、该用什么语气。
+> GitHub 源码版本为 0.4.0。npm 现有 0.3.0 不包含这些新增接口，npm 发包另行处理。可克隆本仓库运行，或用 npm install github:suking459/persona-memory 安装源码。验证与限制见 [ROADMAP](docs/ROADMAP.md)。
 
-> **来源**：本库的算法与参数出自 [Kondius/qq-agent](https://github.com/Kondius/qq-agent) 的 `plugins/memory-tree`（MIT），
-> 代码为重新实现。授权链与具体借用了什么，见 [NOTICE.md](NOTICE.md)。
+设计来源是 [Kondius/qq-agent](https://github.com/Kondius/qq-agent) 的 memory-tree，重新实现为宿主独立的库。保留来源说明与版权声明，见 [NOTICE](NOTICE.md)。
 
-
-不是"记住用户说过什么"，是"记住你和这个人处到哪一步了"。
-
----
-
-## 为什么又造一个记忆轮子
-
-现有的记忆方案解决的是**事实存储**：
-
-| 项目 | 记什么 | 机制 |
-|---|---|---|
-| mem0 | "用户叫张三，住在上海" | LLM 抽取 + 向量 |
-| Letta / MemGPT | 分层上下文 | agent 自管理 |
-| Zep | 事实随时间演化 | 时序知识图谱 |
-| **persona-memory** | **"和小明到 62 分，最近在找工作"** | **规则 + 衰减 + 生命周期** |
-
-前者回答「**他是什么人**」，这里回答「**我们是什么关系**」。
-
-这两件事不一样。一个记事实的库，永远不会告诉你：
-
-- 这个人今天该用客气语气还是可以互怼
-- "最近很累"这个状态已经过了 48 小时，该过期了
-- 一个月没说话，关系该淡一点
-- 群里 30 个人，这次只该把 3 个人的信息放进提示词
-
----
-
-## 五个核心机制
-
-### 1. 好感度：有上限、会衰减、分档位
-
-```
-5 档：生疏(0) / 眼熟(20) / 熟了(40) / 亲近(60) / 很铁(80)
-
-@ 你       +2
-引用 / 回复 +2
-夸你       +3
-骂你       -5      ← 负分不封顶
-拍一拍     +1.5
-普通说话   +1      ← 每天只计 12 句
-每日涨幅上限 30 分   ← 防话痨一轮刷满
-每天回落 2 分        ← 久了不来往会淡
-```
-
-关键设计：**分数不是终身积分，是近期状态**。涨有日额度，跌没下限，久了自动回落。
-
-### 2. 状态标签：短期会过期，长期会降级
-
-```
-命中 → 短期标签，48 小时过期；再次命中是"顺延"不是"重来"
-晋升长期：注入过 ≥6 轮 + 存活 ≥3 天
-长期保鲜：7 天没有新命中 → 降回短期（v0.3）
-注入上限：短期标签被注入 200 次仍未晋升 → 强制过期（v0.3）
-每人上限 16 个，超了丢最旧的短期
-```
-
-"这人最近在找工作"是**会过期的信息**，不该一直挂在上面。但"他爱说'确实'"这种习惯，聊久了就该沉淀成长期印象。
-
-**v0.3 的两个改动都来自真实数据**：
-
-- **晋升不再要求 `hits >= 2`**。标签词表命中是稀疏事件——一个人不会反复说"压力大"，旧规则下大多数标签永远停在短期（实测 9 个标签里 5 个 `hits=1`）。
-- **长期标签也会降级**。实测有个标签被注入了 1097 次——已经"焊死"在提示词里，但可能早就不成立了。现在 7 天没有新证据就降回短期。
-
-### 3. 说话风格：从消息里统计，不靠模型
-
-长度、问句率、表情率、夜间活跃率、口头禅滑窗。
-
-纯本地规则，**零 token 成本**——不要为了知道对方爱用表情，去调一次模型。
-
-### 4. 提示词预算：只注入该注入的
-
-```
-最多注入 4 个人 / 700 字，按好感度和活跃度排序，超了截断
-```
-
-同时面对几十个人时，这是必需品。不做预算控制，提示词会被关系信息撑爆。
-
-### 5. 档案瘦身：普通闲聊不建档
-
-**v0.3 新增，来自真实数据**：某个跑了几个月的机器人，508 份档案里 **403 份是 0 分（79%）**——全是只说过一句话就再没互动的人。
-
-现在规则改成：
-
-| 情况 | 处理 |
-|---|---|
-| 没加分、没命中标签、没 @ | **只记访客表**（`firstSeen / lastSeen / count`），不建完整档案 |
-| 有加分 / 命中标签 / 被 @ 或引用 | 建完整档案 |
-
-访客表很轻：`{ firstSeen, lastSeen, count }`，按 `config.visitorHint` 决定要不要在提示词里提一句「来过 N 次」。
-
-**效果**：508 → 291 份，排序和读盘都轻了一半。
-
----
-
-## 安装
-
-```bash
-npm install persona-memory
-```
-
-零运行时依赖，纯 JS，Node 18+。
-
-## 快速开始
+## 开始使用
 
 ```js
 import { PersonaMemory } from 'persona-memory';
+import { createPreset } from 'persona-memory/presets';
 
 const pm = new PersonaMemory({
-  storage: './data',        // 档案落盘目录
-  persona: 'assistant',     // 人设键：换人设换一套档案
+  storage: './data',
+  scope: 'my-app',             // 租户/应用边界；不同 scope 使用不同文件
+  persona: 'assistant',        // 人设键，不是机器人的平台账号 ID
+  config: createPreset('community', { botId: 'actual-bot-id' }),
 });
 
-// 1. 收到消息 → 喂进去（同步、无 IO 阻塞）
 pm.ingest({
-  chatId: 'group-1001',
-  userId: 'u-42',
-  text: '今天好累啊',
-  ts: Date.now(),
-  mentions: ['assistant'],
+  chatId: 'room-1', userId: 'u-1', eventId: 'message-1',
+  text: '今天好累', mentionsSelf: true,
 });
 
-// 2. 组装提示词 → 拿到该注入的【关系记忆】段落
-const block = pm.buildBlock({
-  chatId: 'group-1001',
-  userIds: ['u-42'],
-  budget: 700,              // 字数上限
-});
-
-// block 长这样：
-// 【交往记忆】
-// - 小明：熟了（52 分），话不多，爱用"确实"，最近状态：累（2 天前）
-
-// 3. 把 block 拼进你的 system prompt 或第一条消息
-
-// 4. 定时维护（衰减、标签过期、长期标签晋升）
-setInterval(() => pm.maintain(), 10 * 60 * 1000);
+const context = pm.buildContext({ chatId: 'room-1', userIds: ['u-1'] });
+// 将 context.text 作为关系资料送进应用实际使用的模型输入。
+// 成功使用后确认一次；刷新面板或单纯查看不要确认。
+pm.confirmContext(context, { turnId: 'turn-1' });
+pm.flush();
+// 宿主负责每隔一段时间调用 pm.maintain()。
 ```
 
----
+未配置 storage 时纯内存运行。ingest 不做磁盘 IO；flush/maintain 会同步落盘。存储仅支持单进程写入。
 
-## 三种接入方式
+## 主要能力
 
-| 方式 | 适合 | 能力 |
+- **有边界的关系分数**：0–100；每日正向增长有额度，扣分没有单独的每日额度，单条仍有上限。
+- **直接互动与旁观消息分开**：@、回复、私聊或宿主标记的直接互动可以计分；普通群消息不会因夸奖了别的事物而涨关系分。
+- **可控生命周期**：短期状态过期，长期状态也会因缺乏新证据降级；来源不等于事实确认。
+- **可纠正的状态**：宿主或人工可设置、替换、移除标签。
+- **可选关系维度**：熟悉程度和信任分开；信任由宿主事件更新，不从奉承文字推断。
+- **可解释的上下文**：返回选中项、来源和省略原因；预览不改变状态，实际使用按 turnId 去重。
+- **数据管理**：scope 隔离、可选频道隔离、删除用户、清空当前实例、快照导入导出、版本迁移。
+- **本地规则**：默认中文关键词和统计；有基础否定/引用过滤，不具备通用语义理解。
+
+## 接入方式
+
+| 方式 | 入口 | 定位 |
 |---|---|---|
-| **Node 库** | 自己写 agent 循环 | 100% |
-| **HTTP API** | 任何语言的后端 | 90% |
-| **MCP Server** | Claude Desktop / Cursor | ~30% ⚠️ |
+| Node | PersonaMemory | 宿主主动记录消息和注入上下文，推荐 |
+| HTTP | persona-memory-http / npm run http | 非 Node 宿主调用；默认仅回环地址 |
+| MCP | persona-memory-mcp / npm run mcp | 模型按需查询；不能保证每轮自动记录与注入 |
+| Discord | adapters/discord + examples/discord-bot.js | 解析真实 SDK 消息；示例回复为规则输出 |
+| LangChain | createLangChainBridge | 明确组合进 Runnable，避免虚假的自动 memory hook |
+| LlamaIndex TS | createLlamaIndexBridge | 可选历史兼容桥接；当前 core 包已停止维护 |
 
-**关于 MCP 的实话**：MCP 是「模型主动调用」，而这个库的核心价值是「框架自动注入」——在模型看到消息**之前**就把关系信息拼好。MCP 版本只能做到「模型想起来时查一下」，体验差一截。详见 [docs/API.md](docs/API.md)。
+集成依赖仅用于开发/示例，不进入核心 dependencies。已验证版本和未验证项目见 [接入说明](docs/integrations.md)。
 
-### LangChain 接入
+## 看效果
 
-```js
-import { createLangChainMemory } from 'persona-memory/adapters/langchain';
-
-const memory = createLangChainMemory(pm, {
-  chatId: 'group-1001',
-  senders: ['u-42'],          // 本次涉及的人（不传则从 input 里找 userId）
-});
-
-// 符合 BaseMemory 形状：memoryKeys / loadMemoryVariables / saveContext
-const chain = prompt.pipe(model).pipe(parser);
-await chain.invoke({ input: '...' }, { configurable: { memory } });
+```sh
+npm run demo
+# http://127.0.0.1:7788
 ```
 
-不 import langchain（各版本接口变动频繁），鸭子类型，LangChain 0.2/0.3 都能用。
+包含社群、陪伴、客服、NPC 四个场景。可以推进一天、改变客服处理状态、通过宿主事件调整 NPC 信任，并查看上下文与来源。
 
-## 先跑起来看效果
+这是不需要密钥的规则演示。它展示机制，不证明真实模型回复质量提高。
 
-```bash
-git clone https://github.com/suking459/persona-memory
-cd persona-memory
-npm run demo        # 或 node demo/server.js
+## 验证
+
+```sh
+npm test
+npm run typecheck
+npm run test:risk
+npm run evaluate
 ```
 
-打开 http://127.0.0.1:7788 —— 左边聊天，**右边实时显示**好感度、说话风格、状态标签，以及「实际注入给模型的那段文本」。
+开发验证使用锁定的可选框架依赖，建议 Node 20+；核心面向 Node 18+。评估使用公开的合成样例，性能数字仅代表当前机器基线。
 
-回复是按档位写死的规则（不调模型），目的是让你直接看到**关系变了，语气也跟着变**。页面上有「跳过 1 天」按钮，能看衰减。
+## 资料
 
----
+- [API 与数据语义](docs/API.md)
+- [六个接入配方](docs/cookbook.md)
+- [参数与场景预设](docs/tuning.md)
+- [接入与兼容状态](docs/integrations.md)
+- [0.3 数据迁移](docs/migration.md)
+- [实测与影子观察](docs/evaluation.md)
+- [路线与验收](docs/ROADMAP.md)
 
+## 限制
 
-## 先例（诚实说明）
+关系分数与词表只是应用规则；不是对人的心理或可信程度评估。未获确认的观察需要保留来源，业务事实交给业务系统。
 
-好感度系统不新，这几个项目做得比我深或更早：
+当前不提供向量检索、跨平台身份猜测、多进程文件协调或完整事件溯源。RAG 可以独立组合，暂不为缺乏验证的检索能力发布新包。
 
-| 项目 | 是什么 | 和这里的区别 |
-|---|---|---|
-| [etherfunlab/eros-engine](https://github.com/etherfunlab/eros-engine) | **六轴**好感度向量 + decay + tier drop | 更精细，但依赖 LLM judge、是完整引擎不是库 |
-| [koishi-plugin-chatluna-affinity](https://www.npmjs.com/package/koishi-plugin-chatluna-affinity) | Koishi 的好感度/关系/黑名单 | 绑 Koishi + onebot，无标签生命周期、无预算 |
-| [suis077/dsh-companion](https://github.com/suis077/dsh-companion) | DSH 人设卡 + 跨会话记忆 + 好感度 | 绑 DSH，好感度单一值，不支持多人 |
+MIT。保留 LICENSE 中的版权声明。
 
-**这里不试图做得更深，只想做得更轻**：库而不是引擎、零 LLM 调用、标签会过期、
-提示词有硬预算。这几件事的组合我没找到现成的。
-
-## 和同类方案的区别
-
-| | persona-memory | mem0 | Letta |
-|---|---|---|---|
-| 记关系状态 | ✅ | ❌ | ⚠️ 靠模型自己判断 |
-| 好感度衰减 | ✅ | ❌ | ❌ |
-| 标签生命周期 | ✅ | ❌ | ❌ |
-| 零 LLM 成本 | ✅ | ❌（抽取要调模型） | ❌ |
-| 提示词预算控制 | ✅ | ❌ | ⚠️ |
-| 事实检索 | ❌ | ✅ | ✅ |
-
-**不是替代关系。** 想要事实记忆用 mem0，想要关系状态用这个。两个可以并存——把 persona-memory 的 block 和 mem0 的 facts 拼进同一个提示词。
-
----
-
-## 场景
-
-- **社群 bot**：Discord / Telegram / 企业微信群里记住每个成员
-- **AI 陪伴**：好感度不该是「聊得多就高」，该是会淡的
-- **客服 agent**：客户状态标签（比价中 / 情绪不好 / 上次没解决）48 小时自动过期
-- **游戏 NPC**：NPC 记得玩家，关系随互动变化
-
-
-## 关键词 / Keywords
-
-**英文**：agent memory · persona memory · relationship memory · affinity system ·
-AI companion memory · chatbot user profile · NPC relationship · social simulation ·
-LLM long-term memory · decaying affinity · tag lifecycle · prompt budget
-
-**中文**：AI 记忆 · agent 记忆 · 好感度系统 · 关系记忆 · 用户画像 ·
-陪伴 AI 记忆 · NPC 记忆 · 群聊机器人记忆 · 长期记忆 · 状态标签
-
-## 已知限制
-
-诚实列出来，免得你踩坑才发现：
-
-- **口头禅靠滑动窗口切 2-4 字**，中文没有词边界，偶尔会切出「的吗？？」这类碎片。已做碎片过滤（被更长片段包含的会被丢掉），但极端句式仍可能漏几个。想精确就自己传 `config.blockWords` 屏蔽。
-- **好感度单值**，不像 [eros-engine](https://github.com/etherfunlab/eros-engine) 那样分六轴。单值的好处是本地规则能算、不烧 token；坏处是表达不了「亲近但没耐心」这种复合状态。
-- **标签词表是内置的中文词**，英文场景要自己写 `config.extraRules`。
-- **衰减按天算**，不按消息数。一天内聊一百句和聊一句，第二天掉的都是 2 分。
-
-## License
-
-MIT
+设计取舍见 [DESIGN](docs/DESIGN.md)，当前一手资料与本轮优化依据见 [研究记录](docs/RESEARCH-20261029.md)。

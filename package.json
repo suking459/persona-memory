@@ -1,64 +1,112 @@
-﻿{
-    "name":  "persona-memory",
-    "version":  "0.3.0",
-    "description":  "Social state layer for conversational agents: decaying affinity, expiring tags, local style stats, budgeted prompt blocks. Zero LLM calls, zero deps. Memory for chatbots, AI companions, NPCs and customer support.",
-    "type":  "module",
-    "main":  "src/index.js",
-    "exports":  {
-                    ".":  "./src/index.js",
-                    "./adapters/onebot":  "./adapters/onebot/index.js",
-                    "./adapters/generic":  "./adapters/generic/index.js",
-                    "./adapters/langchain":  "./adapters/langchain/index.js",
-                    "./types":  "./index.d.ts"
-                },
-    "files":  [
-                  "src",
-                  "adapters",
-                  "demo",
-                  "examples",
-                  "index.d.ts",
-                  "README.md",
-                  "NOTICE.md",
-                  "LICENSE",
-                  "!demo/.data"
-              ],
-    "keywords":  [
-                     "agent-memory",
-                     "persona",
-                     "affinity",
-                     "relationship",
-                     "chatbot",
-                     "llm",
-                     "ai-companion",
-                     "social-simulation",
-                     "npc",
-                     "user-profile",
-                     "character-ai",
-                     "memory"
-                 ],
-    "engines":  {
-                    "node":  "\u003e=18"
-                },
-    "license":  "MIT",
-    "repository":  {
-                       "type":  "git",
-                       "url":  "git+https://github.com/suking459/persona-memory.git"
-                   },
-    "scripts":  {
-                    "test":  "node --test test/core.test.mjs",
-                    "demo":  "node demo/server.js",
-                    "http":  "node adapters/http/server.js",
-                    "mcp":  "node adapters/mcp/server.js"
-                },
-    "publishConfig":  {
-                          "access":  "public"
-                      },
-    "types":  "index.d.ts",
-    "devDependencies":  {
-                            "typescript":  "^5.9.3"
-                        },
-    "author":  "suking459",
-    "contributors":  [
-                         "Kondius (original memory-tree design in Kondius/qq-agent)"
-                     ]
+{
+  "name": "persona-memory",
+  "version": "0.4.0",
+  "description": "Social state layer for conversational agents: decaying affinity, expiring tags, local style stats, budgeted prompt blocks. Zero LLM calls, zero deps. Memory for chatbots, AI companions, NPCs and customer support.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./presets": {
+      "types": "./src/presets.d.ts",
+      "import": "./src/presets.js"
+    },
+    "./adapters/onebot": {
+      "types": "./adapters/onebot/index.d.ts",
+      "import": "./adapters/onebot/index.js"
+    },
+    "./adapters/generic": {
+      "types": "./adapters/generic/index.d.ts",
+      "import": "./adapters/generic/index.js"
+    },
+    "./adapters/discord": {
+      "types": "./adapters/discord/index.d.ts",
+      "import": "./adapters/discord/index.js"
+    },
+    "./adapters/langchain": {
+      "types": "./adapters/langchain/index.d.ts",
+      "import": "./adapters/langchain/index.js"
+    },
+    "./adapters/llamaindex": {
+      "types": "./adapters/llamaindex/index.d.ts",
+      "import": "./adapters/llamaindex/index.js"
+    },
+    "./types": "./index.d.ts"
+  },
+  "files": [
+    "src",
+    "adapters",
+    "demo",
+    "examples",
+    "docs",
+    "tools",
+    "index.d.ts",
+    "README.md",
+    "NOTICE.md",
+    "LICENSE",
+    "!demo/.data",
+    "!docs/WORKING-AGREEMENT.md",
+    "!docs/DEVELOPMENT.md",
+    "!docs/PROMO.md",
+    "!docs/V2EX-POST.md",
+    "!docs/RELEASE.md",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "agent-memory",
+    "persona",
+    "affinity",
+    "relationship",
+    "chatbot",
+    "llm",
+    "ai-companion",
+    "social-simulation",
+    "npc",
+    "user-profile",
+    "character-ai",
+    "memory"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suking459/persona-memory.git"
+  },
+  "scripts": {
+    "test": "node tools/run-tests.mjs",
+    "demo": "node demo/server.js",
+    "http": "node adapters/http/server.js",
+    "mcp": "node adapters/mcp/server.js",
+    "typecheck": "tsc -p test/tsconfig.json",
+    "example:discord": "node examples/discord-bot.js",
+    "example:langchain": "node examples/langchain.js",
+    "example:llamaindex": "node examples/llamaindex.js",
+    "evaluate": "node tools/evaluate.mjs",
+    "shadow": "node tools/shadow.mjs",
+    "test:core": "node --test test/core.test.mjs test/milestone.test.mjs test/boundaries.test.mjs test/extra.test.mjs test/demo.test.mjs test/risk.test.mjs",
+    "test:risk": "node --test test/risk.test.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "types": "index.d.ts",
+  "devDependencies": {
+    "@langchain/core": "1.3.1",
+    "@llamaindex/core": "0.6.23",
+    "ajv": "8.20.0",
+    "discord.js": "14.27.0",
+    "typescript": "^5.9.3"
+  },
+  "author": "suking459",
+  "contributors": [
+    "Kondius (original memory-tree design in Kondius/qq-agent)"
+  ],
+  "bin": {
+    "persona-memory-http": "./adapters/http/server.js",
+    "persona-memory-mcp": "./adapters/mcp/server.js"
+  }
 }

@@ -1,255 +1,88 @@
-# API 设计（三个适配层）
+# API 与数据语义
 
-> 核心逻辑只写一次，适配器各写一遍。
-> 三层共用同一套语义：**ingest → buildBlock → maintain**。
+状态：GitHub 源码 0.4.0 接口，npm 发包独立处理。核心入口为 PersonaMemory，规则纯函数仍可独立导入。
 
----
+## 实例与范围
 
-## 通用类型
+new PersonaMemory({storage, persona, scope, config, clock})
 
-```ts
-/** 一条消息。宿主负责把它填好。 */
-interface ChatMessage {
-  /** 会话作用域：群号 / 频道 ID / 项目 ID，随便什么字符串 */
-  chatId: string;
-  /** 发送者 ID：QQ 号 / Discord user id / 客户 id */
-  userId: string;
-  /** 纯文本（已去掉 @ 标记等，原始形态放 raw） */
-  text: string;
-  /** 毫秒时间戳 */
-  ts: number;
-  /** 本条消息 @ 了谁（包括 bot 自己） */
-  mentions?: string[];
-  /** 回复的是哪条消息的 id */
-  replyTo?: string;
-  /** bot 自己发的消息（用于区分"谁搭理谁"） */
-  isSelf?: boolean;
-  /** 平台原始消息，适配器自用，不参与计算 */
-  raw?: unknown;
-}
+- persona 默认 default，用于区分角色；不是 botId。
+- scope 默认空，表示应用/租户范围。非空 scope 的文件名由 scope 与 persona 的组合摘要生成。
+- config.tagScope 默认为 user：同一实例内标签/访客按用户共享，关系分数按 chatId+userId 保存。chat 模式下标签/访客也按频道隔离。
+- 应用应该显式命名 chatId 和 userId，平台适配器负责平台边界；不要自动猜测跨平台身份。
+- clock 默认 Date.now；测试/回放可传入可控时钟。所有时间为毫秒。
+- storage 为 null 时不写盘。持久化仅支持单进程写入。
 
-interface Affinity {
-  /** 0-100 */
-  value: number;
-  /** 基线，长时间不来往会回落到这里 */
-  baseline: number;
-  /** '生疏' | '眼熟' | '熟了' | '亲近' | '很铁' */
-  tier: string;
-  /** 给提示词用的一句话（"你们算熟了：正常唠嗑，不用客套"） */
-  hint: string;
-  lastInteractiveAt: number;
-}
+## 记录消息
 
-interface Tag {
-  tag: string;
-  /** 'builtin' | 'extra' | 'model' | 'manual' */
-  source: string;
-  /** 给提示词的行动建议 */
-  advice?: string;
-  /** null = 长期标签 */
-  expiresAt: number | null;
-  longTerm: boolean;
-  hits: number;
-  addedAt: number;
-}
+ingest({chatId,userId,text,ts?,eventId?,mentionsSelf?,replyToSelf?,directedToBot?,mentions?,replyTo?,isSelf?})
 
-interface StyleProfile {
-  /** 样本数 */
-  count: number;
-  avgChars: number;
-  questionRate: number;   // 0-100
-  emojiRate: number;      // 0-100
-  nightRate: number;      // 0-100
-  /** 常说的口头禅，已过滤屏蔽词 */
-  catchphrases: string[];
-}
+显式 mentionsSelf/replyToSelf 优先；否则识别 self 标记或配置的 botId。directedToBot 用于私聊等没有 @ 的直接互动；最近一次明确互动后的 attentionWindowSec 内可算续聊。
 
-interface Profile {
-  chatId: string;
-  userId: string;
-  displayName?: string;
-  affinity: Affinity;
-  style: StyleProfile;
-  tags: Tag[];
-  lastAt: number;
-}
-```
+默认不对旁观消息计关系分。scoreAmbient=true 可恢复旧版对旁观夸奖/辱骂等词表计分的行为。
 
----
+eventId 去重范围为当前实例的 chatId+userId；保留受 dedupeDays/dedupeLimit 限制，不承诺永久去重。旧于当前档案或维护时间的消息返回 ignored，不倒退时间或重置日额度。没有 eventId 时不保证重复消息不重复计数。
 
-## 一、Node 库（推荐）
+返回 matched、实际 delta、reasons，以及可选 tags/visitor/duplicate/ignored。机器人自己的消息忽略，不会把机器人回复计入人的风格。
 
-```ts
-import { PersonaMemory } from 'persona-memory';
+## 预览和实际使用
 
-const pm = new PersonaMemory({
-  storage: './data',          // 落盘目录，null = 纯内存
-  persona: 'assistant',       // 人设键，换人设换一套档案
-  config?: Partial<Config>;   // 见下方 Config
+```js
+const context = pm.buildContext({
+  chatId: 'room', userIds: ['a','b'], priorityUserIds: ['b'],
+  budget: 700, maxPeople: 4,
 });
-
-/** 喂一条消息。同步，只写内存；落盘由 flush() 或 maintain() 批量做。 */
-pm.ingest(msg: ChatMessage): {
-  matched: boolean;           // 这条是否算"对她说的"
-  delta?: number;             // 好感度变化
-  newTags?: string[];
-};
-
-/** 取一段可直接拼进提示词的文本。返回空字符串 = 无需注入。 */
-pm.buildBlock(opts: {
-  chatId: string;
-  userIds: string[];          // 本次涉及的人
-  budget?: number;            // 字数上限，默认 700
-  maxPeople?: number;         // 最多几人，默认 4
-}): string;
-
-/** 单人档案（给调试面板/管理后台用） */
-pm.getProfile(chatId: string, userId: string): Profile | null;
-
-/** 手动维护：衰减、标签过期、长期晋升。建议 10 分钟一次 */
-pm.maintain(now?: number): {
-  decayed: number;            // 回落了几个人
-  expired: number;            // 过期了几个标签
-  promoted: number;           // 晋升了几个长期标签
-};
-
-/** 立即落盘 */
-pm.flush(): void;
-
-/** 导出/导入（跨设备迁移） */
-pm.export(): Snapshot;
-pm.import(snapshot: Snapshot): void;
-
-interface Config {
-  /** 每天涨分上限 */
-  dailyGainCap: number;       // 默认 30
-  /** 每天回落 */
-  decayPerDay: number;        // 默认 2
-  /** 单条消息涨跌封顶 */
-  perMessageCap: number;      // 默认 8
-  /** 标签存活小时 */
-  tagTtlHours: number;        // 默认 48
-  /** 每人标签上限 */
-  maxTagsPerPerson: number;   // 默认 16
-  /** 关注窗口：被 @ 后多少秒内算"仍在聊" */
-  attentionWindowSec: number; // 默认 180
-  /** 自定义标签词表 */
-  extraRules: Record<string, { words: string[]; advice: string }>;
-  /** 口头禅屏蔽词 */
-  blockWords: string[];
-}
+// context: {contextId, text, people, omitted, budget, characters, createdAt}
+const block = pm.buildBlock({chatId:'room', userIds:['a']}); // 纯文本兼容入口
 ```
 
----
+排序优先显式关注的人，再看最近活跃与关系分。只考虑传入的人；访客也计入人数上限。超过预算时省略整行或标签，不截断标签再当作完整注入。显示字段会去除换行控制字符；宿主仍需将上下文当作资料，而非可执行指令。
 
-## 二、HTTP API
+可选 tokenBudget 与 countTokens(text) 回调同时传入，才能约束精确 token 预算。HTTP/MCP 的普通 JSON 参数不能携带 tokenizer 回调，默认使用字符预算。characters 计算 Unicode 码点，不等价于 token。
 
-> 适合：Python / Go / Java 后端，或者把记忆层做成独立服务。
+预览不增加 injections，不修改导出状态。contextId 是当前实例的短期确认凭据，最多保留 128 个，10 分钟有效，不跨重启。
 
-所有接口 `Content-Type: application/json`，成功 `{ ok: true, ... }`，失败 `{ ok: false, error }`。
-
-```http
-POST /api/ingest
-Body: ChatMessage
-Resp: { ok: true, matched: boolean, delta?: number }
-
-POST /api/context
-Body: { chatId, userIds: string[], budget?: number, maxPeople?: number }
-Resp: { ok: true, block: string }
-      // block 为空字符串 = 无内容可注入
-
-GET /api/profile?chatId=g1&userId=u42
-Resp: { ok: true, profile: Profile }
-
-POST /api/maintain
-Body: {}
-Resp: { ok: true, decayed, expired, promoted }
-
-GET /api/stats?chatId=g1
-Resp: { ok: true, stats: { people, profiles, tagged, avgAffinity } }
-
-GET /api/health
-Resp: { ok: true, version: "0.1.0" }
+```js
+// 仅在该上下文实际用于一次模型调用后执行。
+pm.confirmContext(context, {turnId:'unique-turn-id'});
+pm.flush();
 ```
 
-**鉴权**：`Authorization: Bearer <token>`，token 走环境变量 `PM_TOKEN`，未设则不校验（仅本地）。
+同一个 turnId 在使用记录保留范围内只计一次。标签被替换或移除后，旧预览不能确认。只记录真正包含在该上下文中的标签。
 
-**并发**：单进程内存 + 落盘，写入用串行队列；多实例部署需要外部锁（不在 v1 范围）。
+## 纠错与宿主事件
 
----
-
-## 三、MCP Server
-
-> 适合：Claude Desktop / Cursor / VS Code 这类只能通过 MCP 扩展的宿主。
-
-```jsonc
-// mcp.json
-{
-  "mcpServers": {
-    "persona-memory": {
-      "command": "npx",
-      "args": ["-y", "persona-memory-mcp"],
-      "env": {
-        "PM_STORAGE": "D:/data/persona-memory",
-        "PM_PERSONA": "assistant"
-      }
-    }
-  }
-}
+```js
+pm.setTag({chatId:'room',userId:'a',tag:'找工作中',source:'host',eventId:'case-1'});
+pm.setTag({chatId:'room',userId:'a',tag:'已入职',source:'host',replace:['找工作中']});
+pm.removeTag({chatId:'room',userId:'a',tag:'已入职'});
+pm.recordEvent({chatId:'room',userId:'a',type:'promise-kept',eventId:'quest-1',changes:{trust:10}});
 ```
 
-暴露的工具：
+setTag 的 expiresAt=null 表示宿主设置长期状态；这类状态仍遵循长期保鲜规则。source 是 provenance，不是置信概率：builtin/extra 表示词表观察，host/manual 表示宿主或人工设置，model 表示外部模型提供。
 
-| 工具 | 参数 | 返回 | 用途 |
-|---|---|---|---|
-| `memory_context` | `chatId`, `userIds[]`, `budget?` | `{ block }` | 取【关系记忆】段落 |
-| `memory_profile` | `chatId`, `userId` | `Profile` | 查单人档案 |
-| `memory_record` | `chatId`, `userId`, `text`, `mentions?` | `{ matched, delta }` | 记录一条消息 |
+recordEvent 只接受已启用的 dimensions，且来源应是宿主确认的事件，不把模型随意输出当作授权。dimensions 是可选扩展；不开启时保留单值关系分。
 
-**⚠️ 必须知道的限制**：
+## 查询与删除
 
-MCP 是「模型主动调用」模型。这带来两个问题：
+getProfile(chatId,userId)、getVisitor(userId,{chatId?})、listVisitors(limit)、diagnostics()、history({chatId?,userId?}) 返回脱离内部引用的结果。chat 模式查询访客必须提供 chatId。
 
-1. **记录不可靠**：模型不一定每次都调 `memory_record`，漏一条就少一条
-2. **注入不自动**：`memory_context` 要模型自己想起来调，而不是每次对话自动带上
+deleteUser(userId) 删除当前实例内该用户的关系、标签、访客、使用记录与诊断历史。指定 chatId 仅删除该会话；user 共享模式下若其他会话还有该用户，保留共享标签。clear() 清空当前实例范围，之后 flush 落盘。它们不会处理调用方另存的旧备份或外部日志。
 
-所以 MCP 版适合「**模型想深入了解一下某人时主动查**」，不适合「**每句话都带着关系**」。
+## 维护与存储
 
-如果宿主支持 hooks（如某些框架的 `beforeLLM` 回调），优先走库或 HTTP，不要走 MCP。
+maintain(now?) 进行按时间增量衰减、标签过期/晋升/降级和保留上限清理，并调用 flush。维护不把最近真实互动时间改成维护时间。
 
----
+短期标签默认 48 小时，晋升需要仍未过期、存活 3 天且实际使用至少 6 次，因此没有新命中/确认的单次观察会先过期，不会只靠被模型反复看到变成长期事实。长期状态 7 天无新证据会降级。
 
-## 适配器开发指南
+export() 返回 schemaVersion=2 快照。import(snapshot) 先完整校验再替换，失败不改变现有状态。支持默认 user 共享语义的旧 schemaVersion=1；导入时 persona/scope/存储语义必须一致。见 migration.md。
 
-把一个新的聊天平台接进来，只需要实现一个 `Adapter`：
+损坏/未知版本文件导致构造时报错并保留原文件；宿主可以捕获后选择无记忆降级。不能静默覆盖坏文件。
 
-```ts
-interface Adapter {
-  /** 平台消息 → ChatMessage */
-  parse(raw: unknown): ChatMessage | null;
+## HTTP 与 MCP
 
-  /** ChatMessage → 该平台的消息（可选，本库不发消息） */
-  format?(msg: unknown): unknown;
+HTTP 默认回环地址 8791，可用 PM_TOKEN 启用 Bearer 鉴权。写请求要求 application/json。GET health/profile/stats；POST ingest/context/confirm/maintain。tags/remove-tag/delete-user 管理接口需显式 PM_ALLOW_ADMIN=1。
 
-  /** 取显示名（可选，库不依赖它算分） */
-  resolveName?(chatId: string, userId: string): string | undefined;
-}
-```
+MCP 提供 memory_record、memory_context、memory_confirm、memory_profile。stdio 仅写协议输出；模型可选工具调用无法保证消息记录完整，可靠接入优先使用库或 HTTP。
 
-现成的适配器：
-
-```
-adapters/
-├── onebot/     # QQ（OneBot v11）
-├── discord/    # Discord
-├── telegram/   # Telegram
-└── generic/    # 纯 JSON（自己写宿主用）
-```
-
----
-
-## 版本策略
-
-- 核心语义（好感度/标签/风格）遵循 semver
-- 适配器独立版本
-- 存储格式带 `schemaVersion`，升级时自动迁移
+HTTP/MCP 存储环境变量：PM_STORAGE、PM_PERSONA、PM_SCOPE。不要将实际凭据放进版本库。
