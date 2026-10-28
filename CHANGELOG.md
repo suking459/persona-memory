@@ -21,7 +21,7 @@
 
 ### Validation
 - Local behavioral, external-watchdog, randomized replay, strict typing and package-install checks.
-- Cross-platform CI is the release gate; its actual result is reported separately.
+- All seven pre-merge CI jobs passed: Node 18 core and Node 20/22/24 integrations on Windows and Linux. [Run](https://github.com/suking459/persona-memory/actions/runs/40737573004).
 - No claim of live Discord validation, production memory accuracy, or LLM response-quality improvement.
 
 npm publication is separate from the GitHub source update.
