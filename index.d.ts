@@ -73,12 +73,16 @@ export interface Profile {
 }
 
 export interface IngestResult {
-  /** 这条消息是否触发了好感度变化 */
+  /** 这条消息是否触发了实质变化（好感度或标签） */
   matched: boolean;
-  /** 实际生效的变化量（可能被每日额度截断） */
+  /** 只记了访客、没有建档（普通闲聊、无互动） */
+  visitor?: boolean;
+  /** 实际生效的好感度变化量（可能被每日额度截断） */
   delta?: number;
   /** 命中原因，如 ['夸了', '@了'] */
   reasons?: string[];
+  /** 本次命中的状态标签名 */
+  tags?: string[];
 }
 
 export interface MaintainResult {
@@ -88,6 +92,18 @@ export interface MaintainResult {
   expired: number;
   /** 晋升了几个长期标签 */
   promoted: number;
+  /** 降回短期的长期标签数（超过 longTermTtlDays 没有新证据） */
+  demoted: number;
+  /** 因注入次数超限被强制过期的标签数 */
+  forcedOut: number;
+}
+
+/** 轻量访客记录：只统计"来过几次"，不建完整档案 */
+export interface Visitor {
+  userId: string;
+  firstSeen: number;
+  lastSeen: number;
+  count: number;
 }
 
 export interface BuildBlockOptions {
@@ -118,10 +134,20 @@ export interface PersonaMemoryConfig {
   maxChars?: number;
   /** 口头禅屏蔽词 */
   blockWords?: string[];
-  /** 自定义标签词表 */
+  /** 自定义标签词表（与内置词表合并） */
   extraRules?: Record<string, { words: string[]; advice: string }>;
   /** 好感度基线，默认 0 */
   decayBaseline?: number;
+  /** 长期标签保鲜期（天）：超过这么久没有新命中 → 降回短期。默认 7 */
+  longTermTtlDays?: number;
+  /** 短期标签注入上限：超过仍未晋升 → 强制过期。默认 200 */
+  maxInjections?: number;
+  /** 是否记访客表（0 分闲聊不建档）。默认 true */
+  visitorTracking?: boolean;
+  /** 访客是否在提示词里提一句"来过 N 次"。默认 true */
+  visitorHint?: boolean;
+  /** 提访客提示的最低来访次数，默认 2 */
+  visitorHintMinCount?: number;
 }
 
 export interface PersonaMemoryOptions {
@@ -137,6 +163,7 @@ export interface MemorySnapshot {
   persona: string;
   sessions: Record<string, Record<string, unknown>>;
   tags: Record<string, Tag[]>;
+  visitors: Record<string, Omit<Visitor, 'userId'>>;
 }
 
 export declare class PersonaMemory {
@@ -151,7 +178,13 @@ export declare class PersonaMemory {
   /** 单人档案 */
   getProfile(chatId: string, userId: string): Profile | null;
 
-  /** 维护：衰减 + 标签清理/晋升。建议 10 分钟一次。 */
+  /** 查访客记录（只来过没聊过的人） */
+  getVisitor(userId: string): Visitor | null;
+
+  /** 列出访客，按最近来访排序 */
+  listVisitors(limit?: number): Visitor[];
+
+  /** 维护：衰减 + 标签清理/晋升/降级。建议 10 分钟一次。 */
   maintain(now?: number): MaintainResult;
 
   /** 立即落盘 */
@@ -225,12 +258,26 @@ export declare function summarizeStyle(style: Partial<StyleProfile> | null | und
 /** 标签归一化（读盘/手改都可能缺字段） */
 export declare function normalizeTag(raw: unknown): Tag | null;
 
+/** 内置状态标签词表 */
+export declare const TAG_RULES: readonly { tag: string; advice: string; words: string[] }[];
+
+/** 从一句话里检测命中了哪些状态标签 */
+export declare function matchTags(
+  text: string,
+  extraRules?: Record<string, { words?: string[]; advice?: string }>
+): { tag: string; advice: string; word: string }[];
+
 /** 命中标签：存在则顺延，不存在则新建 */
 export declare function hitTag(tags: Tag[], tag: string, advice: string, now: number, ttlHours?: number): Tag[];
 
-/** 清理过期 + 晋升长期 + 上限裁剪 */
+/** 清理过期 + 晋升长期 + 长期降级 + 注入上限 */
 export declare function sweepTags(
   tags: Tag[],
   now: number,
-  opts?: { tagTtlHours?: number; maxTagsPerPerson?: number }
-): { tags: Tag[]; expired: number; promoted: number };
+  opts?: {
+    tagTtlHours?: number;
+    maxTagsPerPerson?: number;
+    longTermTtlDays?: number;
+    maxInjections?: number;
+  }
+): { tags: Tag[]; expired: number; promoted: number; demoted: number; forcedOut: number };

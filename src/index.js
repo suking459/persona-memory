@@ -32,7 +32,9 @@ export const SCORE_RULES = {
 const TAG_TTL_HOURS = 48;
 const PROMOTE_INJECTIONS = 6;
 const PROMOTE_ALIVE_DAYS = 3;
-const PROMOTE_HITS = 2;
+const PROMOTE_HITS = 2; // 保留常量兼容，晋升判定已不再使用
+const PROMOTE_LONG_TERM_TTL_DAYS = 7; // 长期标签多久没有新证据就降回短期
+const MAX_INJECTIONS = 200; // 短期标签注入超过这个次数仍未晋升 → 强制过期
 const MAX_TAGS_PER_PERSON = 16;
 const HOUR = 3600000;
 const DAY = 86400000;
@@ -49,6 +51,16 @@ const DEFAULT_CONFIG = {
   blockWords: [],
   extraRules: {},
   decayBaseline: 0,
+  // 长期标签保鲜期：超过这么多天没有新命中 → 降回短期
+  longTermTtlDays: PROMOTE_LONG_TERM_TTL_DAYS,
+  // 短期标签注入上限：超过就强制过期
+  maxInjections: MAX_INJECTIONS,
+  // 只说过一句话、没有任何实质互动的人：记访客表，不建完整档案
+  visitorTracking: true,
+  // 访客是否在提示词里提一句（"来过 N 次"）。false = 只在数据层记录
+  visitorHint: true,
+  // 提访客提示的最低来访次数
+  visitorHintMinCount: 2,
 };
 
 // ─── 纯函数：好感度 ──────────────────────────────────────────────
@@ -190,6 +202,72 @@ export function summarizeStyle(style) {
 
 // ─── 纯函数：标签 ────────────────────────────────────────────────
 
+/**
+ * 内置状态标签词表。
+ *
+ * 每条 tag 配一组「同义说法」，命中即打标，advice 会逐字进提示词。
+ * 选词原则：宁可漏，不可误——"累"这种单字会把"这个梗好累"也算成"最近很累"，
+ * 所以只用多字组合。
+ *
+ * 你可以通过 config.extraRules 覆盖或追加：
+ *   { 加班中: { words: ['在加班'], advice: '别打扰' } }
+ */
+export const TAG_RULES = [
+  {
+    tag: '心情不好',
+    advice: '别开玩笑、别抬杠，可以关心一句但别追问',
+    words: ['不开心', '不高兴', '心情不好', '郁闷', '好烦', '烦躁', '难过', '想哭', '崩溃', '破防', '委屈', '失落', '生气', '不爽', '糟心', '难受', '烦死了'],
+  },
+  {
+    tag: '最近很累',
+    advice: '话少一点、别催回复、别拉着熬夜聊',
+    words: ['好累', '累死', '累瘫', '太累了', '困死', '没睡好', '熬夜', '通宵', '失眠', '睡不着', '加班', '刚下班', '忙死', '忙疯', '撑不住', '顶不住'],
+  },
+  {
+    tag: '身体不舒服',
+    advice: '关心一句就好，别说教',
+    words: ['生病', '感冒', '发烧', '胃疼', '肚子疼', '头疼', '头痛', '嗓子疼', '咳嗽', '去医院', '看病', '吃药', '过敏', '受伤', '牙疼', '拉肚子'],
+  },
+  {
+    tag: '压力大',
+    advice: '少玩梗多顺着，适当打气',
+    words: ['考试', '期末', '考研', '面试', '笔试', 'deadline', 'ddl', '绩效', '考核', 'kpi', '投简历', '找工作', '论文', '答辩', '赶工', '汇报', '压力大', '扛不住', '卷不动'],
+  },
+  {
+    tag: '有喜事',
+    advice: '起个哄、捧个场，别泼冷水',
+    words: ['升职', '加薪', '涨薪', '上岸', '通过了', '考上了', '录取', '中奖', '中签', 'offer', '放假', '发工资', '发奖金', '脱单', '表白成功', '生日', '结婚', '搬家', '提车', '买房'],
+  },
+  {
+    tag: '在忙',
+    advice: '别催、别连着发消息',
+    words: ['在忙', '忙会儿', '回头聊', '先不聊', '忙完再说', '等下聊'],
+  },
+];
+
+/**
+ * 从一句话里检测命中了哪些状态标签。
+ * @param {string} text
+ * @param {Record<string, {words?: string[], advice?: string}>} [extraRules] 自定义词表
+ * @returns {{tag:string, advice:string, word:string}[]}
+ */
+export function matchTags(text, extraRules = {}) {
+  if (!text) return [];
+  const rules = [...TAG_RULES];
+  for (const [tag, rule] of Object.entries(extraRules || {})) {
+    if (!rule) continue;
+    rules.push({ tag, advice: String(rule.advice ?? ''), words: Array.isArray(rule.words) ? rule.words : [] });
+  }
+
+  const lower = String(text).toLowerCase();
+  const hits = [];
+  for (const rule of rules) {
+    const word = (rule.words || []).find((w) => w && lower.includes(String(w).toLowerCase()));
+    if (word) hits.push({ tag: rule.tag, advice: rule.advice || '', word: String(word) });
+  }
+  return hits;
+}
+
 export function normalizeTag(raw) {
   const o = raw && typeof raw === 'object' ? raw : {};
   const tag = String(o.tag ?? '').trim();
@@ -217,6 +295,7 @@ export function hitTag(tags, tag, advice, now, ttlHours = TAG_TTL_HOURS) {
     const t = list[i];
     t.hits += 1;
     t.lastHitAt = now;
+    t.lastEvidenceAt = now; // 有新证据了（长期标签的"保鲜"依据）
     if (!t.longTerm) t.expiresAt = now + ttlHours * HOUR;
     return list;
   }
@@ -226,6 +305,7 @@ export function hitTag(tags, tag, advice, now, ttlHours = TAG_TTL_HOURS) {
     advice: advice || '',
     addedAt: now,
     lastHitAt: now,
+    lastEvidenceAt: now,
     expiresAt: now + ttlHours * HOUR,
     longTerm: false,
     hits: 1,
@@ -234,12 +314,16 @@ export function hitTag(tags, tag, advice, now, ttlHours = TAG_TTL_HOURS) {
   return list;
 }
 
-/** 清理过期 + 晋升长期 + 上限裁剪。 */
+/** 清理过期 + 晋升长期 + 长期保鲜 + 上限裁剪。 */
 export function sweepTags(tags, now, opts = {}) {
   const ttl = opts.tagTtlHours || TAG_TTL_HOURS;
   const max = opts.maxTagsPerPerson || MAX_TAGS_PER_PERSON;
+  const longTtlDays = opts.longTermTtlDays ?? PROMOTE_LONG_TERM_TTL_DAYS;
+  const maxInjections = opts.maxInjections ?? MAX_INJECTIONS;
   let expired = 0;
   let promoted = 0;
+  let demoted = 0;
+  let forcedOut = 0;
 
   let list = (Array.isArray(tags) ? tags : []).filter((t) => {
     if (t.longTerm || t.expiresAt === null) return true;
@@ -249,14 +333,44 @@ export function sweepTags(tags, now, opts = {}) {
   });
 
   for (const t of list) {
-    if (t.longTerm) continue;
+    // 长期标签：太久没有新证据 → 降回短期
+    if (t.longTerm) {
+      const lastEvidence = t.lastEvidenceAt || t.lastHitAt || t.addedAt;
+      if ((now - lastEvidence) / DAY > longTtlDays) {
+        t.longTerm = false;
+        t.promotedAt = null;
+        t.expiresAt = now + ttl * HOUR;
+        demoted += 1;
+      }
+      continue;
+    }
+
     const aliveDays = (now - t.addedAt) / DAY;
-    if (t.injections >= PROMOTE_INJECTIONS && aliveDays >= PROMOTE_ALIVE_DAYS && t.hits >= PROMOTE_HITS) {
+    // 晋升：只看「被用了多少次 + 活了多久」。
+    // 不再要求 hits >= 2 —— 标签词表命中是稀疏事件，要求重复命中等于永远不晋升。
+    if (t.injections >= PROMOTE_INJECTIONS && aliveDays >= PROMOTE_ALIVE_DAYS) {
       t.longTerm = true;
       t.expiresAt = null;
+      t.promotedAt = now;
+      t.lastEvidenceAt = t.lastHitAt || t.addedAt;
       promoted += 1;
+      continue;
+    }
+
+    // 短期标签注入太多次还没晋升 → 强制过期（防"焊死"在提示词里）
+    if (t.injections > maxInjections) {
+      t.expiresAt = now - 1; // 用 now-1 而不是 now：清理用的是 `now <= expiresAt`，等于 now 会被当成没过期
+      forcedOut += 1;
     }
   }
+
+  // 二次清理：上面刚被强制过期的要真正移除
+  list = list.filter((t) => {
+    if (t.longTerm || t.expiresAt === null) return true;
+    if (now <= t.expiresAt) return true;
+    expired += 1;
+    return false;
+  });
 
   if (list.length > max) {
     const short = list.filter((t) => !t.longTerm).sort((a, b) => a.addedAt - b.addedAt);
@@ -266,7 +380,7 @@ export function sweepTags(tags, now, opts = {}) {
     }
   }
 
-  return { tags: list, expired, promoted };
+  return { tags: list, expired, promoted, demoted, forcedOut };
 }
 
 // ─── 主类 ────────────────────────────────────────────────────────
@@ -279,7 +393,7 @@ export class PersonaMemory {
     this.storage = storage ? path.resolve(storage) : null;
     this.persona = persona;
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.state = { schemaVersion: 1, persona, sessions: {}, tags: {} };
+    this.state = { schemaVersion: 1, persona, sessions: {}, tags: {}, visitors: {} };
     this._dirty = false;
     if (this.storage) this._load();
   }
@@ -289,7 +403,7 @@ export class PersonaMemory {
     if (!fs.existsSync(file)) return;
     try {
       const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (raw && raw.sessions) this.state = raw;
+      if (raw && raw.sessions) { this.state = raw; if (!this.state.visitors) this.state.visitors = {}; }
     } catch {
       /* 损坏就重来，不阻塞宿主 */
     }
@@ -320,20 +434,51 @@ export class PersonaMemory {
   /** 喂一条消息 */
   ingest(msg) {
     const { chatId, userId, text = '', ts = Date.now(), mentions = [], replyTo, isSelf = false, mentionsSelf, replyToSelf } = msg || {};
-    if (!chatId || !userId) return { matched: false };
-
-    const p = this._profile(chatId, userId, true);
-    p.lastAt = Math.max(p.lastAt || 0, ts);
-
-    // 风格统计：自己的消息不统计
-    if (!isSelf) p.style = updateStyle(p.style, text, ts, this.config.blockWords);
+    if (!chatId || !userId) return { matched: false, delta: 0, reasons: [] };
 
     const _mentionsSelf = mentionsSelf ?? (Array.isArray(mentions) && mentions.includes('self'));
     const _replyToSelf = replyToSelf ?? Boolean(replyTo && replyTo === 'self');
 
-    const { delta, reasons } = scoreMessage(text, { mentionsSelf: _mentionsSelf, replyToSelf: _replyToSelf, isSelf });
-    let applied = 0;
+    // bot 自己发的话：不建档、不记分（只会更新已有档案的最后活跃时间）
+    if (isSelf) {
+      const existing = this._profile(chatId, userId, false);
+      if (existing) {
+        existing.lastAt = Math.max(existing.lastAt || 0, ts);
+        this._dirty = true;
+      }
+      return { matched: false, delta: 0, reasons: [] };
+    }
 
+    const { delta, reasons } = scoreMessage(text, { mentionsSelf: _mentionsSelf, replyToSelf: _replyToSelf, isSelf });
+    const tagHits = matchTags(text, this.config.extraRules);
+
+    // 没有任何实质互动（没加分、没命中标签、没 @/引用）→ 只记访客，不建完整档案。
+    // 这条规则来自真实数据：508 份档案里 403 份是 0 分（79%），全在拖慢排序和读盘。
+    const noRealInteraction = delta === 0 && tagHits.length === 0 && !_mentionsSelf && !_replyToSelf;
+    if (noRealInteraction && this.config.visitorTracking) {
+      this._recordVisitor(userId, ts);
+      return { matched: false, visitor: true, delta: 0, reasons: [] };
+    }
+
+    const p = this._profile(chatId, userId, true);
+    p.lastAt = Math.max(p.lastAt || 0, ts);
+    p.style = updateStyle(p.style, text, ts, this.config.blockWords);
+
+    // 标签命中 → 打标 / 顺延
+    const newTags = [];
+    for (const h of tagHits) {
+      this.state.tags[userId] = hitTag(
+        this.state.tags[userId] || [],
+        h.tag,
+        h.advice,
+        ts,
+        this.config.tagTtlHours,
+      );
+      newTags.push(h.tag);
+    }
+
+    // 好感度
+    let applied = 0;
     if (delta !== 0) {
       const dayKey = this._dayKey(ts);
       if (p.affinity.dayKey !== dayKey) {
@@ -351,7 +496,39 @@ export class PersonaMemory {
     }
 
     this._dirty = true;
-    return { matched: delta !== 0, delta: applied, reasons };
+    return {
+      matched: delta !== 0 || newTags.length > 0,
+      delta: applied,
+      reasons,
+      tags: newTags,
+    };
+  }
+
+  /** 记录一次"来过"（不建档，只更新访客表） */
+  _recordVisitor(userId, ts) {
+    const id = String(userId);
+    const v = this.state.visitors[id];
+    if (v) {
+      v.lastSeen = Math.max(v.lastSeen, ts);
+      v.count += 1;
+    } else {
+      this.state.visitors[id] = { firstSeen: ts, lastSeen: ts, count: 1 };
+    }
+    this._dirty = true;
+  }
+
+  /** 查访客记录 */
+  getVisitor(userId) {
+    const v = this.state.visitors[String(userId)];
+    return v ? { userId: String(userId), ...v } : null;
+  }
+
+  /** 列出访客（按最近来访排序） */
+  listVisitors(limit = 50) {
+    return Object.entries(this.state.visitors)
+      .map(([userId, v]) => ({ userId, ...v }))
+      .sort((a, b) => b.lastSeen - a.lastSeen)
+      .slice(0, limit);
   }
 
   /** 组装提示词段落 */
@@ -374,7 +551,7 @@ export class PersonaMemory {
       .sort((a, b) => b.value - a.value)
       .slice(0, max);
 
-    if (!rows.length) return '';
+    if (!rows.length && !this.config.visitorHint) return '';
 
     const lines = [];
     for (const r of rows) {
@@ -384,6 +561,21 @@ export class PersonaMemory {
       if (r.tags.length) parts.push(`状态：${r.tags.slice(0, 3).map((t) => t.tag).join('、')}`);
       lines.push(`- ${r.id}：${parts.join('，')}`);
     }
+
+    // 访客提示：没建档但来过多次的人，提一句（config.visitorHint 可关）
+    if (this.config.visitorHint) {
+      const minCount = this.config.visitorHintMinCount ?? 2;
+      const known = new Set(rows.map((r) => r.id));
+      for (const id of userIds) {
+        if (known.has(id)) continue;
+        const v = this.state.visitors[id];
+        if (v && v.count >= minCount) {
+          lines.push(`- ${id}：来过 ${v.count} 次，没怎么聊过`);
+        }
+      }
+    }
+
+    if (!lines.length) return '';
 
     let block = `【交往记忆】\n${lines.join('\n')}`;
     if (block.length > limit) block = block.slice(0, limit - 1) + '…';
@@ -411,11 +603,13 @@ export class PersonaMemory {
     };
   }
 
-  /** 维护：衰减 + 标签清理/晋升 */
+  /** 维护：衰减 + 标签清理/晋升/降级 */
   maintain(now = Date.now()) {
     let decayed = 0;
     let expired = 0;
     let promoted = 0;
+    let demoted = 0;
+    let forcedOut = 0;
 
     for (const chat of Object.values(this.state.sessions)) {
       for (const p of Object.values(chat)) {
@@ -436,11 +630,13 @@ export class PersonaMemory {
       this.state.tags[uid] = r.tags;
       expired += r.expired;
       promoted += r.promoted;
+      demoted += r.demoted;
+      forcedOut += r.forcedOut;
     }
 
     this._dirty = true;
     this.flush();
-    return { decayed, expired, promoted };
+    return { decayed, expired, promoted, demoted, forcedOut };
   }
 
   flush() {
