@@ -1,0 +1,78 @@
+[
+  {
+    "text": "今天好累啊",
+    "expected": [
+      "最近很累"
+    ]
+  },
+  {
+    "text": "我在找工作",
+    "expected": [
+      "压力大"
+    ]
+  },
+  {
+    "text": "今天发烧了",
+    "expected": [
+      "身体不舒服"
+    ]
+  },
+  {
+    "text": "我升职了",
+    "expected": [
+      "有喜事"
+    ]
+  },
+  {
+    "text": "先不聊，回头聊",
+    "expected": [
+      "在忙"
+    ]
+  },
+  {
+    "text": "今天好烦",
+    "expected": [
+      "心情不好"
+    ]
+  },
+  {
+    "text": "今天天气不错",
+    "expected": []
+  },
+  {
+    "text": "我不是在找工作",
+    "expected": []
+  },
+  {
+    "text": "没有生病",
+    "expected": []
+  },
+  {
+    "text": "他说“我在找工作”",
+    "expected": []
+  },
+  {
+    "text": "今天加班到十点",
+    "expected": [
+      "最近很累"
+    ]
+  },
+  {
+    "text": "我已经不再加班了",
+    "expected": []
+  },
+  {
+    "text": "I am tired",
+    "expected": []
+  },
+  {
+    "text": "我不是不开心",
+    "expected": []
+  },
+  {
+    "text": "我在面试，但不是不开心",
+    "expected": [
+      "压力大"
+    ]
+  }
+]

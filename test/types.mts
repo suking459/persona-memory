@@ -1,0 +1,16 @@
+import {PersonaMemory,updateStyle,summarizeStyle,type MemorySnapshot} from 'persona-memory';
+import {createPreset} from 'persona-memory/presets';
+import {parseDiscord} from 'persona-memory/adapters/discord';
+import {createLangChainBridge} from 'persona-memory/adapters/langchain';
+import {createLlamaIndexBridge} from 'persona-memory/adapters/llamaindex';
+const pm=new PersonaMemory({scope:'test',config:createPreset('npc'),clock:()=>100});
+pm.ingest({chatId:'room',userId:'u',text:'hi',directedToBot:true,eventId:'one'});
+const context=pm.buildContext({chatId:'room',userIds:['u']});
+pm.confirmContext(context,{turnId:'one'});
+pm.setTag({chatId:'room',userId:'u',tag:'checked',source:'host'});
+pm.recordEvent({chatId:'room',userId:'u',type:'fulfilled',changes:{trust:1}});
+const copy:MemorySnapshot=pm.export();pm.import(copy);
+const style=updateStyle(null,'hi',100);summarizeStyle(style);
+parseDiscord(null,{selfId:'bot'});
+createLangChainBridge(pm,{chatId:'r',userId:'u'}).invoke({text:'hi',turnId:'t'},async values=>String(values.persona_memory));
+createLlamaIndexBridge(pm,{chatId:'r',userId:'u',memory:{async add(){},async get(){return []}}});
