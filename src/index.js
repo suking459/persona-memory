@@ -91,7 +91,7 @@ function containsAny(text, words) {
  * @param {{mentionsSelf?:boolean, replyToSelf?:boolean, isSelf?:boolean}} ctx
  */
 export function scoreMessage(text, ctx = {}) {
-  if (ctx.isSelf) return 0; // 自己的消息不计分
+  if (ctx.isSelf) return { delta: 0, reasons: [] }; // 自己的消息不计分
   const reasons = [];
   let delta = 0;
 
@@ -150,6 +150,10 @@ export function updateStyle(style, text, ts, blockWords = []) {
       for (let i = 0; i + n <= clean.length; i++) {
         const frag = clean.slice(i, i + n);
         if (/^[0-9a-zA-Z]+$/.test(frag)) continue;
+        // 纯标点/符号片段（"??" "。。" "!!"）不是口头禅，跳过
+        if (/^[\p{P}\p{S}\p{Z}]+$/u.test(frag)) continue;
+        // 必须至少含一个汉字/字母，避免 "?好" 这种半截碎片
+        if (!/[\p{Script=Han}a-zA-Z]/u.test(frag)) continue;
         if (blockWords.some((w) => w && (frag.includes(w) || w.includes(frag)))) continue;
         s.catch[frag] = (s.catch[frag] || 0) + 1;
       }
@@ -161,11 +165,19 @@ export function updateStyle(style, text, ts, blockWords = []) {
 export function summarizeStyle(style) {
   const s = style || { count: 0, totalChars: 0, questions: 0, emojis: 0, night: 0, catch: {} };
   const n = s.count || 1;
-  const catchphrases = Object.entries(s.catch || {})
-    .filter(([, c]) => c >= 3)
+
+  // 滑窗切出的碎片里有很多是"被更长片段包含"的（"确实确实" 会切出 "实确"）。
+  // 规则：一个片段如果被某个更长的片段包含，且那个长片段的出现次数不少于它，
+  // 就认为它是碎片，丢掉。这样只留最长的、真正有意义的那个。
+  const cand = Object.entries(s.catch || {}).filter(([, c]) => c >= 3);
+  const keep = cand.filter(([w, c]) => {
+    return !cand.some(([w2, c2]) => w2.length > w.length && w2.includes(w) && c2 >= c);
+  });
+  const catchphrases = keep
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([w]) => w);
+
   return {
     count: s.count,
     avgChars: Math.round((s.totalChars / n) * 10) / 10,

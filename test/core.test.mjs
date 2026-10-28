@@ -70,3 +70,23 @@ test('style summary', () => {
   assert.equal(sum.count, 5);
   assert.ok(sum.catchphrases.includes('确实'));
 });
+
+test('score: isSelf returns object not number (regression)', () => {
+  const r = scoreMessage('hi', { isSelf: true });
+  assert.equal(typeof r, 'object');
+  assert.equal(r.delta, 0);
+  assert.deepEqual(r.reasons, []);
+});
+
+test('ingest: bot own message does not crash', () => {
+  const pm = new PersonaMemory({ storage: null });
+  const r = pm.ingest({ chatId: 'g', userId: 'bot', text: '我是回复', isSelf: true });
+  assert.equal(r.matched, false);
+});
+test('catchphrase: punctuation fragments are ignored', () => {
+  let s = null;
+  const now = Date.now();
+  for (let i = 0; i < 5; i++) s = updateStyle(s, '真的吗？？', now);
+  const sum = summarizeStyle(s);
+  assert.ok(!sum.catchphrases.includes('？？'), '不该把纯标点当口头禅');
+});

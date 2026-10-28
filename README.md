@@ -1,4 +1,4 @@
-﻿# persona-memory
+# persona-memory
 
 [![npm version](https://img.shields.io/npm/v/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
 [![npm downloads](https://img.shields.io/npm/dm/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
@@ -134,6 +134,35 @@ setInterval(() => pm.maintain(), 10 * 60 * 1000);
 
 **关于 MCP 的实话**：MCP 是「模型主动调用」，而这个库的核心价值是「框架自动注入」——在模型看到消息**之前**就把关系信息拼好。MCP 版本只能做到「模型想起来时查一下」，体验差一截。详见 [docs/API.md](docs/API.md)。
 
+### LangChain 接入
+
+```js
+import { createLangChainMemory } from 'persona-memory/adapters/langchain';
+
+const memory = createLangChainMemory(pm, {
+  chatId: 'group-1001',
+  senders: ['u-42'],          // 本次涉及的人（不传则从 input 里找 userId）
+});
+
+// 符合 BaseMemory 形状：memoryKeys / loadMemoryVariables / saveContext
+const chain = prompt.pipe(model).pipe(parser);
+await chain.invoke({ input: '...' }, { configurable: { memory } });
+```
+
+不 import langchain（各版本接口变动频繁），鸭子类型，LangChain 0.2/0.3 都能用。
+
+## 先跑起来看效果
+
+```bash
+git clone https://github.com/suking459/persona-memory
+cd persona-memory
+npm run demo        # 或 node demo/server.js
+```
+
+打开 http://127.0.0.1:7788 —— 左边聊天，**右边实时显示**好感度、说话风格、状态标签，以及「实际注入给模型的那段文本」。
+
+回复是按档位写死的规则（不调模型），目的是让你直接看到**关系变了，语气也跟着变**。页面上有「跳过 1 天」按钮，能看衰减。
+
 ---
 
 
@@ -181,6 +210,15 @@ LLM long-term memory · decaying affinity · tag lifecycle · prompt budget
 
 **中文**：AI 记忆 · agent 记忆 · 好感度系统 · 关系记忆 · 用户画像 ·
 陪伴 AI 记忆 · NPC 记忆 · 群聊机器人记忆 · 长期记忆 · 状态标签
+
+## 已知限制
+
+诚实列出来，免得你踩坑才发现：
+
+- **口头禅靠滑动窗口切 2-4 字**，中文没有词边界，偶尔会切出「的吗？？」这类碎片。已做碎片过滤（被更长片段包含的会被丢掉），但极端句式仍可能漏几个。想精确就自己传 `config.blockWords` 屏蔽。
+- **好感度单值**，不像 [eros-engine](https://github.com/etherfunlab/eros-engine) 那样分六轴。单值的好处是本地规则能算、不烧 token；坏处是表达不了「亲近但没耐心」这种复合状态。
+- **标签词表是内置的中文词**，英文场景要自己写 `config.extraRules`。
+- **衰减按天算**，不按消息数。一天内聊一百句和聊一句，第二天掉的都是 2 分。
 
 ## License
 

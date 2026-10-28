@@ -1,20 +1,25 @@
 ﻿{
     "name":  "persona-memory",
-    "version":  "0.1.0",
+    "version":  "0.2.0",
     "description":  "Social state layer for conversational agents: decaying affinity, expiring tags, local style stats, budgeted prompt blocks. Zero LLM calls, zero deps. Memory for chatbots, AI companions, NPCs and customer support.",
     "type":  "module",
     "main":  "src/index.js",
     "exports":  {
                     ".":  "./src/index.js",
                     "./adapters/onebot":  "./adapters/onebot/index.js",
-                    "./adapters/generic":  "./adapters/generic/index.js"
+                    "./adapters/generic":  "./adapters/generic/index.js",
+                    "./adapters/langchain":  "./adapters/langchain/index.js",
+                    "./types":  "./index.d.ts"
                 },
     "files":  [
                   "src",
                   "adapters",
+                  "demo",
                   "examples",
+                  "index.d.ts",
                   "README.md",
-                  "LICENSE"
+                  "LICENSE",
+                  "!demo/.data"
               ],
     "keywords":  [
                      "agent-memory",
@@ -40,11 +45,15 @@
                    },
     "scripts":  {
                     "test":  "node --test test/core.test.mjs",
-                    "mcp":  "node adapters/mcp/server.js",
+                    "demo":  "node demo/server.js",
                     "http":  "node adapters/http/server.js",
-                    "example":  "node examples/basic.js"
+                    "mcp":  "node adapters/mcp/server.js"
                 },
     "publishConfig":  {
                           "access":  "public"
-                      }
+                      },
+    "types":  "index.d.ts",
+    "devDependencies":  {
+                            "typescript":  "^5.9.3"
+                        }
 }
