@@ -1,4 +1,4 @@
-# persona-memory
+﻿# persona-memory
 
 [![npm version](https://img.shields.io/npm/v/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
 [![npm downloads](https://img.shields.io/npm/dm/persona-memory.svg)](https://www.npmjs.com/package/persona-memory)
@@ -6,6 +6,10 @@
 [![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](package.json)
 
 > 给对话 agent 的**社交状态层**：谁跟你熟、他最近什么状态、该用什么语气。
+
+> **来源**：本库的算法与参数出自 [Kondius/qq-agent](https://github.com/Kondius/qq-agent) 的 `plugins/memory-tree`（MIT），
+> 代码为重新实现。授权链与具体借用了什么，见 [NOTICE.md](NOTICE.md)。
+
 
 不是"记住用户说过什么"，是"记住你和这个人处到哪一步了"。
 
