@@ -9,6 +9,12 @@ export function createMemoryServer({pm=new PersonaMemory(),token='',allowAdmin=f
   return http.createServer(async(req,res)=>{
     try {
       if(token && req.headers.authorization!=='Bearer '+token) return json(res,401,{ok:false,error:'unauthorized'});
+      let authority;
+      try{authority=new URL('http://'+req.headers.host);}catch{return json(res,403,{ok:false,error:'invalid local host'});}
+      const localPort=String(req.socket.localPort);
+      if(!['127.0.0.1','localhost','[::1]'].includes(authority.hostname)||(authority.port||'80')!==localPort||
+        authority.username||authority.password||authority.pathname!=='/'||authority.search||authority.hash)
+        return json(res,403,{ok:false,error:'local host required'});
       const url=new URL(req.url,'http://127.0.0.1');
       if(req.method==='GET' && url.pathname==='/api/health') return json(res,200,{ok:true,version:VERSION});
       if(req.method==='GET' && url.pathname==='/api/stats') return json(res,200,{ok:true,stats:pm.diagnostics()});
@@ -17,11 +23,11 @@ export function createMemoryServer({pm=new PersonaMemory(),token='',allowAdmin=f
       if(!req.headers['content-type']?.startsWith('application/json')) return json(res,415,{ok:false,error:'application/json required'});
       if(req.headers.origin) {
         const origin=new URL(req.headers.origin),localPort=String(req.socket.localPort);
-        if(!['127.0.0.1','localhost'].includes(origin.hostname) || origin.port!==localPort) return json(res,403,{ok:false,error:'cross-origin request denied'});
+        if(origin.protocol!=='http:' || !['127.0.0.1','localhost','[::1]'].includes(origin.hostname) || (origin.port||'80')!==localPort) return json(res,403,{ok:false,error:'cross-origin request denied'});
       }
       const chunks=[];let size=0;
       for await(const chunk of req){size+=chunk.length;if(size>1048576)return json(res,413,{ok:false,error:'body too large'});chunks.push(chunk);}
-      const body=JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');
+      const body=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks))||'{}');
       let result;
       switch(url.pathname){
         case '/api/ingest': {const msg=parse(body);if(!msg)throw new TypeError('chatId/userId required');result=pm.ingest(msg);break;}

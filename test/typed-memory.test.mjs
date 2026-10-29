@@ -1,3 +1,4 @@
+import {testTimeout} from '../tools/test-limits.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -300,7 +301,7 @@ test('fixed-seed typed-memory replay preserves slot, capacity and snapshot invar
 
 test('external watchdog bounds malformed and excessive typed-memory input',()=>{
   const worker=fileURLToPath(new URL('./fixtures/records-worker.mjs',import.meta.url));
-  const result=spawnSync(process.execPath,[worker],{encoding:'utf8',windowsHide:true,timeout:10000,maxBuffer:1048576});
+  const result=spawnSync(process.execPath,[worker],{encoding:'utf8',windowsHide:true,timeout:testTimeout(10000),maxBuffer:1048576});
   assert.equal(result.error,undefined,'typed-memory worker exceeded OS deadline');
   assert.equal(result.status,0,result.stderr);assert.ok(result.stdout.includes('"completed":true'));
 });

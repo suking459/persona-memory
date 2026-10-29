@@ -1,10 +1,10 @@
 # API 与数据语义
 
-状态：GitHub 源码 0.4.0 接口，npm 发包独立处理。核心入口为 PersonaMemory，规则纯函数仍可独立导入。
+状态：本地 1.0 候选；package 版本暂保留 0.4.0，当前新增能力尚未推送或发布。核心入口为 PersonaMemory，规则纯函数仍可独立导入。
 
 ## 通用记忆（本地 0.6 批次）
 
-putMemory/getMemory/listMemories/forgetMemory/deleteSubject 提供用户、项目、任务的结构化记录，详见 [完整说明](typed-memory.md)。独立于关系分与标签，不自动提取或注入旧的 buildContext。searchMemories/buildMemoryContext 提供独立的通用检索与上下文；confirmContexts 可以将其与关系块一并确认，见 [0.7 说明](retrieval.md)。新快照输出 schemaVersion=3，读取旧 schema 1/2。
+putMemory/getMemory/listMemories/forgetMemory/deleteSubject 提供用户、项目、任务的结构化记录，详见 [完整说明](typed-memory.md)。独立于关系分与标签，不自动提取或注入旧的 buildContext。searchMemories/buildMemoryContext 提供独立的通用检索与上下文；confirmContexts 可以将其与关系块一并确认，见 [0.7 说明](retrieval.md)。当前新快照输出 schemaVersion=5，读取并迁移 schema 1/2/3/4。
 
 ## 实例与范围
 
@@ -15,7 +15,7 @@ new PersonaMemory({storage, persona, scope, config, clock})
 - config.tagScope 默认为 user：同一实例内标签/访客按用户共享，关系分数按 chatId+userId 保存。chat 模式下标签/访客也按频道隔离。
 - 应用应该显式命名 chatId 和 userId，平台适配器负责平台边界；不要自动猜测跨平台身份。
 - clock 默认 Date.now；测试/回放可传入可控时钟。所有时间为毫秒。
-- storage 为 null 时不写盘。持久化仅支持单进程写入。
+- storage 为 null 时不写盘。默认 JSON 用锁与内容修订拒绝冲突；自定义存储的并发原子性由宿主实现，详见 time-storage.md。
 
 ## 记录消息
 
@@ -81,7 +81,9 @@ maintain(now?) 进行按时间增量衰减、标签过期/晋升/降级和保留
 
 export() 返回 schemaVersion=5 快照，包含独立的 memories 集合。import(snapshot) 先完整校验再替换，失败不改变现有状态。支持旧 schemaVersion=4/3/2，以及默认 user 共享语义的旧 schemaVersion=1；导入时 persona/scope/存储语义必须一致。见 migration.md。
 
-损坏/未知版本文件导致构造时报错并保留原文件；宿主可以捕获后选择无记忆降级。不能静默覆盖坏文件。
+损坏/未知版本文件导致构造时报错并保留原文件；宿主可以捕获后选择无记忆降级。不能静默覆盖坏文件。完整 import 只接受普通 JSON 数据，不执行 getter/toJSON；总编码字节受 config.maxSnapshotBytes 限制，同时限制嵌套深度 32 和节点数 2,000,000。该校验覆盖未知字段；不接受稀疏数组、访问器、隐藏或 Symbol 属性。
+
+JSON 文件须为普通文件；拒绝符号链接、设备和 FIFO。UTF-8 解码错误明确失败；实际读取最多 maxBytes+1 字节后判断是否超限，避免文件在读取期间增长绕过长度检查。
 
 ## HTTP 与 MCP
 
@@ -91,10 +93,12 @@ MCP 提供 memory_record、memory_context、memory_confirm、memory_profile。st
 
 HTTP/MCP 存储环境变量：PM_STORAGE、PM_PERSONA、PM_SCOPE。不要将实际凭据放进版本库。
 
+HTTP 所有请求的 Host 必须是 127.0.0.1、localhost 或 [::1]，且端口匹配实际监听端口；默认地址仍为回环。反向代理需把后端 Host 改为该回环地址和实际端口，不能直接保留公网 Host。POST 的 Origin 继续要求相同本地端口和 http 协议；Host/Origin 校验不替代宿主鉴权。HTTP/CLI/MCP 拒绝非法 UTF-8。MCP stdio 逐项处理请求并等待 stdout drain 后继续，不会在输出阻塞时无限堆积请求；上限为 1 MiB 的待解析输入，EOF 可处理没有换行的完整末条消息。
+
 
 ## 时间、存储和选择性迁移
 
-getMemoryAt、expectedRevision/validFrom、maxVersionsPerMemory，以及 PersonaMemory.open/persist/reload、JsonFileStore/MemorySnapshotStore、exportMemories/previewMemoryImport/applyMemoryImport 已在本地实现。参数、异步错误和 schema 4 升级边界见 [时间与存储](time-storage.md)。status=current 表示最新版本头，生效值以默认读取/检索的区间选择为准。
+getMemoryAt、expectedRevision/validFrom、maxVersionsPerMemory，以及 PersonaMemory.open/persist/reload、JsonFileStore/MemorySnapshotStore、exportMemories/previewMemoryImport/applyMemoryImport 已在本地实现。参数、异步错误和旧格式升级边界见 [时间与存储](time-storage.md)。status=current 表示最新版本头，生效值以默认读取/检索的区间选择为准。
 
 
 ## 候选审阅与经验

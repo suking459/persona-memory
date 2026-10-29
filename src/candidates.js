@@ -27,7 +27,7 @@ function memoryInput(raw,now,config,fallback){
   fields(raw,MEMORY_FIELDS,'candidate memory');
   const input={...raw,source:raw.source===undefined?'model':raw.source,evidenceId:memoryIdentifier(raw.evidenceId,'candidate evidenceId')};
   for(const field of ['observedAt','validFrom','expiresAt'])if(input[field]===undefined&&fallback)input[field]=fallback[field];
-  const record=prepareMemoryWrite({},input,now,config,()=> 'candidate-validation').record;
+  const record=prepareMemoryWrite({},input,now,{...config,maxMemories:1},()=> 'candidate-validation').record;
   return Object.fromEntries([...MEMORY_FIELDS].map(key=>[key,record[key]]));
 }
 function pool(candidates,config){

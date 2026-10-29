@@ -228,7 +228,7 @@ for(const stage of ['write','rename'])test('failed disk '+stage+' preserves the 
   const second=pm.putMemory({id:'second',subject,kind:'constraint',key:'release',value:'revised',replaceId:first.id});
   const fail=()=>Object.assign(new Error('simulated disk failure'),{code:'EIO'});
   if(stage==='write')fs.writeFileSync=function(target,...args){
-    if(String(target).endsWith('.tmp')){originals.write.call(fs,target,'partial data');throw fail();}
+    if(typeof target==='number' || String(target).endsWith('.tmp')){originals.write.call(fs,target,'partial data');throw fail();}
     return originals.write.call(fs,target,...args);
   };
   else fs.renameSync=function(from,to){if(to===file)throw fail();return originals.rename.call(fs,from,to);};

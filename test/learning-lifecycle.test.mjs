@@ -1,3 +1,4 @@
+import {testTimeout} from '../tools/test-limits.mjs';
 import fs from 'node:fs';
 import {evaluateLearning} from '../tools/evaluate-learning.mjs';
 import test from 'node:test';
@@ -6,7 +7,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {PersonaMemory} from '../src/index.js';
 test('external watchdog bounds recursive extraction and saturated candidate retries',()=>{
-  const result=spawnSync(process.execPath,[fileURLToPath(new URL('./fixtures/learning-worker.mjs',import.meta.url))],{encoding:'utf8',windowsHide:true,timeout:10000});
+  const result=spawnSync(process.execPath,[fileURLToPath(new URL('./fixtures/learning-worker.mjs',import.meta.url))],{encoding:'utf8',windowsHide:true,timeout:testTimeout(10000)});
   assert.equal(result.error,undefined);assert.equal(result.status,0,result.stderr);
   assert.deepEqual(JSON.parse(result.stdout),{recursiveTimeout:true,boundedCandidates:64,pureRetries:500});
 });

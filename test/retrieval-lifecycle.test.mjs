@@ -1,3 +1,4 @@
+import {testTimeout} from '../tools/test-limits.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
@@ -13,7 +14,7 @@ test('classified cross-application retrieval cases match their declared policy l
 
 test('external watchdog bounds long-record retrieval and full-context rendering',()=>{
   const worker=fileURLToPath(new URL('./fixtures/retrieval-worker.mjs',import.meta.url));
-  const result=spawnSync(process.execPath,[worker],{encoding:'utf8',windowsHide:true,timeout:10000,maxBuffer:1048576});
+  const result=spawnSync(process.execPath,[worker],{encoding:'utf8',windowsHide:true,timeout:testTimeout(10000),maxBuffer:1048576});
   assert.equal(result.error,undefined);assert.equal(result.status,0,result.stderr);
   assert.ok(result.stdout.includes('"completed":true'));
 });

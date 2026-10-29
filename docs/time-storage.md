@@ -2,7 +2,7 @@
 
 当前本地 0.9 / 1.0 候选已采用 schema 5；候选审阅、经验和旧格式迁移见 [受控学习](learning.md)。下文内部批次记录不代表已经发布。
 
-本地 0.8 开发内容，尚未发布。公开包版本保留 0.4.0；当前快照为 schema 4。运行示例：`npm run example:time-storage`。主体和 JSON 限制继续见 [通用记忆](typed-memory.md)，检索与模型接入见 [检索](retrieval.md)。
+时间与存储始于本地 0.8 批次，尚未发布。公开包版本保留 0.4.0；当前快照为 schema 5。运行示例：`npm run example:time-storage`。主体和 JSON 限制继续见 [通用记忆](typed-memory.md)，检索与模型接入见 [检索](retrieval.md)。
 
 ## 获知、生效和保留时间
 
@@ -54,7 +54,7 @@ maxVersionsPerMemory 默认 32，上限 1000、下限 1。每次写入只裁剪�
 
 ## 快照与兼容
 
-export() 输出 schemaVersion=4；import() 先完整校验，再替换状态。schema 1/2 的关系数据继续迁移。schema 3 通用记录按旧版即时替代语义迁移：validFrom=createdAt，旧版本 validUntil=updatedAt。
+export() 输出 schemaVersion=5；import() 先完整校验，再替换状态。schema 1/2 的关系数据继续迁移，schema 4 的时间区间保持原语义。schema 3 通用记录按旧版即时替代语义迁移：validFrom=createdAt，旧版本 validUntil=updatedAt。
 
 schema 4 必须含完整时间字段。只修改 schemaVersion 不能降级；旧代码也会拒绝新格式。升级前保留旧数据和旧代码备份。对含重叠区间、重复修订或相互矛盾的残缺链，导入会明确失败；磁盘原文件保留，不猜测如何修补。旧 schema 3 也可能包含旧实现允许的歧义片段，这类文件需要宿主显式整理，不能保证任意历史文件都可无损自动修复。
 
@@ -71,9 +71,13 @@ catch (error) {
 }
 ```
 
-ERR_STORE_LOCKED 表示另一个写者持有锁；不自动抢占“看起来旧”的锁。进程异常退出可能留下锁文件，需确认写者已经停止后由宿主恢复。本批验证了 Windows 本地文件上两个本项目进程竞争，不能据此宣称网络文件系统、未遵守锁的编辑器、旧版本写者或任意多进程程序都安全。文件修订是内容哈希；字节完全相同视为相同内容，不是全局事件序号。
+ERR_STORE_LOCKED 表示另一个写者持有锁；不自动抢占“看起来旧”的锁。进程异常退出可能留下锁文件，需确认写者已经停止后由宿主恢复。当前已在 Windows/Ubuntu 本地文件上验证两个本项目进程竞争，另有真实进程在 rename 前后被终止的恢复检查；详见 [多环境记录](1.0-HARDENING.md)。不能据此宣称网络文件系统、未遵守锁的编辑器、旧版本写者或任意多进程程序都安全。文件修订是内容哈希；字节完全相同视为相同内容，不是全局事件序号。
 
 实现使用 Node 的独占打开、同步文件操作和重命名机制；Node 文档也说明独占标记在某些网络文件系统上可能不起作用。参见 [Node fs](https://nodejs.org/api/fs.html)。不声称具备数据库事务、目录级断电持久性或 Windows ACL 配置能力。
+
+读取仅接受普通文件，拒绝符号链接/FIFO/设备；非法 UTF-8 不替换为其他字符。文件在 stat 后增长时仍受实际读取字节上限约束。写者只清理自己成功创建的临时文件，临时文件名碰撞不会删除他人的文件。进程被强杀可能留下自己的临时文件与锁，恢复前需确认写者确实停止；不自动循环重试。
+
+Node 26 的 --permission 模式会禁用 fsync；本次实测即使授予目录读写权限，内置 JsonFileStore 仍会 ERR_ACCESS_DENIED，清理临时文件后失败。它不会通过跳过 fsync 声称保存成功。该环境可使用 MemorySnapshotStore 或宿主提供的存储；具体存储能力由宿主验证，不能把权限 smoke test 当作完整安全沙箱证明。
 
 ## 可插拔异步存储
 

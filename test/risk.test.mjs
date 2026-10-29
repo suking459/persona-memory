@@ -1,3 +1,4 @@
+import {testTimeout} from '../tools/test-limits.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
@@ -10,7 +11,7 @@ import {createPreset} from '../src/presets.js';
 const worker=fileURLToPath(new URL('./fixtures/risk-worker.mjs',import.meta.url));
 for(const mode of ['quotes','repetition','recursive','late-result','bounded-wait','saturation']){
   test('external watchdog: '+mode,()=>{
-    const result=spawnSync(process.execPath,[worker,mode],{encoding:'utf8',windowsHide:true,timeout:10000,maxBuffer:1048576});
+    const result=spawnSync(process.execPath,[worker,mode],{encoding:'utf8',windowsHide:true,timeout:testTimeout(10000),maxBuffer:1048576});
     assert.equal(result.error,undefined,'worker exceeded the OS deadline');
     assert.equal(result.status,0,result.stderr);assert.ok(result.stdout.includes('"completed":true'));
   });

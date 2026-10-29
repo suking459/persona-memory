@@ -1,3 +1,4 @@
+import {testTimeout} from '../tools/test-limits.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -32,7 +33,7 @@ test('two actual processes cannot both commit from the same JSON revision',{time
 });
 test('external watchdog bounds 1000-record transfer, idempotent preview and excessive input',()=>{
   const result=spawnSync(process.execPath,[fileURLToPath(new URL('./fixtures/time-storage-worker.mjs',import.meta.url))],
-    {encoding:'utf8',timeout:10000,windowsHide:true});
+    {encoding:'utf8',timeout:testTimeout(10000),windowsHide:true});
   assert.equal(result.error,undefined);assert.equal(result.status,0,result.stderr);
   assert.deepEqual(JSON.parse(result.stdout),{imported:1000,retryUnchanged:1000,oversizedRejected:true});
 });

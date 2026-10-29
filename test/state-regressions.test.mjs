@@ -1,3 +1,4 @@
+import {testTimeout} from '../tools/test-limits.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {setImmediate as nextTurn} from 'node:timers/promises';
@@ -67,7 +68,7 @@ test('LlamaIndex history arriving after timeout cannot start the model call',asy
     get(){return new Promise(resolve=>{releaseHistory=resolve;});},
   };
   const pm=new PersonaMemory();
-  const bridge=createLlamaIndexBridge(pm,{memory,chatId:'room',userId:'user',timeoutMs:10});
+  const bridge=createLlamaIndexBridge(pm,{memory,chatId:'room',userId:'user',timeoutMs:testTimeout(200)});
   await assert.rejects(bridge.invoke({text:'hello',turnId:'late-history',call:async()=>{
     modelCalls++;return 'late response';
   }}),{code:'ERR_TURN_TIMEOUT'});

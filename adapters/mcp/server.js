@@ -61,20 +61,33 @@ export async function handleMcp(msg,pm){
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
   const pm=new PersonaMemory({storage:process.env.PM_STORAGE||null,persona:process.env.PM_PERSONA||'assistant',scope:process.env.PM_SCOPE||''});
-  let buffer='',queue=Promise.resolve();
-  process.stdin.setEncoding('utf8');
-  process.stdin.on('data',chunk=>{
-    buffer+=chunk;
-    if(Buffer.byteLength(buffer)>1048576){process.stderr.write('Input exceeds 1 MiB\n');process.exitCode=1;process.stdin.destroy();return;}
-    let end;
-    while((end=buffer.indexOf('\n'))>=0){
-      const line=buffer.slice(0,end).trim();buffer=buffer.slice(end+1);if(!line)continue;
-      queue=queue.then(async()=>{
-        let result;
-        try{result=await handleMcp(JSON.parse(line),pm);}catch{result={jsonrpc:'2.0',id:null,error:{code:-32700,message:'Parse error'}};}
-        if(result)process.stdout.write(JSON.stringify(result)+'\n');
-      });
+  const decoder=new TextDecoder('utf-8',{fatal:true});let buffer='';
+  const write=async value=>{
+    const {once}=await import('node:events');
+    if(!process.stdout.write(JSON.stringify(value)+'\n'))await once(process.stdout,'drain');
+  };
+  const line=async text=>{
+    if(!text.trim())return;
+    let result;
+    try{result=await handleMcp(JSON.parse(text),pm);}
+    catch{result={jsonrpc:'2.0',id:null,error:{code:-32700,message:'Parse error'}};}
+    if(result)await write(result);
+  };
+  try{
+    for await(const chunk of process.stdin){
+      buffer+=decoder.decode(chunk,{stream:true});
+      if(Buffer.byteLength(buffer)>1048576)throw new RangeError('Input exceeds 1 MiB');
+      let end;
+      while((end=buffer.indexOf('\n'))>=0){const current=buffer.slice(0,end);buffer=buffer.slice(end+1);await line(current);}
     }
-  });
-  process.stdin.on('end',()=>{queue.then(()=>pm.flush()).catch(e=>{process.stderr.write(e.message+'\n');process.exitCode=1;});});
+    buffer+=decoder.decode();
+    if(Buffer.byteLength(buffer)>1048576)throw new RangeError('Input exceeds 1 MiB');
+    if(buffer.trim())await line(buffer);
+    await pm.persist();
+  }catch(error){
+    if(error instanceof TypeError&&/encoded data|encoding/i.test(error.message)){
+      await write({jsonrpc:'2.0',id:null,error:{code:-32700,message:'Invalid UTF-8'}});
+    }else process.stderr.write(error.message+'\n');
+    process.exitCode=1;
+  }
 }

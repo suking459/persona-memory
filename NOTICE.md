@@ -32,3 +32,5 @@ records.js 的明确主体、有类型记录、受限 JSON、独立寿命和显�
 0.8 的显式时间区间、有限版本、storage.js 的 CAS 存储协议，以及 transfer.js 的选择性迁移/冲突预览由本项目独立实现；设计原则的公开参考见 docs/time-storage.md，保留已有来源与许可。
 
 候选状态机 candidates.js、experience.js 的宿主经验契约、学习桥和审阅 CLI 为本项目独立实现；公开概念依据在 docs/learning.md 列明，不主张通用记忆概念首创。
+
+本次 1.0 加固新增 snapshot.js：不执行访问器的有界 JSON 快照复制与编码字节计数；以及普通文件/严格 UTF-8 读取、临时文件归属清理、stdio 背压处理与原型同名身份回归。实现与验证由本项目独立完成；不改变已有来源和版权说明。

@@ -21,7 +21,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     if(!process.env.PM_STORAGE)throw new TypeError('PM_STORAGE is required; review uses an explicit project data directory');
     let size=0;const chunks=[];
     for await(const chunk of process.stdin){size+=chunk.length;if(size>1048576)throw new RangeError('review request exceeds 1 MiB');chunks.push(chunk);}
-    const request=JSON.parse(Buffer.concat(chunks).toString('utf8').replace(/^\uFEFF/,''));
+    const request=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)).replace(/^\uFEFF/,''));
     const pm=new PersonaMemory({storage:process.env.PM_STORAGE,persona:process.env.PM_PERSONA||'default',scope:process.env.PM_SCOPE||''});
     const result=review(pm,request);pm.flush();process.stdout.write(JSON.stringify(result)+'\n');
   }catch(error){process.stderr.write(JSON.stringify({error:error.message,...(error.code?{code:error.code}:{})})+'\n');process.exitCode=1;}

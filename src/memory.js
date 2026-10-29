@@ -1,3 +1,4 @@
+import {copySnapshotJSON} from './snapshot.js';
 import {experienceInput,selectExperiences} from './experience.js';
 import {stageCandidateProposals,stageCandidateAcceptance,reviseCandidate as reviseProposal,rejectCandidate as rejectProposal,selectCandidates,hydrateCandidates,candidateConflict} from './candidates.js';
 import {validateResourceLimits,capacityError} from './limits.js';
@@ -13,6 +14,7 @@ import { SCORE_RULES, tierOf, clampAffinity, applyDailyGain, decayAmount, scoreM
 
 const DAY = 86400000;
 const own = (object, key) => Object.hasOwn(object, key);
+const entry = (object,key,fallback) => own(object,key)?object[key]:fallback;
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const chars = (text) => Array.from(text);
 const inline = (text) => String(text).replace(/[\r\n\t\u0000-\u001f]/g, ' ');
@@ -111,7 +113,6 @@ export class PersonaMemory {
       if(!loaded || !Object.hasOwn(loaded,'snapshot'))throw new TypeError('invalid store read result');
       checkRevision(loaded.revision);
       if((loaded.snapshot===null)!==(loaded.revision===null))throw new TypeError('inconsistent store read result');
-      if(loaded.snapshot!==null && Buffer.byteLength(JSON.stringify(loaded.snapshot))>this.config.maxSnapshotBytes)throw capacityError('snapshot');
       const next=loaded.snapshot===null?this._empty():this._hydrate(loaded.snapshot);
       if(JSON.stringify(this.state)!==before)throw storageError('ERR_STORE_DIRTY','memory changed during reload; local changes preserved');
       this.state=next;this._storeRevision=loaded.revision;this._dirty=false;
@@ -132,13 +133,9 @@ export class PersonaMemory {
     }finally{this._storeBusy=false;}
   }
   _hydrate(snapshot) {
-    const memoryField=snapshot && typeof snapshot==='object'?Object.getOwnPropertyDescriptor(snapshot,'memories'):undefined;
-    if(memoryField && (!memoryField.enumerable || !own(memoryField,'value')))throw new TypeError('invalid snapshot memories field');
-    const memories=hydrateMemories(memoryField===undefined?{}:memoryField.value,this.config,{legacy:(snapshot?.schemaVersion??1)<4,allowExperience:snapshot?.schemaVersion>=5});
-    const candidateField=snapshot&&typeof snapshot==='object'?Object.getOwnPropertyDescriptor(snapshot,'candidates'):undefined;
-    if(candidateField&&(!candidateField.enumerable||!own(candidateField,'value')))throw new TypeError('invalid snapshot candidates field');
-    const candidates=hydrateCandidates(candidateField===undefined?{}:candidateField.value,this.config,memories);
-    const raw = clone(snapshot);
+    const raw=copySnapshotJSON(snapshot,this.config.maxSnapshotBytes);
+    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5});
+    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories);
     if (!dictionary(raw) || ![1,2,3,4,5].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
     if (raw.persona && raw.persona !== this.persona) throw new TypeError('snapshot persona mismatch');
     if ((raw.scope ?? '') !== this.scope) throw new TypeError('snapshot scope mismatch');
@@ -173,7 +170,7 @@ export class PersonaMemory {
         profile.lastAddressedAt = p.lastAddressedAt==null ? null : this._now(p.lastAddressedAt);
         profile.dimensions = {};
         for (const [name, rule] of Object.entries(this.config.dimensions)) {
-          const d = p.dimensions?.[name];
+          const d = entry(p.dimensions??{},name);
           profile.dimensions[name] = { value: d ? Math.max(rule.min, Math.min(rule.max, number(d.value,'dimension',-Number.MAX_VALUE))) : rule.baseline,
             lastAt: this._now(d?.lastAt ?? lastAt) };
         }
@@ -323,7 +320,7 @@ export class PersonaMemory {
         const entries=Object.entries(this.state.visitors);
         if(entries.length>=this.config.maxVisitors){let oldest=entries[0];for(const item of entries)if(item[1].lastSeen<oldest[1].lastSeen)oldest=item;delete this.state.visitors[oldest[0]];}
       }
-      const v=this.state.visitors[pkey] || {firstSeen:ts,lastSeen:ts,count:0};
+      const v=entry(this.state.visitors,pkey) || {firstSeen:ts,lastSeen:ts,count:0};
       v.firstSeen=Math.min(v.firstSeen,ts); v.lastSeen=Math.max(v.lastSeen,ts); v.count++;
       this.state.visitors[pkey]=v; this._dirty=true;
       return {matched:false,visitor:true,delta:0,reasons:[]};
@@ -357,7 +354,7 @@ export class PersonaMemory {
       d.value=Math.min(r.max,d.value+Math.max(0,applied)); d.lastAt=ts;
     }
     if (tagHits.length) {
-      let tags=sweepTags(this.state.tags[pkey] || [],ts,this.config).tags;
+      let tags=sweepTags(entry(this.state.tags,pkey,[]),ts,this.config).tags;
       for (const h of tagHits) {
         tags=hitTag(tags,h.tag,h.advice,ts,this.config.tagTtlHours);
         const t=tags.find((t)=>t.tag===h.tag);
@@ -381,7 +378,7 @@ export class PersonaMemory {
     if (this._duplicate(eventId,chatId,userId,now)) return {duplicate:true};
     this._profile(chatId,userId,true,now).lastAt=now;
     const id=this._personKey(chatId,userId);
-    let tags=sweepTags(this.state.tags[id] || [],now,this.config).tags.filter((t)=>!replace.includes(t.tag));
+    let tags=sweepTags(entry(this.state.tags,id,[]),now,this.config).tags.filter((t)=>!replace.includes(t.tag));
     tags=hitTag(tags,tag,String(advice),now,this.config.tagTtlHours);
     const t=tags.find((t)=>t.tag===tag);
     Object.assign(t,{source,evidenceId:eventId ? String(eventId) : undefined,lastEvidenceAt:now,revision:(t.revision??0)+1});
@@ -394,7 +391,7 @@ export class PersonaMemory {
   }
   removeTag({chatId,userId,tag} = {}) {
     userId=key(userId,'userId'); tag=key(tag,'tag');
-    const id=this._personKey(chatId,userId), tags=this.state.tags[id] || [];
+    const id=this._personKey(chatId,userId), tags=entry(this.state.tags,id,[]);
     const next=tags.filter((t)=>t.tag!==tag);
     if (next.length===tags.length) return false;
     this.state.tags[id]=next; this._clearTagContexts(); this._dirty=true;
@@ -582,7 +579,7 @@ export class PersonaMemory {
   }
   getVisitor(userId,{chatId}={}) {
     userId=key(userId,'userId');
-    const v=this.state.visitors[this._personKey(chatId,userId)];
+    const v=entry(this.state.visitors,this._personKey(chatId,userId));
     return v ? {userId,...clone(v)} : null;
   }
   listVisitors(limit=50) {
@@ -594,7 +591,7 @@ export class PersonaMemory {
     const p=this._profile(chatId,userId); if (!p) return null;
     const t=tierOf(p.affinity.value);
     return {chatId,userId,affinity:{value:Math.round(p.affinity.value*10)/10,baseline:p.affinity.baseline,tier:t.tier,hint:t.hint,lastInteractiveAt:p.affinity.lastInteractiveAt},
-      style:summarizeStyle(p.style),tags:clone(this.state.tags[this._personKey(chatId,userId)] || []),dimensions:clone(p.dimensions),lastAt:p.lastAt};
+      style:summarizeStyle(p.style),tags:clone(entry(this.state.tags,this._personKey(chatId,userId),[])),dimensions:clone(p.dimensions),lastAt:p.lastAt};
   }
   buildContext({chatId,userIds=[],budget=this.config.maxChars,maxPeople=this.config.maxPeople,priorityUserIds=[],now,tokenBudget,countTokens}={}) {
     chatId=key(chatId,'chatId'); now=this._now(now);
@@ -606,7 +603,7 @@ export class PersonaMemory {
     const candidates=[],omitted=[];
     for (const userId of ids) {
       const p=this._profile(chatId,userId),pk=this._personKey(chatId,userId);
-      const v=this.state.visitors[pk];
+      const v=entry(this.state.visitors,pk);
       if (p) candidates.push({userId,kind:'profile',p,pk,lastAt:p.lastAt,priority:priority.has(userId)?1:0});
       else if (this.config.visitorHint && v && v.count>=this.config.visitorHintMinCount) candidates.push({userId,kind:'visitor',v,pk,lastAt:v.lastSeen,priority:priority.has(userId)?1:0});
       else omitted.push({userId,reason:'no-eligible-memory'});
@@ -616,7 +613,7 @@ export class PersonaMemory {
     for (const c of candidates) {
       if (people.length>=maxPeople) { omitted.push({userId:c.userId,reason:'people-limit'}); continue; }
       let body,selectedTags=[];
-      const tags=c.p ? (this.state.tags[c.pk] || []).filter((t)=>t.longTerm || t.expiresAt===null || t.expiresAt>now)
+      const tags=c.p ? (entry(this.state.tags,c.pk,[])).filter((t)=>t.longTerm || t.expiresAt===null || t.expiresAt>now)
         .sort((a,b)=>(['manual','host'].includes(b.source)?1:0)-(['manual','host'].includes(a.source)?1:0) || b.lastHitAt-a.lastHitAt) : [];
       if (c.kind==='visitor') body='来过 '+c.v.count+' 次，没怎么聊过';
       else {
@@ -683,7 +680,7 @@ export class PersonaMemory {
       }else{
         chats.add(pending.chatId);pending.userIds.forEach(id=>users.add(id));
         for(const ref of pending.refs){
-          const tag=(this.state.tags[ref.personKey] || []).find(tag=>tag.tag===ref.tag && tag.addedAt===ref.addedAt &&
+          const tag=(entry(this.state.tags,ref.personKey,[])).find(tag=>tag.tag===ref.tag && tag.addedAt===ref.addedAt &&
             (tag.lastEvidenceAt??tag.lastHitAt)===ref.lastEvidenceAt && (tag.revision??0)===ref.revision);
           if(tag && (tag.longTerm || tag.expiresAt===null || tag.expiresAt>now))tags.set(JSON.stringify([ref.personKey,ref.tag]),tag);
         }
