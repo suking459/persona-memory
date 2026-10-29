@@ -13,12 +13,12 @@ export function createLlamaIndexBridge(pm,{memory,chatId,userId,budget=700,timeo
         if(!state.inputAdded){
           const ingested=pm.ingest({chatId,userId,text,eventId:turnId,directedToBot:true});
           if(ingested.ignored)throw new RangeError('out-of-order turn');
-          pm.flush();await memory.add({role:'user',content:text});state.inputAdded=true;check();
+          await pm.persist();check();await memory.add({role:'user',content:text});state.inputAdded=true;check();
         }
         const context=state.context || pm.buildContext({chatId,userIds:[userId],budget});
         try{
           if(!state.hasResponse){
-            const history=await memory.get({type:'llamaindex'});
+            const history=await memory.get({type:'llamaindex'});check();
             const messages=context.text?[{role:'system',content:context.text},...history]:history;
             const response=await call(messages,{signal});check();state.response=response;state.hasResponse=true;state.context=context;
           }
@@ -26,7 +26,7 @@ export function createLlamaIndexBridge(pm,{memory,chatId,userId,budget=700,timeo
           const output=typeof state.response==='string'?state.response:state.response?.message?.content;
           if(!state.outputAdded && typeof output==='string'){await memory.add({role:'assistant',content:output});state.outputAdded=true;check();}
           return {response:state.response,context:state.context,usage};
-        }finally{pm.flush();}
+        }finally{await pm.persist();}
       });
     },
     context(){return pm.buildContext({chatId,userIds:[userId],budget});},

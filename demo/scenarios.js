@@ -26,8 +26,8 @@ export function createDemoState({storage=null}={}) {
       const pm=select(name);now++;
       if(action==='advance-day'){now+=86400000;for(const memory of Object.values(memories))memory.maintain();}
       else if(action==='reset')pm.deleteUser('visitor');
-      else if(name==='support' && action==='unresolved')pm.setTag({chatId:'demo',userId:'visitor',tag:'待跟进',source:'host',expiresAt:null,replace:['已解决']});
-      else if(name==='support' && action==='resolved')pm.setTag({chatId:'demo',userId:'visitor',tag:'已解决',source:'host',replace:['待跟进']});
+      else if(name==='support' && action==='unresolved')pm.setTag({chatId:'demo',userId:'visitor',tag:'待跟进',advice:'先确认当前进度，接着处理未完成的问题',source:'host',expiresAt:null,replace:['已解决']});
+      else if(name==='support' && action==='resolved')pm.setTag({chatId:'demo',userId:'visitor',tag:'已解决',advice:'不要继续追问已解决问题',source:'host',replace:['待跟进']});
       else if(name==='npc' && ['promise-kept','promise-broken'].includes(action))pm.recordEvent({chatId:'demo',userId:'visitor',type:action,changes:{trust:action==='promise-kept'?10:-10}});
       else throw new TypeError('action not available in this scenario');
       pm.flush();return state(name);

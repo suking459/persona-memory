@@ -9,7 +9,7 @@ export function createLangChainMemory(pm,{chatId,senders=[],budget=700,maxPeople
     async saveContext(input={}){
       const participants=ids(input),sender=input.userId??input.sender??input.user_id??(participants.length===1?participants[0]:null);
       if(!sender)throw new TypeError('one actual sender is required; do not attribute one message to every participant');
-      pm.ingest({chatId,userId:String(sender),text:getText(input),directedToBot:true,eventId:input.turnId});pm.flush();
+      pm.ingest({chatId,userId:String(sender),text:getText(input),directedToBot:true,eventId:input.turnId});await pm.persist();
     },
   };
 }
@@ -25,10 +25,10 @@ export function createLangChainBridge(pm,{chatId,userId,budget=700,memoryKey='pe
       if(ingested.ignored)throw new RangeError('out-of-order turn');
       const context=state.context || pm.buildContext({chatId,userIds:[userId],budget});
       try{
-        if(!state.hasResponse){pm.flush();const response=await call({...input,[memoryKey]:context.text},{signal});check();state.response=response;state.hasResponse=true;state.context=context;}
+        if(!state.hasResponse){await pm.persist();check();const response=await call({...input,[memoryKey]:context.text},{signal});check();state.response=response;state.hasResponse=true;state.context=context;}
         check();const usage=acknowledge(pm,state.context,turnId);
         return {response:state.response,context:state.context,usage};
-      }finally{pm.flush();}
+      }finally{await pm.persist();}
     });
   }};
 }

@@ -4,7 +4,7 @@
 
 | 接入 | 开发验证版本 | 验证内容 | 尚未验证 |
 |---|---|---|---|
-| 核心、HTTP、MCP | Node 24.16.0 | 消息语义、预览、确认、HTTP 请求与协议处理 | 完整矩阵以 GitHub CI 记录为准 |
+| 核心、HTTP、MCP | Windows/Ubuntu：Node 18 核心，20/22/24/26 完整 | 消息/通用记忆语义、预算、版本/候选、存储与协议 | macOS/ARM、网络盘与长期生产负载 |
 | Discord | discord.js 14.27.0 | 消息形状、@、回复、机器人过滤的离线用例 | 真实登录、权限和断线重连 |
 | LangChain | @langchain/core 1.3.1 | 真实 Runnable 接收关系上下文 | 外部模型 API 与所有框架版本 |
 | LlamaIndex TS | @llamaindex/core 0.6.23 | 真实 Memory.add/get 及上下文组合 | 外部模型与后续替代框架 |
@@ -35,7 +35,7 @@ TS 官方参考：https://developers.llamaindex.ai/typescript/framework-api-refe
 
 ## 运行要求
 
-核心仅使用 Node 内置模块，面向 Node 18+。可选 LangChain 开发验证依赖要求 Node 20+，不等于核心新增了运行时依赖。本机开发基线为 Node 24；CI 覆盖 Node 18 核心及 Node 20/22/24 在 Windows、Linux 上的完整集成，实际结果见 GitHub 检查记录。
+核心仅使用 Node 内置模块，面向 Node 18+。可选 LangChain 开发验证依赖要求 Node 20+，不等于核心新增了运行时依赖。部署选择维护中的 LTS；Node 18/20 仅保留 EOL 兼容检查。本地已验收 Windows 六组合与 Ubuntu 五组合，具体版本、Linux 仿真条件和边界见 [加固记录](1.0-HARDENING.md)。最终发布的 Windows/Linux Node 20/22/24/26 及 Node 18 核心检查见 [Actions](https://github.com/suking459/persona-memory/actions/workflows/ci.yml)。
 
 ## 故障降级
 

@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {PersonaMemory,MemorySnapshotStore} from '../src/index.js';
+import {createMemoryServer} from '../adapters/http/server.js';
+import {handleMcp} from '../adapters/mcp/server.js';
+const subject={type:'project',id:'workflow'};
+test('HTTP review routes enforce admin, version conflicts and persistence through an async store',async t=>{
+  const store=new MemorySnapshotStore(),pm=await PersonaMemory.open({store,clock:()=>1000}),server=createMemoryServer({pm,token:'test',allowAdmin:true});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>server.close(resolve)));
+  const post=async(route,body)=>{const r=await fetch('http://127.0.0.1:'+server.address().port+route,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer test'},body:JSON.stringify(body)});return {status:r.status,body:await r.json()};};
+  const proposed=await post('/api/candidates/propose',{memory:{subject,kind:'constraint',key:'release',value:'after all checks',evidenceId:'message'}});
+  assert.equal(proposed.status,200);const id=proposed.body.candidate.id;
+  assert.equal((await post('/api/memory/search',{subject})).body.matches.length,0);
+  assert.equal((await post('/api/candidates/list',{subject,status:'pending'})).body.candidates.length,1);
+  assert.equal((await post('/api/candidates/accept',{id,options:{expectedRevision:2}})).status,409);
+  const accepted=await post('/api/candidates/accept',{id,options:{expectedRevision:1}});assert.equal(accepted.body.record.value,'after all checks');
+  const restored=await PersonaMemory.open({store,clock:()=>1000});assert.equal(restored.getCandidate(id).status,'accepted');
+  const disabled=createMemoryServer({pm});await new Promise(resolve=>disabled.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>disabled.close(resolve)));
+  const response=await fetch('http://127.0.0.1:'+disabled.address().port+'/api/candidates/reject',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,options:{expectedRevision:1}})});assert.equal(response.status,403);
+});
+test('MCP exposes host-reported experiences but no candidate acceptance or extraction authority',async()=>{
+  const pm=new PersonaMemory({clock:()=>1000});pm.recordExperience({subject,key:'method',task:'Check release',attempt:'Replay',result:'Passed these cases',outcome:'success',verified:true,evidenceId:'run'});
+  const listing=await handleMcp({jsonrpc:'2.0',id:1,method:'tools/list'},pm);
+  assert.ok(!listing.result.tools.some(tool=>/candidate|extract|experience_record/.test(tool.name)));
+  const result=await handleMcp({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'memory_experiences',arguments:{subject,verifiedOnly:true}}},pm);
+  assert.equal(JSON.parse(result.result.content[0].text).experiences[0].experience.verified,true);
+});
+test('review CLI reads a real project snapshot, applies an explicit revision and preserves files on rejected actions',t=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'pm-review-'));t.after(()=>{const resolved=path.resolve(dir);assert.ok(resolved.startsWith(path.resolve(os.tmpdir())+path.sep)&&path.basename(resolved).startsWith('pm-review-'));fs.rmSync(resolved,{recursive:true,force:true});});
+  const pm=new PersonaMemory({storage:dir}),candidate=pm.proposeMemory({memory:{subject,kind:'fact',key:'step',value:'check first',evidenceId:'message'}});pm.flush();
+  const cli=fileURLToPath(new URL('../tools/review.mjs',import.meta.url)),run=request=>spawnSync(process.execPath,[cli],{input:JSON.stringify(request),encoding:'utf8',windowsHide:true,timeout:10000,env:{...process.env,PM_STORAGE:dir,PM_PERSONA:'default',PM_SCOPE:''}});
+  const list=run({operation:'list',subject});assert.equal(list.status,0,list.stderr);assert.equal(JSON.parse(list.stdout).candidates.length,1);
+  const file=path.join(dir,'default.json'),before=fs.readFileSync(file,'utf8'),bad=run({operation:'accept',id:candidate.id,options:{expectedRevision:2}});
+  assert.equal(bad.status,1);assert.equal(fs.readFileSync(file,'utf8'),before);
+  const accepted=run({operation:'accept',id:candidate.id,options:{expectedRevision:1}});assert.equal(accepted.status,0,accepted.stderr);
+  assert.equal(new PersonaMemory({storage:dir}).getCandidate(candidate.id).status,'accepted');
+});

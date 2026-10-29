@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {PersonaMemory} from '../../src/index.js';
+const pm=new PersonaMemory({clock:()=>1000,config:{maxMemories:32}});
+const subject={type:'project',id:'synthetic'};
+let deep=0;for(let i=0;i<20000;i++)deep={child:deep};
+assert.throws(()=>pm.putMemory({subject,kind:'fact',key:'deep',value:deep}),/structural/);
+const cycle={};cycle.loop=cycle;
+assert.throws(()=>pm.putMemory({subject,kind:'fact',key:'cycle',value:cycle}),/cyclic/);
+const bad=pm.export();
+bad.memories=Object.fromEntries(Array.from({length:10001},(_,i)=>['id-'+i,{}]));
+const before=pm.export();
+assert.throws(()=>pm.import(bad),error=>error.code==='ERR_MEMORY_CAPACITY');
+assert.deepEqual(pm.export(),before);
+for(let i=0;i<32;i++)pm.putMemory({subject,kind:'fact',key:'f'+i,value:i});
+assert.throws(()=>pm.putMemory({subject,kind:'fact',key:'overflow',value:33}),error=>error.code==='ERR_MEMORY_CAPACITY');
+assert.equal(pm.diagnostics().memories,32);
+console.log(JSON.stringify({completed:true,records:32}));

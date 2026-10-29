@@ -1,3 +1,4 @@
+import {testTimeout} from '../../tools/test-limits.mjs';
 import assert from 'node:assert/strict';
 import {PersonaMemory,matchTags,sweepTags} from '../../src/index.js';
 import {createTurnRunner} from '../../src/turns.js';
@@ -16,7 +17,7 @@ if(mode==='quotes'){
   const run=createTurnRunner({timeoutMs:35});
   await assert.rejects(()=>run('recursive','hi',()=>run('recursive','hi',()=>Promise.resolve('unreachable'))),e=>e.code==='ERR_TURN_TIMEOUT');
 }else if(mode==='late-result'){
-  const pm=new PersonaMemory(),bridge=createLangChainBridge(pm,{chatId:'r',userId:'u',timeoutMs:30});
+  const pm=new PersonaMemory(),bridge=createLangChainBridge(pm,{chatId:'r',userId:'u',timeoutMs:testTimeout(200)});
   let finish;const pending=bridge.invoke({text:'好累',turnId:'late'},()=>new Promise(resolve=>{finish=resolve;}));
   await assert.rejects(pending,e=>e.code==='ERR_TURN_TIMEOUT');
   finish('late');await new Promise(resolve=>setTimeout(resolve,10));

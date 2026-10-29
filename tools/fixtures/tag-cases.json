@@ -3,76 +3,323 @@
     "text": "今天好累啊",
     "expected": [
       "最近很累"
-    ]
+    ],
+    "category": "implicit-statement"
   },
   {
     "text": "我在找工作",
     "expected": [
       "压力大"
-    ]
+    ],
+    "category": "first-person"
   },
   {
     "text": "今天发烧了",
     "expected": [
       "身体不舒服"
-    ]
+    ],
+    "category": "implicit-statement"
   },
   {
     "text": "我升职了",
     "expected": [
       "有喜事"
-    ]
+    ],
+    "category": "first-person"
   },
   {
     "text": "先不聊，回头聊",
     "expected": [
       "在忙"
-    ]
+    ],
+    "category": "mixed-clauses"
   },
   {
     "text": "今天好烦",
     "expected": [
       "心情不好"
-    ]
+    ],
+    "category": "implicit-statement"
   },
   {
     "text": "今天天气不错",
-    "expected": []
+    "expected": [],
+    "category": "no-evidence"
   },
   {
     "text": "我不是在找工作",
-    "expected": []
+    "expected": [],
+    "category": "negation"
   },
   {
     "text": "没有生病",
-    "expected": []
+    "expected": [],
+    "category": "negation"
   },
   {
     "text": "他说“我在找工作”",
-    "expected": []
+    "expected": [],
+    "category": "quoted"
   },
   {
     "text": "今天加班到十点",
     "expected": [
       "最近很累"
-    ]
+    ],
+    "category": "implicit-statement"
   },
   {
     "text": "我已经不再加班了",
-    "expected": []
+    "expected": [],
+    "category": "negation"
   },
   {
     "text": "I am tired",
-    "expected": []
+    "expected": [],
+    "category": "no-evidence"
   },
   {
     "text": "我不是不开心",
-    "expected": []
+    "expected": [],
+    "category": "negation"
   },
   {
     "text": "我在面试，但不是不开心",
     "expected": [
       "压力大"
-    ]
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "我今天发烧了",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "first-person"
+  },
+  {
+    "text": "我现在很难过",
+    "expected": [
+      "心情不好"
+    ],
+    "category": "first-person"
+  },
+  {
+    "text": "本人感冒了",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "first-person"
+  },
+  {
+    "text": "今天感冒了",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "implicit-statement"
+  },
+  {
+    "text": "太累了",
+    "expected": [
+      "最近很累"
+    ],
+    "category": "implicit-statement"
+  },
+  {
+    "text": "我朋友发烧了",
+    "expected": [],
+    "category": "third-party"
+  },
+  {
+    "text": "我的同事在找工作",
+    "expected": [],
+    "category": "third-party"
+  },
+  {
+    "text": "他说他失眠",
+    "expected": [],
+    "category": "third-party"
+  },
+  {
+    "text": "她今天升职了",
+    "expected": [],
+    "category": "third-party"
+  },
+  {
+    "text": "你今天发烧了",
+    "expected": [],
+    "category": "third-party"
+  },
+  {
+    "text": "对方好累",
+    "expected": [],
+    "category": "third-party"
+  },
+  {
+    "text": "你发烧了吗",
+    "expected": [],
+    "category": "question"
+  },
+  {
+    "text": "发烧了吗",
+    "expected": [],
+    "category": "question"
+  },
+  {
+    "text": "今天发烧了？",
+    "expected": [],
+    "category": "question"
+  },
+  {
+    "text": "请问发烧该怎么办",
+    "expected": [],
+    "category": "question"
+  },
+  {
+    "text": "是不是生病了",
+    "expected": [],
+    "category": "question"
+  },
+  {
+    "text": "如果发烧了就去医院",
+    "expected": [],
+    "category": "conditional"
+  },
+  {
+    "text": "假如我感冒了怎么办",
+    "expected": [],
+    "category": "conditional"
+  },
+  {
+    "text": "如果我发烧了，就去医院",
+    "expected": [],
+    "category": "conditional"
+  },
+  {
+    "text": "万一明天加班就不来了",
+    "expected": [],
+    "category": "conditional"
+  },
+  {
+    "text": "我不饿，发烧了",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "clause-negation"
+  },
+  {
+    "text": "没有生病，但是今天好累",
+    "expected": [
+      "最近很累"
+    ],
+    "category": "clause-negation"
+  },
+  {
+    "text": "我今天不加班，明天要面试",
+    "expected": [
+      "压力大"
+    ],
+    "category": "clause-negation"
+  },
+  {
+    "text": "我朋友发烧了，我今天好累",
+    "expected": [
+      "最近很累"
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "你今天加班了吗？我升职了",
+    "expected": [
+      "有喜事"
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "如果发烧就去医院；我今天好累",
+    "expected": [
+      "最近很累"
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "我今天发烧了，你呢？",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "他说“我好累”，我今天感冒了",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "他加班但我升职了",
+    "expected": [
+      "有喜事"
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "我没有生病，我生病了",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "朋友发烧，我发烧",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "mixed-clauses"
+  },
+  {
+    "text": "\"我发烧了\"",
+    "expected": [],
+    "category": "quoted"
+  },
+  {
+    "text": "「我在找工作」",
+    "expected": [],
+    "category": "quoted"
+  },
+  {
+    "text": "他说“我生病了”但我升职了",
+    "expected": [
+      "有喜事"
+    ],
+    "category": "quoted"
+  },
+  {
+    "text": "主要是感冒了",
+    "expected": [
+      "身体不舒服"
+    ],
+    "category": "implicit-statement"
+  },
+  {
+    "text": "主要是我今天好累",
+    "expected": [
+      "最近很累"
+    ],
+    "category": "first-person"
+  },
+  {
+    "text": "我其他事都做完了就是好累",
+    "expected": [
+      "最近很累"
+    ],
+    "category": "first-person"
+  },
+  {
+    "text": "我今天做迷你模型好累",
+    "expected": [
+      "最近很累"
+    ],
+    "category": "first-person"
   }
 ]

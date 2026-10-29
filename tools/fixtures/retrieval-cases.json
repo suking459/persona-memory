@@ -1,0 +1,658 @@
+{
+  "now": 1000,
+  "records": [
+    {
+      "id": "release",
+      "subject": {
+        "type": "project",
+        "id": "work"
+      },
+      "kind": "constraint",
+      "key": "发布要求",
+      "value": "1.0 完整测试后统一发布",
+      "source": "user",
+      "observedAt": 500
+    },
+    {
+      "id": "runtime",
+      "subject": {
+        "type": "project",
+        "id": "work"
+      },
+      "kind": "fact",
+      "key": "运行环境",
+      "value": "Node18 JavaScript",
+      "source": "host"
+    },
+    {
+      "id": "step",
+      "subject": {
+        "type": "project",
+        "id": "work"
+      },
+      "kind": "decision",
+      "key": "开发安排",
+      "value": "先复核上一批，再做检索",
+      "source": "host"
+    },
+    {
+      "id": "progress-old",
+      "subject": {
+        "type": "project",
+        "id": "work"
+      },
+      "kind": "fact",
+      "key": "进度",
+      "value": "尚未开始",
+      "source": "host"
+    },
+    {
+      "id": "progress",
+      "subject": {
+        "type": "project",
+        "id": "work"
+      },
+      "kind": "fact",
+      "key": "进度",
+      "value": "开始检索开发",
+      "source": "host",
+      "replaceId": "progress-old"
+    },
+    {
+      "id": "format",
+      "subject": {
+        "type": "user",
+        "id": "owner"
+      },
+      "kind": "preference",
+      "key": "回答格式",
+      "value": {
+        "language": "中文",
+        "length": "简短"
+      },
+      "source": "user"
+    },
+    {
+      "id": "food",
+      "subject": {
+        "type": "user",
+        "id": "owner"
+      },
+      "kind": "preference",
+      "key": "早餐",
+      "value": "喜欢面包",
+      "source": "user"
+    },
+    {
+      "id": "lesson",
+      "subject": {
+        "type": "task",
+        "id": "lesson"
+      },
+      "kind": "decision",
+      "key": "练习顺序",
+      "value": "先练分数，再练方程",
+      "source": "host"
+    },
+    {
+      "id": "story",
+      "subject": {
+        "type": "project",
+        "id": "story"
+      },
+      "kind": "fact",
+      "key": "世界设定",
+      "value": "故事发生在海边城市",
+      "source": "user"
+    },
+    {
+      "id": "private",
+      "subject": {
+        "type": "project",
+        "id": "other"
+      },
+      "kind": "constraint",
+      "key": "发布要求",
+      "value": "9.9 私人发布",
+      "source": "user"
+    },
+    {
+      "id": "expired",
+      "subject": {
+        "type": "project",
+        "id": "work"
+      },
+      "kind": "state",
+      "key": "健康状态",
+      "value": "发烧",
+      "expiresAt": 1000
+    },
+    {
+      "id": "cpp",
+      "subject": {
+        "type": "project",
+        "id": "tools"
+      },
+      "kind": "fact",
+      "key": "language",
+      "value": "C++"
+    },
+    {
+      "id": "c",
+      "subject": {
+        "type": "project",
+        "id": "tools"
+      },
+      "kind": "fact",
+      "key": "language-c",
+      "value": "C"
+    },
+    {
+      "id": "version-one",
+      "subject": {
+        "type": "project",
+        "id": "versions"
+      },
+      "kind": "fact",
+      "key": "first",
+      "value": "1.0"
+    },
+    {
+      "id": "version-two",
+      "subject": {
+        "type": "project",
+        "id": "versions"
+      },
+      "kind": "fact",
+      "key": "second",
+      "value": "2.0"
+    }
+  ],
+  "cases": [
+    {
+      "name": "project release",
+      "category": "project",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "什么时候发布"
+      },
+      "expected": [
+        "release"
+      ]
+    },
+    {
+      "name": "format preference",
+      "category": "personal",
+      "options": {
+        "subject": {
+          "type": "user",
+          "id": "owner"
+        },
+        "query": "回答格式"
+      },
+      "expected": [
+        "format"
+      ]
+    },
+    {
+      "name": "Chinese value",
+      "category": "personal",
+      "options": {
+        "subject": {
+          "type": "user",
+          "id": "owner"
+        },
+        "query": "中文"
+      },
+      "expected": [
+        "format"
+      ]
+    },
+    {
+      "name": "breakfast",
+      "category": "personal",
+      "options": {
+        "subject": {
+          "type": "user",
+          "id": "owner"
+        },
+        "query": "早餐"
+      },
+      "expected": [
+        "food"
+      ]
+    },
+    {
+      "name": "learning sequence",
+      "category": "learning",
+      "options": {
+        "subject": {
+          "type": "task",
+          "id": "lesson"
+        },
+        "query": "练习"
+      },
+      "expected": [
+        "lesson"
+      ]
+    },
+    {
+      "name": "learning content",
+      "category": "learning",
+      "options": {
+        "subject": {
+          "type": "task",
+          "id": "lesson"
+        },
+        "query": "分数"
+      },
+      "expected": [
+        "lesson"
+      ]
+    },
+    {
+      "name": "creative setting",
+      "category": "creative",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "story"
+        },
+        "query": "海边"
+      },
+      "expected": [
+        "story"
+      ]
+    },
+    {
+      "name": "cross subject selection",
+      "category": "selection",
+      "options": {
+        "subjects": [
+          {
+            "type": "project",
+            "id": "work"
+          },
+          {
+            "type": "user",
+            "id": "owner"
+          }
+        ],
+        "query": "格式"
+      },
+      "expected": [
+        "format"
+      ]
+    },
+    {
+      "name": "cross task selection",
+      "category": "selection",
+      "options": {
+        "subjects": [
+          {
+            "type": "project",
+            "id": "work"
+          },
+          {
+            "type": "task",
+            "id": "lesson"
+          }
+        ],
+        "query": "分数"
+      },
+      "expected": [
+        "lesson"
+      ]
+    },
+    {
+      "name": "no evidence",
+      "category": "abstention",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "天文学"
+      },
+      "expected": []
+    },
+    {
+      "name": "wrong subject cannot leak",
+      "category": "isolation",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "9.9"
+      },
+      "expected": []
+    },
+    {
+      "name": "unknown subject",
+      "category": "isolation",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "unknown"
+        },
+        "query": "发布"
+      },
+      "expected": []
+    },
+    {
+      "name": "current version only",
+      "category": "updates",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "进度"
+      },
+      "expected": [
+        "progress"
+      ]
+    },
+    {
+      "name": "topic contains two records",
+      "category": "project",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "检索"
+      },
+      "expected": [
+        "step",
+        "progress"
+      ]
+    },
+    {
+      "name": "kind narrows topic",
+      "category": "filters",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "检索",
+        "kinds": [
+          "decision"
+        ]
+      },
+      "expected": [
+        "step"
+      ]
+    },
+    {
+      "name": "user source",
+      "category": "filters",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "发布",
+        "sources": [
+          "user"
+        ]
+      },
+      "expected": [
+        "release"
+      ]
+    },
+    {
+      "name": "host source excludes user",
+      "category": "filters",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "发布",
+        "sources": [
+          "host"
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "exact field",
+      "category": "filters",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "Node18",
+        "keys": [
+          "运行环境"
+        ]
+      },
+      "expected": [
+        "runtime"
+      ]
+    },
+    {
+      "name": "case insensitive",
+      "category": "language",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "JAVASCRIPT"
+      },
+      "expected": [
+        "runtime"
+      ]
+    },
+    {
+      "name": "old observation included",
+      "category": "time",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "发布",
+        "observedBefore": 600
+      },
+      "expected": [
+        "release"
+      ]
+    },
+    {
+      "name": "old observation excluded",
+      "category": "time",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "发布",
+        "observedAfter": 501
+      },
+      "expected": []
+    },
+    {
+      "name": "expiry is not evidence",
+      "category": "time",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "发烧"
+      },
+      "expected": []
+    },
+    {
+      "name": "literal version one",
+      "category": "identifiers",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "versions"
+        },
+        "query": "1.0"
+      },
+      "expected": [
+        "version-one"
+      ]
+    },
+    {
+      "name": "literal version two",
+      "category": "identifiers",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "versions"
+        },
+        "query": "2.0"
+      },
+      "expected": [
+        "version-two"
+      ]
+    },
+    {
+      "name": "C++ distinct from C",
+      "category": "identifiers",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "tools"
+        },
+        "query": "C++"
+      },
+      "expected": [
+        "cpp"
+      ]
+    },
+    {
+      "name": "C distinct from C++",
+      "category": "identifiers",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "tools"
+        },
+        "query": "C"
+      },
+      "expected": [
+        "c"
+      ]
+    },
+    {
+      "name": "unsupported language name",
+      "category": "abstention",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "tools"
+        },
+        "query": "Python"
+      },
+      "expected": []
+    },
+    {
+      "name": "empty explicit key filter",
+      "category": "filters",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "发布",
+        "keys": []
+      },
+      "expected": []
+    },
+    {
+      "name": "only stopwords",
+      "category": "abstention",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "what is the"
+      },
+      "expected": []
+    },
+    {
+      "name": "explicit inventory",
+      "category": "filters",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "",
+        "keys": [
+          "运行环境"
+        ]
+      },
+      "expected": [
+        "runtime"
+      ]
+    },
+    {
+      "name": "external cannot escape subjects",
+      "category": "external",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "发布",
+        "relevance": [
+          {
+            "id": "private",
+            "score": 1
+          }
+        ]
+      },
+      "expected": [
+        "release"
+      ]
+    },
+    {
+      "name": "literal synonym unsupported",
+      "category": "abstention",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "release"
+      },
+      "expected": []
+    },
+    {
+      "name": "host semantic result",
+      "category": "external",
+      "options": {
+        "subject": {
+          "type": "project",
+          "id": "work"
+        },
+        "query": "release",
+        "relevance": [
+          {
+            "id": "release",
+            "score": 0.9
+          }
+        ]
+      },
+      "expected": [
+        "release"
+      ]
+    }
+  ]
+}

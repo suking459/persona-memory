@@ -1,13 +1,17 @@
 {
   "name": "persona-memory",
-  "version": "0.4.0",
-  "description": "Social state layer for conversational agents: decaying affinity, expiring tags, local style stats, budgeted prompt blocks. Zero LLM calls, zero deps. Memory for chatbots, AI companions, NPCs and customer support.",
+  "version": "1.0.0",
+  "description": "Host-independent agent memory: typed records, scoped retrieval, temporal versions, reviewed learning, optional relationship state. Zero runtime dependencies.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
     ".": {
       "types": "./index.d.ts",
       "import": "./src/index.js"
+    },
+    "./adapters/memory": {
+      "types": "./adapters/memory/index.d.ts",
+      "import": "./adapters/memory/index.js"
     },
     "./presets": {
       "types": "./src/presets.d.ts",
@@ -33,7 +37,11 @@
       "types": "./adapters/llamaindex/index.d.ts",
       "import": "./adapters/llamaindex/index.js"
     },
-    "./types": "./index.d.ts"
+    "./types": "./index.d.ts",
+    "./adapters/learning": {
+      "types": "./adapters/learning/index.d.ts",
+      "import": "./adapters/learning/index.js"
+    }
   },
   "files": [
     "src",
@@ -56,17 +64,18 @@
   ],
   "keywords": [
     "agent-memory",
-    "persona",
-    "affinity",
-    "relationship",
+    "project-memory",
+    "task-memory",
+    "user-preferences",
+    "context-management",
+    "temporal-memory",
+    "memory",
+    "mcp",
     "chatbot",
-    "llm",
-    "ai-companion",
-    "social-simulation",
     "npc",
-    "user-profile",
-    "character-ai",
-    "memory"
+    "typescript",
+    "relationship",
+    "zero-dependencies"
   ],
   "engines": {
     "node": ">=18"
@@ -82,13 +91,20 @@
     "http": "node adapters/http/server.js",
     "mcp": "node adapters/mcp/server.js",
     "typecheck": "tsc -p test/tsconfig.json",
+    "example:memory": "node examples/typed-memory.js",
+    "example:retrieval": "node examples/retrieval.js",
     "example:discord": "node examples/discord-bot.js",
     "example:langchain": "node examples/langchain.js",
     "example:llamaindex": "node examples/llamaindex.js",
     "evaluate": "node tools/evaluate.mjs",
+    "evaluate:retrieval": "node tools/evaluate-retrieval.mjs",
     "shadow": "node tools/shadow.mjs",
-    "test:core": "node --test test/core.test.mjs test/milestone.test.mjs test/boundaries.test.mjs test/extra.test.mjs test/demo.test.mjs test/risk.test.mjs",
-    "test:risk": "node --test test/risk.test.mjs"
+    "test:core": "node --test test/core.test.mjs test/milestone.test.mjs test/boundaries.test.mjs test/context-regressions.test.mjs test/state-regressions.test.mjs test/text-evidence.test.mjs test/upgrade-scenarios.test.mjs test/typed-memory.test.mjs test/typed-memory-audit.test.mjs test/retrieval.test.mjs test/retrieval-audit.test.mjs test/retrieval-lifecycle.test.mjs test/retrieval-transports.test.mjs test/extra.test.mjs test/demo.test.mjs test/risk.test.mjs test/time-versions.test.mjs test/storage.test.mjs test/transfer.test.mjs test/time-storage-audit.test.mjs test/time-storage-lifecycle.test.mjs test/time-storage-transports.test.mjs test/candidates.test.mjs test/learning.test.mjs test/experience.test.mjs test/learning-audit.test.mjs test/learning-transports.test.mjs test/learning-lifecycle.test.mjs test/platform-boundaries.test.mjs test/transport-boundaries.test.mjs test/prototype-identities.test.mjs",
+    "test:risk": "node --test test/risk.test.mjs",
+    "example:time-storage": "node examples/time-storage.js",
+    "review": "node tools/review.mjs",
+    "evaluate:learning": "node tools/evaluate-learning.mjs",
+    "example:learning": "node examples/learning.js"
   },
   "publishConfig": {
     "access": "public"
@@ -107,6 +123,7 @@
   ],
   "bin": {
     "persona-memory-http": "./adapters/http/server.js",
-    "persona-memory-mcp": "./adapters/mcp/server.js"
+    "persona-memory-mcp": "./adapters/mcp/server.js",
+    "persona-memory-review": "./tools/review.mjs"
   }
 }

@@ -1,0 +1,177 @@
+{
+  "provenance": {
+    "sourceCommit": "cb1ed406e3dba989d5058096220de81a66122303",
+    "sourcePath": "src/index.js",
+    "sourceSha256": "c57887b8ff3f9be7af614c8725a020ffebf2e0499c80ddecaddaf817fc4783c5",
+    "synthetic": true,
+    "timeZone": "UTC",
+    "baseTime": 1767268800000,
+    "generatedAt": 1767269040000,
+    "generation": "Unmodified source from the local Git commit, loaded offline in memory; Date.now fixed for each synthetic message.",
+    "steps": [
+      {
+        "offsetMs": 0,
+        "chatId": "synthetic-chat-a",
+        "userId": "synthetic-member",
+        "text": "好厉害，今天加班了",
+        "mentionsSelf": true
+      },
+      {
+        "offsetMs": 60000,
+        "chatId": "synthetic-chat-a",
+        "userId": "synthetic-member",
+        "text": "晚点再聊",
+        "mentionsSelf": true
+      },
+      {
+        "offsetMs": 120000,
+        "chatId": "synthetic-chat-b",
+        "userId": "synthetic-member",
+        "text": "你好呀",
+        "replyToSelf": true
+      },
+      {
+        "offsetMs": 180000,
+        "chatId": "synthetic-chat-a",
+        "userId": "synthetic-visitor",
+        "text": "路过看看"
+      },
+      {
+        "offsetMs": 240000,
+        "chatId": "synthetic-chat-b",
+        "userId": "synthetic-visitor",
+        "text": "下次再来"
+      }
+    ],
+    "preview": {
+      "chatId": "synthetic-chat-a",
+      "userIds": [
+        "synthetic-member",
+        "synthetic-visitor"
+      ]
+    }
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "persona": "synthetic-upgrade",
+    "sessions": {
+      "synthetic-chat-a": {
+        "synthetic-member": {
+          "affinity": {
+            "value": 7,
+            "baseline": 0,
+            "lastInteractiveAt": 1767268860000,
+            "dayKey": "2026-1-1",
+            "dayGain": 7,
+            "ledger": [
+              {
+                "ts": 1767268860000,
+                "delta": 2,
+                "applied": 2,
+                "reason": "@了"
+              },
+              {
+                "ts": 1767268800000,
+                "delta": 5,
+                "applied": 5,
+                "reason": "夸了+@了"
+              }
+            ]
+          },
+          "style": {
+            "count": 2,
+            "totalChars": 13,
+            "questions": 0,
+            "emojis": 0,
+            "night": 0,
+            "catch": {
+              "好厉": 1,
+              "厉害": 1,
+              "害，": 1,
+              "，今": 1,
+              "今天": 1,
+              "天加": 1,
+              "加班": 1,
+              "班了": 1,
+              "好厉害": 1,
+              "厉害，": 1,
+              "害，今": 1,
+              "，今天": 1,
+              "今天加": 1,
+              "天加班": 1,
+              "加班了": 1,
+              "好厉害，": 1,
+              "厉害，今": 1,
+              "害，今天": 1,
+              "，今天加": 1,
+              "今天加班": 1,
+              "天加班了": 1,
+              "晚点": 1,
+              "点再": 1,
+              "再聊": 1,
+              "晚点再": 1,
+              "点再聊": 1,
+              "晚点再聊": 1
+            }
+          },
+          "lastAt": 1767268860000
+        }
+      },
+      "synthetic-chat-b": {
+        "synthetic-member": {
+          "affinity": {
+            "value": 2,
+            "baseline": 0,
+            "lastInteractiveAt": 1767268920000,
+            "dayKey": "2026-1-1",
+            "dayGain": 2,
+            "ledger": [
+              {
+                "ts": 1767268920000,
+                "delta": 2,
+                "applied": 2,
+                "reason": "引用了"
+              }
+            ]
+          },
+          "style": {
+            "count": 1,
+            "totalChars": 3,
+            "questions": 0,
+            "emojis": 0,
+            "night": 0,
+            "catch": {
+              "你好": 1,
+              "好呀": 1,
+              "你好呀": 1
+            }
+          },
+          "lastAt": 1767268920000
+        }
+      }
+    },
+    "tags": {
+      "synthetic-member": [
+        {
+          "tag": "最近很累",
+          "source": "builtin",
+          "advice": "话少一点、别催回复、别拉着熬夜聊",
+          "addedAt": 1767268800000,
+          "lastHitAt": 1767268800000,
+          "lastEvidenceAt": 1767268800000,
+          "expiresAt": 1767441600000,
+          "longTerm": false,
+          "hits": 1,
+          "injections": 1
+        }
+      ]
+    },
+    "visitors": {
+      "synthetic-visitor": {
+        "firstSeen": 1767268980000,
+        "lastSeen": 1767269040000,
+        "count": 2
+      }
+    }
+  }
+}
