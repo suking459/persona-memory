@@ -1,49 +1,38 @@
 # Changelog
 
-## 本地 1.0 多环境加固（未发布）
+## 1.0.0 — 2026-10-29
 
-- 有界、无 getter/toJSON 执行的快照导入，覆盖完整字节、深度和节点限制。
-- 严格 UTF-8 与普通文件读取、增长文件读取上限、临时文件归属与异常退出恢复。
-- 修复原型同名用户/访客/标签键和缺少自定义维度时的恢复；候选校验不占用正式容量。
-- HTTP 校验本地 Host/实际端口；MCP 顺序处理与 stdout 背压，HTTP/MCP/CLI 拒绝坏编码。
-- Windows/Ubuntu 的实际 Node 版本矩阵、离线安装、崩溃点与权限边界见 docs/1.0-HARDENING.md。未推送、未发布。
+The first unified release of the host-independent memory library. GitHub releases and npm registry publication are separate channels; use the fixed v1.0.0 installation instructions in README.
 
-## 本地 0.9 / 1.0 候选开发（未发布）
+### Memory and retrieval
+- Typed user/project/task memories: preference, fact, constraint, decision, episode and state, with provenance, bounded JSON values and independent retention.
+- Scoped lexical retrieval, filtering, explanations and complete record contexts under explicit character/token budgets.
+- Pure preview and idempotent acknowledgement of contexts actually used in a successful model call.
 
-- schema 5：独立候选池、期限、有限去重、基于原版本的接受/拒绝/修订和原子批量审阅。
-- 可插拔抽取桥、限定主体/类型、取消/迟到保护、可选新字段接纳策略。
-- 宿主报告的任务经验，独立结果确认、适用条件与纠错；CLI/HTTP/MCP 检查。
-- 修复深入复核复现的 10 个复核失败用例（9 类问题）；真实旧 0.8 迁移和 Windows 多 Node 版本检查见 docs/0.9-AUDIT.md。
+### Corrections, time and storage
+- Explicit replacement and revisions, effective/knowledge time queries, future activation and bounded version retention.
+- JSON and in-memory stores, a pluggable asynchronous CAS contract, file conflict detection and explicit recovery.
+- Current-value export, explicit subject mapping, conflict preview and atomic batch import; schema 5 with migrations from schemas 1–4.
 
-## 本地 0.8 开发（未发布）
+### Reviewed learning and optional relationship state
+- Expiring candidates with review/revision/accept/reject, stale-update protection and bounded host-provided extraction.
+- Opt-in new-field acceptance policy and task experiences with applicability and host confirmation metadata.
+- Optional relationship state, host-corrected tags, direct interaction limits, decay, dimensions, style and four presets.
 
-- schema 4：明确生效/获知时间、未来计划切换、修订前置条件与默认 32 版本保留。
-- 可插拔快照存储、内存/JSON 实现、冲突拒绝与显式异步 persist/reload。
-- 主体映射的当前值导出、差异预览、原子导入；HTTP/MCP 时间读取与异步模型桥。
-- 强化残缺历史校验、预览字节限制和删除清理。详见 docs/0.8-AUDIT.md。
+### Integration and hardening
+- Node/TypeScript, HTTP, MCP, review CLI, platform parsers, generic model bridge and optional framework adapters.
+- Safe bounded snapshot import/reload, strict UTF-8, regular-file reads, growing-file limits and owned temporary-file cleanup.
+- Inherited-name IDs/dimensions, independent candidate capacity, local HTTP Host validation and MCP stdout backpressure.
+- Windows/Ubuntu runtime matrices, process-crash recovery, synthetic evaluations, public types and offline installed-package validation. Conditions and limits are documented.
+- Rewritten project overview, use cases, installation, migration and release notes. Runtime dependencies remain zero; existing copyright and provenance are preserved.
 
-## Unreleased — local 1.0 development
+### Upgrade notes
+- Snapshots now use schema 5; back up before upgrading and use the old backup when rolling back.
+- Preview does not count model use; integrations must explicitly confirm successful use.
+- File writes may reject conflicts; strict UTF-8 and plain-data validation reject malformed inputs instead of repairing them silently.
+- No claim of live-model accuracy, all-platform compatibility, full event sourcing or database-level power-loss durability.
 
-- Add scoped, explainable lexical retrieval with filters, explicit work limits and optional host-supplied relevance data.
-- Render full typed records under character/token budgets; atomically acknowledge overlapping record and relationship contexts without refreshing factual evidence.
-- Add a model-agnostic bridge, read-only MCP record tools, opt-in HTTP management, cross-application fixtures and bounded lifecycle replay.
-- Harden final token budgets, literal version queries, request identity snapshots, stream completion checks and confirmation metadata limits during the 0.7 audit.
-
-- Fix Unicode-key retry ordering, reuse of IDs still referenced after expiry, and forgetting a pruned ID through retained version links.
-- Reject accessor/hidden/symbolic snapshot entries and inconsistent dangling version references; add expiry/retry/deletion regressions and disk write/rename failure recovery checks.
-
-- Add typed user/project/task memories, independent retention, bounded JSON values, explicit replacement and stable-ID retry semantics.
-- Read schemas 1/2 and persist schema 3 so old writers cannot silently drop new memory records. Add structured deletion and a runnable personal/project/learning example.
-
-- Prevent stale tags from cycling between short and long term indefinitely; retain actual evidence time and allow advice corrections.
-- Enforce profile limits for host events; stop LlamaIndex after a late history read exceeds its deadline.
-- Include complete state guidance in prompt budgets and suppress conflicting generic tone; support presets omit social tiers through affinityContext=false and disable the default social tag lexicons.
-- Reject oversized or invalid advice atomically for manual updates and snapshot imports.
-- Expand conservative text-evidence checks and grouped synthetic evaluation; verify a real 0.3-generated synthetic snapshot plus continuous support/NPC scenarios.
-
-No intermediate source push, tag, Release or package publication is triggered by this work.
-
-## 0.4.0 — 2026-10-29
+## 0.4.0 source baseline — 2026-10-29
 
 ### Relationship state
 - Explainable context previews and explicit, idempotent usage confirmation.

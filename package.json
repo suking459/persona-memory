@@ -1,7 +1,7 @@
 {
   "name": "persona-memory",
-  "version": "0.4.0",
-  "description": "Social state layer for conversational agents: decaying affinity, expiring tags, local style stats, budgeted prompt blocks. Zero LLM calls, zero deps. Memory for chatbots, AI companions, NPCs and customer support.",
+  "version": "1.0.0",
+  "description": "Host-independent agent memory: typed records, scoped retrieval, temporal versions, reviewed learning, optional relationship state. Zero runtime dependencies.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -64,17 +64,18 @@
   ],
   "keywords": [
     "agent-memory",
-    "persona",
-    "affinity",
-    "relationship",
+    "project-memory",
+    "task-memory",
+    "user-preferences",
+    "context-management",
+    "temporal-memory",
+    "memory",
+    "mcp",
     "chatbot",
-    "llm",
-    "ai-companion",
-    "social-simulation",
     "npc",
-    "user-profile",
-    "character-ai",
-    "memory"
+    "typescript",
+    "relationship",
+    "zero-dependencies"
   ],
   "engines": {
     "node": ">=18"

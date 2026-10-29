@@ -1,8 +1,8 @@
 # API 与数据语义
 
-状态：本地 1.0 候选；package 版本暂保留 0.4.0，当前新增能力尚未推送或发布。核心入口为 PersonaMemory，规则纯函数仍可独立导入。
+适用于 persona-memory 1.0，快照 schema 5。核心入口为 PersonaMemory，规则纯函数仍可独立导入。
 
-## 通用记忆（本地 0.6 批次）
+## 通用记忆
 
 putMemory/getMemory/listMemories/forgetMemory/deleteSubject 提供用户、项目、任务的结构化记录，详见 [完整说明](typed-memory.md)。独立于关系分与标签，不自动提取或注入旧的 buildContext。searchMemories/buildMemoryContext 提供独立的通用检索与上下文；confirmContexts 可以将其与关系块一并确认，见 [0.7 说明](retrieval.md)。当前新快照输出 schemaVersion=5，读取并迁移 schema 1/2/3/4。
 
@@ -98,7 +98,7 @@ HTTP 所有请求的 Host 必须是 127.0.0.1、localhost 或 [::1]，且端口�
 
 ## 时间、存储和选择性迁移
 
-getMemoryAt、expectedRevision/validFrom、maxVersionsPerMemory，以及 PersonaMemory.open/persist/reload、JsonFileStore/MemorySnapshotStore、exportMemories/previewMemoryImport/applyMemoryImport 已在本地实现。参数、异步错误和旧格式升级边界见 [时间与存储](time-storage.md)。status=current 表示最新版本头，生效值以默认读取/检索的区间选择为准。
+getMemoryAt、expectedRevision/validFrom、maxVersionsPerMemory，以及 PersonaMemory.open/persist/reload、JsonFileStore/MemorySnapshotStore、exportMemories/previewMemoryImport/applyMemoryImport 已实现。参数、异步错误和旧格式升级边界见 [时间与存储](time-storage.md)。status=current 表示最新版本头，生效值以默认读取/检索的区间选择为准。
 
 
 ## 候选审阅与经验
