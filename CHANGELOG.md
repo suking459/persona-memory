@@ -1,5 +1,40 @@
 # Changelog
 
+## 本地 0.9 / 1.0 候选开发（未发布）
+
+- schema 5：独立候选池、期限、有限去重、基于原版本的接受/拒绝/修订和原子批量审阅。
+- 可插拔抽取桥、限定主体/类型、取消/迟到保护、可选新字段接纳策略。
+- 宿主报告的任务经验，独立结果确认、适用条件与纠错；CLI/HTTP/MCP 检查。
+- 修复深入复核复现的 10 个复核失败用例（9 类问题）；真实旧 0.8 迁移和 Windows 多 Node 版本检查见 docs/0.9-AUDIT.md。
+
+## 本地 0.8 开发（未发布）
+
+- schema 4：明确生效/获知时间、未来计划切换、修订前置条件与默认 32 版本保留。
+- 可插拔快照存储、内存/JSON 实现、冲突拒绝与显式异步 persist/reload。
+- 主体映射的当前值导出、差异预览、原子导入；HTTP/MCP 时间读取与异步模型桥。
+- 强化残缺历史校验、预览字节限制和删除清理。详见 docs/0.8-AUDIT.md。
+
+## Unreleased — local 1.0 development
+
+- Add scoped, explainable lexical retrieval with filters, explicit work limits and optional host-supplied relevance data.
+- Render full typed records under character/token budgets; atomically acknowledge overlapping record and relationship contexts without refreshing factual evidence.
+- Add a model-agnostic bridge, read-only MCP record tools, opt-in HTTP management, cross-application fixtures and bounded lifecycle replay.
+- Harden final token budgets, literal version queries, request identity snapshots, stream completion checks and confirmation metadata limits during the 0.7 audit.
+
+- Fix Unicode-key retry ordering, reuse of IDs still referenced after expiry, and forgetting a pruned ID through retained version links.
+- Reject accessor/hidden/symbolic snapshot entries and inconsistent dangling version references; add expiry/retry/deletion regressions and disk write/rename failure recovery checks.
+
+- Add typed user/project/task memories, independent retention, bounded JSON values, explicit replacement and stable-ID retry semantics.
+- Read schemas 1/2 and persist schema 3 so old writers cannot silently drop new memory records. Add structured deletion and a runnable personal/project/learning example.
+
+- Prevent stale tags from cycling between short and long term indefinitely; retain actual evidence time and allow advice corrections.
+- Enforce profile limits for host events; stop LlamaIndex after a late history read exceeds its deadline.
+- Include complete state guidance in prompt budgets and suppress conflicting generic tone; support presets omit social tiers through affinityContext=false and disable the default social tag lexicons.
+- Reject oversized or invalid advice atomically for manual updates and snapshot imports.
+- Expand conservative text-evidence checks and grouped synthetic evaluation; verify a real 0.3-generated synthetic snapshot plus continuous support/NPC scenarios.
+
+No intermediate source push, tag, Release or package publication is triggered by this work.
+
 ## 0.4.0 — 2026-10-29
 
 ### Relationship state

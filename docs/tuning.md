@@ -8,13 +8,16 @@ createPreset('community'|'companion'|'support'|'npc', overrides)
 
 - community：频道隔离，最多 4 人，每日增长上限 20，适合群聊。
 - companion：用户共享，默认一人，可选熟悉程度与信任维度。
-- support：频道隔离、关系分日增长为 0，不用关系分决定服务资格；处理状态由宿主设置。
+- support：频道隔离、关系分日增长为 0，上下文默认不包含社交档位/语气，不用关系分决定服务资格；默认关闭内置社交状态词表，处理状态和建议由宿主设置；可用 extraRules 按业务显式开启需要的规则。
 - npc：频道隔离，熟悉程度与信任分离，状态 TTL 72 小时。
 
 ## 参数表
 
 | 参数 | 默认 | 行为与注意 |
 |---|---|---|
+| maxMemories | 10000 | 通用记录总数，包含保留的旧版本；满额拒绝新增，不静默删除长期事实 |
+| stateMemoryTtlHours | 48 | state 类型的默认寿命（小时）；不影响旧标签 TTL |
+| episodeMemoryTtlDays | 90 | episode 类型默认寿命（天）；其他稳定类型默认不按时间过期 |
 | dailyGainCap | 30 | 关系分每日正向变化额度，0 禁止正向增长 |
 | talkDailyCap | 12 | 每日普通直接互动计分次数；@、引用等有自己的分值 |
 | perMessageCap | 8 | 单条正负变化上限，0 禁止分数变化 |
@@ -22,6 +25,7 @@ createPreset('community'|'companion'|'support'|'npc', overrides)
 | decayBaseline | 0 | 0–100，衰减不越过基线；不是最低可扣到的分数 |
 | attentionWindowSec | 180 | 明确 @/回复/私聊后的续聊窗口；0 不开启后续时间窗口 |
 | botId | null | 实际平台机器人 ID，和 persona 无关 |
+| affinityContext | true | 是否在上下文包含关系档位、分数和通用语气；support 默认 false，档案数据仍保留 |
 | scoreAmbient | false | false 避免旁观消息的夸奖/辱骂影响与机器人的关系 |
 | tagTtlHours | 48 | 短期状态寿命，重复命中顺延 |
 | longTermTtlDays | 7 | 长期状态无新证据后的降级时间 |

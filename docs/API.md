@@ -2,6 +2,10 @@
 
 状态：GitHub 源码 0.4.0 接口，npm 发包独立处理。核心入口为 PersonaMemory，规则纯函数仍可独立导入。
 
+## 通用记忆（本地 0.6 批次）
+
+putMemory/getMemory/listMemories/forgetMemory/deleteSubject 提供用户、项目、任务的结构化记录，详见 [完整说明](typed-memory.md)。独立于关系分与标签，不自动提取或注入旧的 buildContext。searchMemories/buildMemoryContext 提供独立的通用检索与上下文；confirmContexts 可以将其与关系块一并确认，见 [0.7 说明](retrieval.md)。新快照输出 schemaVersion=3，读取旧 schema 1/2。
+
 ## 实例与范围
 
 new PersonaMemory({storage, persona, scope, config, clock})
@@ -36,7 +40,7 @@ const context = pm.buildContext({
 const block = pm.buildBlock({chatId:'room', userIds:['a']}); // 纯文本兼容入口
 ```
 
-排序优先显式关注的人，再看最近活跃与关系分。只考虑传入的人；访客也计入人数上限。超过预算时省略整行或标签，不截断标签再当作完整注入。显示字段会去除换行控制字符；宿主仍需将上下文当作资料，而非可执行指令。
+排序优先显式关注的人，再看最近活跃与关系分。只考虑传入的人；访客也计入人数上限。超过预算时省略整行或标签，不截断标签再当作完整注入。显示字段会去除换行控制字符；宿主仍需将上下文当作资料，而非可执行指令。标签和完整 advice 一起计入预算，放不下时整项省略。存在当前状态建议时，不附加可能冲突的通用关系语气。config.affinityContext=false 可省略上下文中的关系档位、分数和语气；客服预设默认关闭，getProfile 仍可查询分数。客服也默认关闭通用社交状态词表，宿主通过 setTag 同时提供业务状态与 advice。
 
 可选 tokenBudget 与 countTokens(text) 回调同时传入，才能约束精确 token 预算。HTTP/MCP 的普通 JSON 参数不能携带 tokenizer 回调，默认使用字符预算。characters 计算 Unicode 码点，不等价于 token。
 
@@ -59,23 +63,23 @@ pm.removeTag({chatId:'room',userId:'a',tag:'已入职'});
 pm.recordEvent({chatId:'room',userId:'a',type:'promise-kept',eventId:'quest-1',changes:{trust:10}});
 ```
 
-setTag 的 expiresAt=null 表示宿主设置长期状态；这类状态仍遵循长期保鲜规则。source 是 provenance，不是置信概率：builtin/extra 表示词表观察，host/manual 表示宿主或人工设置，model 表示外部模型提供。
+setTag 的 advice 必须为字符串，最多 2000 个 UTF-16 代码单元（与规则配置一致），同名状态更新会替换建议。setTag 的 expiresAt=null 表示宿主设置长期状态；这类状态仍遵循长期保鲜规则。source 是 provenance，不是置信概率：builtin/extra 表示词表观察，host/manual 表示宿主或人工设置，model 表示外部模型提供。
 
 recordEvent 只接受已启用的 dimensions，且来源应是宿主确认的事件，不把模型随意输出当作授权。dimensions 是可选扩展；不开启时保留单值关系分。
 
 ## 查询与删除
 
-getProfile(chatId,userId)、getVisitor(userId,{chatId?})、listVisitors(limit)、diagnostics()、history({chatId?,userId?}) 返回脱离内部引用的结果。chat 模式查询访客必须提供 chatId。
+getProfile(chatId,userId)、getVisitor(userId,{chatId?})、listVisitors(limit)、diagnostics()、history({chatId?,userId?,subject?}) 返回脱离内部引用的结果。chat 模式查询访客必须提供 chatId。
 
 deleteUser(userId) 删除当前实例内该用户的关系、标签、访客、使用记录与诊断历史。指定 chatId 仅删除该会话；user 共享模式下若其他会话还有该用户，保留共享标签。clear() 清空当前实例范围，之后 flush 落盘。它们不会处理调用方另存的旧备份或外部日志。
 
 ## 维护与存储
 
-maintain(now?) 进行按时间增量衰减、标签过期/晋升/降级和保留上限清理，并调用 flush。维护不把最近真实互动时间改成维护时间。
+maintain(now?) 进行按时间增量衰减、标签过期/晋升/降级和保留上限清理，目录存储调用 flush；纯异步存储需随后 await persist。返回 memoriesExpired 表示过期通用记录数。维护不把最近真实互动时间改成维护时间。
 
-短期标签默认 48 小时，晋升需要仍未过期、存活 3 天且实际使用至少 6 次，因此没有新命中/确认的单次观察会先过期，不会只靠被模型反复看到变成长期事实。长期状态 7 天无新证据会降级。
+短期标签默认 48 小时，晋升需要仍未过期、存活 3 天且实际使用至少 6 次，因此没有新命中/确认的单次观察会先过期，不会只靠被模型反复看到变成长期事实。长期状态 7 天无新证据会降级，旧的使用次数不能让陈旧证据反复晋升；没有新证据时在短期寿命结束后过期。
 
-export() 返回 schemaVersion=2 快照。import(snapshot) 先完整校验再替换，失败不改变现有状态。支持默认 user 共享语义的旧 schemaVersion=1；导入时 persona/scope/存储语义必须一致。见 migration.md。
+export() 返回 schemaVersion=5 快照，包含独立的 memories 集合。import(snapshot) 先完整校验再替换，失败不改变现有状态。支持旧 schemaVersion=4/3/2，以及默认 user 共享语义的旧 schemaVersion=1；导入时 persona/scope/存储语义必须一致。见 migration.md。
 
 损坏/未知版本文件导致构造时报错并保留原文件；宿主可以捕获后选择无记忆降级。不能静默覆盖坏文件。
 
@@ -86,3 +90,13 @@ HTTP 默认回环地址 8791，可用 PM_TOKEN 启用 Bearer 鉴权。写请求�
 MCP 提供 memory_record、memory_context、memory_confirm、memory_profile。stdio 仅写协议输出；模型可选工具调用无法保证消息记录完整，可靠接入优先使用库或 HTTP。
 
 HTTP/MCP 存储环境变量：PM_STORAGE、PM_PERSONA、PM_SCOPE。不要将实际凭据放进版本库。
+
+
+## 时间、存储和选择性迁移
+
+getMemoryAt、expectedRevision/validFrom、maxVersionsPerMemory，以及 PersonaMemory.open/persist/reload、JsonFileStore/MemorySnapshotStore、exportMemories/previewMemoryImport/applyMemoryImport 已在本地实现。参数、异步错误和 schema 4 升级边界见 [时间与存储](time-storage.md)。status=current 表示最新版本头，生效值以默认读取/检索的区间选择为准。
+
+
+## 候选审阅与经验
+
+proposeMemory/proposeMemories、getCandidate/listCandidates、reviseCandidate/rejectCandidate/acceptCandidate/acceptCandidates/forgetCandidate，以及 recordExperience/listExperiences 已实现。候选默认不检索、不接纳；正式值基于明确的原版本和宿主审阅。schema 5 含独立 candidates；参数、类型和错误见 [受控学习](learning.md)。

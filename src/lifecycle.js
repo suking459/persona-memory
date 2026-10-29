@@ -20,7 +20,7 @@ export function hitTag(tags,tag,advice,now,ttlHours=48){
   const next=(tags||[]).map(t=>({...t}));
   const existing=next.find(t=>t.tag===tag);
   if(existing){
-    existing.hits=count(existing.hits,0)+1;existing.lastHitAt=now;existing.lastEvidenceAt=now;
+    existing.hits=count(existing.hits,0)+1;existing.lastHitAt=now;existing.lastEvidenceAt=now;existing.advice=advice||'';
     if(!existing.longTerm)existing.expiresAt=deadline(now,ttlHours);
   }else next.push({tag,advice:advice||'',source:'builtin',addedAt:now,lastHitAt:now,lastEvidenceAt:now,
     expiresAt:deadline(now,ttlHours),longTerm:false,hits:1,injections:0});
@@ -36,11 +36,11 @@ export function sweepTags(tags,now,options={}){
     const t={...input};
     const isLong=t.longTerm || t.expiresAt===null;
     if(!isLong && now>=t.expiresAt){expired++;continue;}
+    const evidence=t.lastEvidenceAt??t.lastHitAt??t.addedAt;
     if(isLong){
-      const evidence=t.lastEvidenceAt??t.lastHitAt??t.addedAt;
       if(now-evidence>longDays*DAY){t.longTerm=false;t.promotedAt=null;t.expiresAt=deadline(now,ttl);demoted++;}
-    }else if(t.injections>=6 && now-t.addedAt>=3*DAY){
-      t.longTerm=true;t.expiresAt=null;t.promotedAt=now;t.lastEvidenceAt=t.lastHitAt??t.addedAt;promoted++;
+    }else if(t.injections>=6 && now-t.addedAt>=3*DAY && now-evidence<=longDays*DAY){
+      t.longTerm=true;t.expiresAt=null;t.promotedAt=now;t.lastEvidenceAt=evidence;promoted++;
     }else if(t.injections>=uses){forcedOut++;expired++;continue;}
     if(!t.longTerm && t.expiresAt!==null && now>=t.expiresAt){expired++;continue;}
     surviving.push(t);

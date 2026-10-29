@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PersonaMemory,MemorySnapshotStore} from '../src/index.js';
+import {createMemoryServer} from '../adapters/http/server.js';
+import {handleMcp} from '../adapters/mcp/server.js';
+const subject={type:'project',id:'transport'},target={type:'project',id:'copy'};
+test('HTTP time queries and admin transfer work through an async store without changing unrelated subjects',async t=>{
+  const store=new MemorySnapshotStore(),pm=await PersonaMemory.open({store,clock:()=>2000});
+  pm.putMemory({id:'a',subject,kind:'fact',key:'version',value:'old',validFrom:1000});
+  pm.putMemory({id:'b',subject,kind:'fact',key:'version',value:'future',validFrom:3000,replaceId:'a'});
+  const server=createMemoryServer({pm,token:'private',allowAdmin:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  t.after(()=>new Promise(resolve=>server.close(resolve)));
+  const post=async(route,body)=>{const result=await fetch('http://127.0.0.1:'+server.address().port+route,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer private'},body:JSON.stringify(body)});return {status:result.status,body:await result.json()};};
+  assert.equal((await post('/api/memory/at',{subject,kind:'fact',key:'version',at:2500})).body.memory.value,'old');
+  const bundle=(await post('/api/memory/export',{subject})).body.bundle;assert.equal(bundle.records[0].id,'a');
+  const preview=await post('/api/memory/import-preview',{bundle,options:{mappings:[{from:subject,to:target}]}});
+  assert.equal(preview.status,200);
+  assert.equal((await post('/api/memory/import-apply',{planId:preview.body.planId})).body.added,1);
+  const restored=await PersonaMemory.open({store,clock:()=>2000});assert.equal(restored.listMemories({subject:target})[0].value,'old');
+  assert.equal(restored.getMemory('b'),null);
+  const disabled=createMemoryServer({pm});await new Promise(resolve=>disabled.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>disabled.close(resolve)));
+  const forbidden=await fetch('http://127.0.0.1:'+disabled.address().port+'/api/memory/export',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subject})});assert.equal(forbidden.status,403);
+});
+test('MCP time lookup uses retained history and supports an async-only store',async()=>{
+  const store=new MemorySnapshotStore(),pm=await PersonaMemory.open({store,clock:()=>2000});
+  pm.putMemory({id:'a',subject,kind:'decision',key:'phase',value:'old',validFrom:1000});
+  pm.putMemory({id:'b',subject,kind:'decision',key:'phase',value:'scheduled',validFrom:3000,replaceId:'a'});
+  const response=await handleMcp({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'memory_at',arguments:{subject,kind:'decision',key:'phase',at:3500}}},pm);
+  assert.equal(response.result.isError,undefined);assert.equal(JSON.parse(response.result.content[0].text).memory.value,'scheduled');
+  assert.equal((await store.read()).snapshot.schemaVersion,5);
+});

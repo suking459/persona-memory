@@ -5,7 +5,7 @@ test('support demo corrects resolved status and preview leaves evidence untouche
  const demo=createDemoState();demo.action('support','unresolved');
  assert.match(demo.chat('support','你好').reply,/没处理完/);
  demo.action('support','resolved');const s=demo.chat('support','你好');
- assert.match(s.reply,/已经解决/);assert.ok(!s.profile.tags.some(t=>t.tag==='待跟进'));
+ assert.match(s.reply,/已经解决/);assert.match(s.context.text,/不要继续追问已解决问题/);assert.doesNotMatch(s.context.text,/生疏|先观察/);assert.ok(!s.profile.tags.some(t=>t.tag==='待跟进'));
  assert.ok(s.profile.tags.every(t=>t.injections===0));
 });
 test('NPC demo separates host trust changes and chat familiarity',()=>{

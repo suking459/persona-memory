@@ -1,6 +1,6 @@
 # 六个接入配方
 
-下列配方针对 GitHub 源码 0.4.0。每个配方共用核心库，不复制算法。配置 storage 后由宿主定时 maintain，并在消息/使用确认后 flush。
+原有关系配方针对 GitHub 源码 0.4.0；标注 0.6 的通用记忆示例仅在本地 1.0 开发中可用，尚未发布。每个配方共用核心库，不复制算法。配置 storage 后由宿主定时 maintain，并在消息/使用确认后 flush。
 
 ## 1. 社群机器人：多人、频道隔离
 
@@ -19,10 +19,11 @@ const context=pm.buildContext({chatId:'discord:guild:channel',userIds:['member']
 ```js
 const pm=new PersonaMemory({config:createPreset('companion')});
 pm.ingest({chatId:'dm',userId:'person',text:'今天好累',directedToBot:true,eventId:'m1'});
-pm.setTag({chatId:'dm',userId:'person',tag:'偏好简短回答',source:'manual',expiresAt:null});
+// 本地 0.6：稳定偏好独立于临时状态，不沿用标签的长期保鲜规则。
+pm.putMemory({subject:{type:'user',id:'person'},kind:'preference',key:'reply-length',value:'short',source:'user'});
 ```
 
-预期：临时疲劳与人工设置偏好分别有来源和期限；维度中的信任不因夸奖自动增加。长期偏好也遵循保鲜规则，需要宿主确认或调整 longTermTtlDays，不代表永久焊死。
+预期：临时疲劳仍按标签过期，明确的通用偏好保留到替换或删除；维度中的信任不因夸奖自动增加。通用偏好通过 listMemories 读取，由宿主使用；旧 buildContext 尚不自动包含它，本地 0.7 可使用 buildMemoryContext 或通用模型桥选择并注入，见 retrieval.md。
 
 ## 3. 客服：业务系统提供状态
 

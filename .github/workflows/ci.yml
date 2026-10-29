@@ -24,6 +24,8 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run evaluate
+      - run: npm run evaluate:retrieval
+      - run: npm run evaluate:learning
   core-node18:
     runs-on: ubuntu-latest
     steps:

@@ -1,0 +1,87 @@
+{
+  "generator": {
+    "description": "Synthetic schema 4 snapshot produced by the actual local 0.8 implementation before 0.9",
+    "sourceSha256": {
+      "memory.js": "401e0567c52c014eb7ff12b7d7d2bf24804c3c58ce434e74d08782b39d205e68",
+      "records.js": "2ccbdd63f34fd1475b62c3a9393e1fd523ec7fcc3adf2679336079144065f136"
+    }
+  },
+  "snapshot": {
+    "schemaVersion": 4,
+    "persona": "default",
+    "scope": "",
+    "tagScope": "user",
+    "sessions": {},
+    "tags": {},
+    "visitors": {},
+    "memories": {
+      "old-current": {
+        "id": "old-current",
+        "subject": {
+          "type": "project",
+          "id": "legacy-0.8"
+        },
+        "kind": "fact",
+        "key": "channel",
+        "value": "preview",
+        "source": "manual",
+        "observedAt": 1000,
+        "expiresAt": null,
+        "validFrom": 1000,
+        "createdAt": 1000,
+        "updatedAt": 1000,
+        "revision": 1,
+        "status": "superseded",
+        "validUntil": 2000,
+        "supersededBy": "old-future"
+      },
+      "old-future": {
+        "id": "old-future",
+        "subject": {
+          "type": "project",
+          "id": "legacy-0.8"
+        },
+        "kind": "fact",
+        "key": "channel",
+        "value": "stable",
+        "source": "manual",
+        "observedAt": 1000,
+        "expiresAt": null,
+        "validFrom": 2000,
+        "createdAt": 1000,
+        "updatedAt": 1000,
+        "revision": 2,
+        "status": "current",
+        "validUntil": null,
+        "supersedes": "old-current"
+      }
+    },
+    "seen": [],
+    "uses": [],
+    "history": [
+      {
+        "type": "memory-put",
+        "at": 1000,
+        "recordId": "old-current",
+        "subject": {
+          "type": "project",
+          "id": "legacy-0.8"
+        },
+        "kind": "fact",
+        "key": "channel"
+      },
+      {
+        "type": "memory-put",
+        "at": 1000,
+        "recordId": "old-future",
+        "subject": {
+          "type": "project",
+          "id": "legacy-0.8"
+        },
+        "kind": "fact",
+        "key": "channel",
+        "replacedId": "old-current"
+      }
+    ]
+  }
+}

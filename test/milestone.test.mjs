@@ -122,7 +122,7 @@ test('persistence upgrades v1, restores exact scope, and preserves corrupt origi
     const {pm}=memory();pm.ingest(message({text:'好累'}));const v1=pm.export();v1.schemaVersion=1;delete v1.scope;delete v1.tagScope;
     const restored=new PersonaMemory({storage:dir,clock:()=>start});restored.import(v1);restored.flush();
     const read=new PersonaMemory({storage:dir,clock:()=>start});assert.equal(read.getProfile('room','u').tags[0].tag,'最近很累');
-    assert.equal(read.export().schemaVersion,2);
+    assert.equal(read.export().schemaVersion,5);
     const file=path.join(dir,'default.json');fs.writeFileSync(file,'{bad');
     assert.throws(()=>new PersonaMemory({storage:dir}),/original file preserved/);
     assert.equal(fs.readFileSync(file,'utf8'),'{bad');
