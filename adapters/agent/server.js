@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {isMainModule} from '../../src/main.js';
 import {pathToFileURL} from 'node:url';
 import {openAgentMemory} from './store.js';
 import {VERSION} from '../../src/version.js';
@@ -45,7 +46,7 @@ export async function runAgentServer(file){
   const session=createAgentSession(pm,binding);
   await serveStdio(createAgentRpc(session));
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+if(isMainModule(import.meta.url)){
   const args=process.argv.slice(2);
   if(args.length!==2||args[0]!=='--binding'){process.stderr.write('Usage: persona-memory-agent --binding ABSOLUTE_BINDING_JSON\n');process.exitCode=2;}
   else await runAgentServer(args[1]).catch(error=>{process.stderr.write(String(error.message)+'\n');process.exitCode=1;});

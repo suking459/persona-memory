@@ -77,10 +77,11 @@ test('forgetting requires current scope/head/revision and removes its history, n
   const second=await remember(session,'English','message-2');
   const other=await session.call('memory_propose',proposal('private','private','personal'));
   const peer=await session.call('memory_review',{scope:'personal',candidateId:other.candidate.id,expectedRevision:1,decision:'accept'});
-  await assert.rejects(session.call('memory_forget',{scope:'project',id:first.record.id,expectedRevision:1}),/current/);
-  await assert.rejects(session.call('memory_forget',{scope:'project',id:second.record.id,expectedRevision:99}),/changed/);
-  await assert.rejects(session.call('memory_forget',{scope:'project',id:peer.record.id,expectedRevision:1}),/unavailable/);
-  await session.call('memory_forget',{scope:'project',id:second.record.id,expectedRevision:second.record.revision});
+  await assert.rejects(session.call('memory_forget',{previewId:'missing',scope:'project',id:first.record.id,expectedRevision:1}),/current/);
+  await assert.rejects(session.call('memory_forget',{previewId:'missing',scope:'project',id:second.record.id,expectedRevision:99}),/changed/);
+  await assert.rejects(session.call('memory_forget',{previewId:'missing',scope:'project',id:peer.record.id,expectedRevision:1}),/unavailable/);
+  const preview=await session.call('memory_forget_preview',{scope:'project',id:second.record.id,expectedRevision:second.record.revision});
+  await session.call('memory_forget',{previewId:preview.previewId,scope:'project',id:second.record.id,expectedRevision:second.record.revision});
   assert.equal((await session.call('memory_recall',{scope:'project'})).matches.length,0);
   assert.equal((await session.call('memory_candidates',{scope:'project'})).candidates.length,0);
   assert.equal((await session.call('memory_recall',{scope:'personal'})).matches.length,1);
@@ -233,4 +234,17 @@ test('configuration application rejects an unrelated target filename without wri
   const dir=directory(t),bundle=path.join(dir,'bundle'),target=path.join(dir,'LICENSE');
   prepareAgentBundle({host:'codex',out:bundle,project:dir});fs.writeFileSync(target,'preserve');
   assert.throws(()=>applyAgentBundle({bundle,target}),/filename/);assert.equal(fs.readFileSync(target,'utf8'),'preserve');
+});
+
+test('actual MCP subprocess runs doctor, explain, atomic batch preview/apply and impact-guarded forgetting',async t=>{
+  const dir=directory(t),bundle=prepareAgentBundle({host:'workbuddy',out:path.join(dir,'bundle'),project:dir,access:'review'}),first=await client(t,path.join(bundle.directory,'binding.json'));
+  const call=async(name,args)=>{const reply=(await first.request('tools/call',{name,arguments:args})).result;assert.equal(reply.isError,undefined,JSON.stringify(reply));return reply.structuredContent;};
+  const p=await call('memory_propose',proposal('日本語','test-new-tools'));
+  const review=await call('memory_review_preview',{scope:'project',decision:'accept',requests:[{id:p.candidate.id,expectedRevision:1}]});
+  const applied=await call('memory_review_batch',{scope:'project',previewId:review.previewId});assert.equal(applied.committed,true);
+  assert.equal((await call('memory_doctor',{scope:'project'})).counts.records,1);
+  const explained=await call('memory_explain',{scope:'project',query:'language'}),record=explained.result.matches[0].record;
+  const impact=await call('memory_forget_preview',{scope:'project',id:record.id,expectedRevision:record.revision});assert.equal(impact.impact.memories,1);
+  await call('memory_forget',{scope:'project',id:record.id,expectedRevision:record.revision,previewId:impact.previewId});
+  assert.equal((await call('memory_recall',{scope:'project'})).matches.length,0);await first.close();
 });

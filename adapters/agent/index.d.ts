@@ -32,3 +32,6 @@ export declare function inspectAgentCandidates(binding:unknown,request:AgentRevi
 
 export interface AgentBackupIdentity {persona:string;namespace:string;subjects:Record<string,MemorySubject>;locale?:string}
 export declare function openAgentMemory(binding:unknown):PersonaMemory;
+
+export interface AgentDoctorReport {ok:boolean;readOnly:true;runtime:string;platform:string;backend:'json'|'sqlite';checks:{level:'pass'|'warning'|'error';code:string;action?:string}[];hostEndToEnd:false;[field:string]:unknown}
+export declare function doctorAgent(binding:unknown):AgentDoctorReport;

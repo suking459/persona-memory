@@ -1,3 +1,4 @@
+import {testTimeout} from '../tools/test-limits.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PersonaMemory} from '../src/index.js';
@@ -80,11 +81,13 @@ test('failed generic model calls do not confirm memory and can retry with fresh 
 
 test('generic bridge late results and mid-call deletion cannot acknowledge stale memory',async()=>{
   const pm=new PersonaMemory({clock:()=>1000}),record=put(pm);
-  const bridge=createMemoryBridge(pm,{subject,budget:2000,timeoutMs:10});
-  let finish;
-  const invocation=bridge.invoke({text:'发布',turnId:'late'},()=>new Promise(resolve=>{finish=resolve;}));
-  await assert.rejects(invocation,{code:'ERR_TURN_TIMEOUT'});
-  finish('late');
+  const bridge=createMemoryBridge(pm,{subject,budget:2000,timeoutMs:testTimeout(500)});
+  let finish,started;const called=new Promise(resolve=>{started=resolve;});
+  const invocation=bridge.invoke({text:'发布',turnId:'late'},()=>new Promise(resolve=>{finish=resolve;started();}));
+  const timedOut=assert.rejects(invocation,{code:'ERR_TURN_TIMEOUT'});
+  await Promise.race([called,timedOut.then(()=>assert.fail('model callback did not start before the test deadline'))]);
+  await timedOut;
+  assert.equal(typeof finish,'function');finish('late');
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(pm.diagnostics().confirmedTurns,0);
   const next=createMemoryBridge(pm,{subject,budget:2000});

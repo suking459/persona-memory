@@ -43,7 +43,7 @@ See [Storage, backups and migration](storage-backup.md) for private full backups
 3. Use memory_propose for a new fact/correction, with the bound scope, kind, key, value, real evidenceId and reason.
 4. The owner inspects the candidate and accepts or rejects its current revision. Correct the same scope/kind/key; stale source heads are rejected.
 5. Confirm a context only after using it successfully. Failed answers, previews and contexts from other connections do not count.
-6. An owner review connection can forget a current field and its retained history at the expected revision.
+6. An owner review connection first inspects memory_forget_preview and obtains the owner decision, then calls memory_forget with its same-connection previewId and current head/revision. Cascades include history, derived fields and related candidates; changed or expired previews cannot execute.
 7. Each call refreshes the persisted view. Independent owner review, correction and forgetting become visible on the next call without restarting. Unchanged revisions preserve pending contexts; external commits invalidate old contexts, so recall again. Restart still recovers from the same binding/storage. Read errors or write failures/conflicts stop the connection; inspect and restart instead of retrying forever.
 
 The owner can inspect proposals independently of the Agent:
@@ -90,3 +90,7 @@ Bundles can explicitly select an Ollama or OpenAI-compatible embedding service. 
 ## 1.2 local additions
 
 See [write quality and corrections](quality.md) for assertion tags, derivedFrom references, stale-content filtering, cascading forget impact and schema 6 migration. Candidate hints never verify evidence or bypass owner review. This local build is not npm 1.0.0.
+
+## Owner operations in local 1.5
+
+See [Owner management](owner-management.md) for doctor, explicit lexical explanation, atomic batch-review previews, same-connection deletion previews, expiry/change guards and recovery. These capabilities are not published in npm 1.0.0.

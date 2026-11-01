@@ -13,7 +13,7 @@ function nativeDatabase(){
   catch{throw storageError('ERR_SQLITE_UNAVAILABLE','This Node runtime does not provide node:sqlite; use JSON');}
 }
 function regular(file){
-  try{const s=fs.lstatSync(file);if(!s.isFile())throw storageError('ERR_STORE_FILE','SQLite requires a regular file, not a link or device');return s;}
+  try{const s=fs.lstatSync(file);if(!s.isFile()||s.nlink>1)throw storageError('ERR_STORE_FILE','SQLite requires a single-link regular file, not a link or device');return s;}
   catch(error){if(error.code==='ENOENT')return null;throw error;}
 }
 function validate(db){
@@ -70,10 +70,11 @@ export class SQLiteSnapshotStore {
       if(!row)return {snapshot:null,revision:null};
       checkRevision(row.revision,{empty:false});
       if(row.bytes>this.maxBytes)throw new RangeError('snapshot exceeds store byte limit');
-      return {text:db.prepare('SELECT snapshot FROM pm_snapshots WHERE namespace=?').get(this.namespace).snapshot,revision:row.revision};
+      return {bytes:db.prepare('SELECT CAST(snapshot AS BLOB) AS bytes FROM pm_snapshots WHERE namespace=?').get(this.namespace).bytes,revision:row.revision};
     });
     if(loaded.snapshot===null)return loaded;
-    return {snapshot:JSON.parse(loaded.text),revision:loaded.revision};
+    const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(loaded.bytes);
+    return {snapshot:JSON.parse(text),revision:loaded.revision};
   }
   writeSync(snapshot,{expectedRevision}={}){
     checkRevision(expectedRevision);

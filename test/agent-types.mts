@@ -56,3 +56,13 @@ const sqliteRestored=await restoreMemoryBackup(sqliteMemory,sqliteBackup,sqliteP
 const sqliteInspected=inspectMemoryBackup(sqliteBackup);
 new SQLiteSubpath({file:'./other.sqlite'});openAgentMemory({});
 const restoredFlag:boolean=sqliteRestored.committed;const memoryCount:number=sqliteInspected.counts.memories;
+
+import {diagnoseMemory,explainMemoryRecall,previewCandidateReview,applyCandidateReview,previewMemoryForget,applyMemoryForget} from 'persona-memory';
+import {doctorAgent} from 'persona-memory/adapters/agent';
+const diagnosed=diagnoseMemory(sqliteMemory,{maxRecords:5});
+const explained=explainMemoryRecall(sqliteMemory,{subject:{type:'project',id:'p'},query:'query'});
+const batchPreview=await previewCandidateReview(sqliteMemory,{subject:{type:'project',id:'p'},requests:[{id:'c',expectedRevision:1}],decision:'accept'});
+await applyCandidateReview(sqliteMemory,batchPreview);
+const forgetPreview=await previewMemoryForget(sqliteMemory,{subject:{type:'project',id:'p'},id:'memory',expectedRevision:1});
+await applyMemoryForget(sqliteMemory,forgetPreview);doctorAgent(binding);
+const noContact:false=explained.semanticConsulted;const readOnlyDoctor:true=diagnosed.readOnly;

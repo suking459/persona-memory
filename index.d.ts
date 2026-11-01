@@ -257,3 +257,37 @@ export declare function createMemoryBackup(pm:PersonaMemory,options?:{identity?:
 export declare function inspectMemoryBackup(raw:unknown,options?:{config?:PersonaMemoryConfig}):{checksum:string;createdAt:number;snapshot:MemorySnapshot;identity?:MemoryBackupIdentity;counts:BackupCounts};
 export declare function previewMemoryRestore(pm:PersonaMemory,raw:unknown,options?:{now?:number}):Promise<MemoryRestorePreview>;
 export declare function restoreMemoryBackup(pm:PersonaMemory,raw:unknown,preview:unknown,options?:{now?:number}):Promise<{committed:true;persistent:boolean;requiresReload:boolean;counts:BackupCounts}>;
+
+export interface MemoryDoctorReport {
+  ok:true;readOnly:true;schemaVersion:6;persistent:boolean;dirty:boolean;
+  counts:{records:number;currentHeads:number;candidates:number;pending:number;expiredPending:number};
+  sourceCheck:{inspected:number;unusable:number;reasons:Record<string,number>;samples:{id:string;reason:string}[];truncated:boolean};
+  warnings:string[];evidenceVerified:false;externalServicesContacted:false;repairsApplied:false;limits:string;
+}
+export declare function diagnoseMemory(pm:PersonaMemory,options?:{subjects?:MemorySubject[];maxRecords?:number}):MemoryDoctorReport;
+export declare function explainMemoryRecall(pm:PersonaMemory,options:{subject:MemorySubject;query?:string;locale?:string;limit?:number;id?:string}):{
+  mode:'local-lexical-diagnostic';semanticConsulted:false;subject:MemorySubject;result:MemorySearchResult;
+  inspected?:{available:boolean;id?:string;validity?:{usable:boolean;reason:string;dependencyId?:string};selected?:boolean;reason:string};
+  explanation:Record<string,unknown>;limits:string;
+};
+export interface ManagementPreview {
+  format:'persona-memory-management-plan';version:1;kind:'review'|'forget';subject:MemorySubject;
+  createdAt:number;expiresAt:number;persona:string;scope:string;expectedRevision:string|null;
+  targetDigest:string;configDigest:string;checksum:string;allowed:boolean;
+}
+export interface CandidateReviewPreview extends ManagementPreview {
+  kind:'review';decision:'accept'|'reject';requests:{id:string;expectedRevision:number}[];reason?:string;
+  rows:{id:string;revision:number;status:CandidateStatus;kind:MemoryKind;key:string;proposedValue:MemoryValue;
+    before:{id:string;revision:number;value:MemoryValue;validFrom:number;expiresAt:number|null}|null;
+    evidenceId:string;reason:string;source:MemorySource;assertion:MemoryAssertion|'unspecified';quality:CandidateQuality}[];
+  evidenceVerified:false;denial?:{code:string;message:string};
+}
+export interface MemoryForgetPreview extends ManagementPreview {
+  kind:'forget';id:string;expectedMemoryRevision:number;
+  impact:{memories:number;candidates:number;recordIds:string[];candidateIds:string[];truncated:boolean};
+}
+export interface ManagedCommitResult {committed:true;persistent:boolean;requiresReload:boolean;counts:BackupCounts}
+export declare function previewCandidateReview(pm:PersonaMemory,options:{subject:MemorySubject;requests:{id:string;expectedRevision:number}[];decision:'accept'|'reject';reason?:string}):Promise<CandidateReviewPreview>;
+export declare function applyCandidateReview(pm:PersonaMemory,preview:unknown):Promise<ManagedCommitResult&{decision:'accept'|'reject';reviewed:number;results:{candidateId:string;recordId?:string;status:'accepted'|'rejected'}[]}>;
+export declare function previewMemoryForget(pm:PersonaMemory,options:{subject:MemorySubject;id:string;expectedRevision:number}):Promise<MemoryForgetPreview>;
+export declare function applyMemoryForget(pm:PersonaMemory,preview:unknown):Promise<ManagedCommitResult&{removed:number}>;

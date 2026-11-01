@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {isMainModule} from '../../src/main.js';
 import {pathToFileURL} from 'node:url';
 import {PersonaMemory} from '../../src/index.js';
 import {VERSION} from '../../src/version.js';
@@ -59,7 +60,7 @@ export async function handleMcp(msg,pm){
     await pm.persist();return reply({content:[{type:'text',text:JSON.stringify(result)}]});
   }catch(e){return reply({isError:true,content:[{type:'text',text:e.message}]});}
 }
-if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
+if(isMainModule(import.meta.url)){
   const pm=new PersonaMemory({storage:process.env.PM_STORAGE||null,persona:process.env.PM_PERSONA||'assistant',scope:process.env.PM_SCOPE||''});
   const decoder=new TextDecoder('utf-8',{fatal:true});let buffer='';
   const write=async value=>{

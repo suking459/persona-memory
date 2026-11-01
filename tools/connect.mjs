@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+import {isMainModule} from '../src/main.js';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {agentManagementCommand} from '../adapters/agent/manage.js';
 import {openAgentMemory} from '../adapters/agent/store.js';
 import {agentBackupCommand,identityFromBackup} from '../adapters/agent/backup.js';
 import {HOST_PROFILES} from '../adapters/agent/profiles.js';
@@ -15,7 +17,7 @@ export async function connectCommand(args){
     if(!/^--[a-z-]+$/.test(rest[i])||rest[i+1]===undefined||Object.hasOwn(options,rest[i].slice(2)))throw new TypeError('expected unique --name value options');
     options[rest[i].slice(2)]=rest[i+1];
   }
-  const allowed={list:[],prepare:['host','out','project','user','access','storage','locale','embedding-provider','embedding-model','embedding-endpoint','embedding-key-env','backend','identity-from'],backup:['binding','out'],'restore-preview':['binding','backup','out'],'restore-apply':['binding','backup','plan'],apply:['bundle','target'],undo:['bundle'],inspect:['binding','scope','candidate','status','limit','after'],review:['binding','scope','candidate','revision','decision','reason']};
+  const allowed={doctor:['binding'],explain:['binding','scope','query','memory','limit','locale'],'review-preview':['binding','scope','requests','decision','reason','out'],'review-apply':['binding','plan'],'forget-preview':['binding','scope','memory','revision','out'],'forget-apply':['binding','plan'],list:[],prepare:['host','out','project','user','access','storage','locale','embedding-provider','embedding-model','embedding-endpoint','embedding-key-env','backend','identity-from'],backup:['binding','out'],'restore-preview':['binding','backup','out'],'restore-apply':['binding','backup','plan'],apply:['bundle','target'],undo:['bundle'],inspect:['binding','scope','candidate','status','limit','after'],review:['binding','scope','candidate','revision','decision','reason']};
   if(!Object.hasOwn(allowed,action)||Object.keys(options).some(k=>!allowed[action].includes(k)))throw new TypeError('usage: persona-memory-connect list | prepare | apply | undo | inspect | review (see docs/agent-integration.md)');
   if(action==='list')return HOST_PROFILES;
   if(action==='prepare'){
@@ -40,6 +42,7 @@ export async function connectCommand(args){
   }
   if(!options.binding)throw new TypeError('--binding required');
   const binding=readBinding(path.resolve(options.binding));
+  if(['doctor','explain','review-preview','review-apply','forget-preview','forget-apply'].includes(action))return agentManagementCommand(action,binding,options);
   if(['backup','restore-preview','restore-apply'].includes(action)){
     if(action==='restore-apply'&&!options.plan)throw new TypeError('--plan required');
     return agentBackupCommand(action,binding,options);
@@ -58,7 +61,7 @@ export async function connectCommand(args){
 function printableJSON(value){
   return JSON.stringify(value,null,2).replace(/[\u2028\u2029\u202a-\u202e\u2066-\u2069]/g,char=>'\\u'+char.charCodeAt(0).toString(16).padStart(4,'0'));
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+if(isMainModule(import.meta.url)){
   try{process.stdout.write(printableJSON(await connectCommand(process.argv.slice(2)))+'\n');}
   catch(error){process.stderr.write(String(error.message)+'\n');process.exitCode=1;}
 }

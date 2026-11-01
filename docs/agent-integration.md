@@ -65,7 +65,7 @@ DSH 和 WorkBuddy 使用其本地 bundle/连接器启用流程，不使用此文
 3. 用户明确提供的新要求或更正，调用 memory_propose：scope、kind、key、value、evidenceId、reason。source 固定为 model，模型不能自己把来源改成 manual 或声称宿主已经验证。
 4. 提案成功只是 pending。所有者独立查看候选，确认内容和 revision 后接受或拒绝。更正沿同一 scope/kind/key 提案，源记录已变化时拒绝陈旧接纳。
 5. memory_confirm 只确认本连接创建、实际用于成功回答的上下文。预览、失败和另一连接的 contextId 均不能当作有效使用。
-6. review 模式可按当前头 ID/revision 使用 memory_forget，删除这一字段及其历史和候选；不能从旧头或别的范围删除。
+6. review 模式先按当前头 ID/revision 调用 memory_forget_preview，查看历史、传递派生字段和相关候选的计数/样本；所有者确认后，带同连接 previewId 调用 memory_forget。没有预览、旧头、变化/过期计划或别的范围均不能删除。
 7. 每次调用先检查持久化快照；独立所有者的审阅/更正/遗忘在下一次调用可见，无需为正常审阅重启。快照没变时保留待确认上下文；外部提交变化时旧上下文失效，须重读。重启仍加载同一目录；读取失败、写入竞争或落盘失败不发成功回执，当前连接停止继续读写，检查后重启恢复，不无限重试。
 
 所有者先在独立终端查看候选，不需要让 Agent 转述原文：
@@ -124,3 +124,12 @@ npm run typecheck
 ## 1.2 local additions
 
 See [write quality and corrections](quality.md) for assertion tags, derivedFrom references, stale-content filtering, cascading forget impact and schema 6 migration. Candidate hints never verify evidence or bypass owner review. This local build is not npm 1.0.0.
+
+
+## 1.5 所有者检查与批量处理
+
+新增 doctor（只读排错）、explain（本地召回解释）、review-preview/review-apply（整批审阅）和 forget-preview/forget-apply（连带删除预览/执行）。先预览原文、旧值、证据引用和影响，确认后再执行；预览十分钟过期，目标数据改变则重新预览。检查和预览不自动修复或批准事实。
+
+MCP 提供相应 memory_doctor、memory_explain、memory_review_preview、memory_review_batch、memory_forget_preview。批量和删除执行仅在 review 授权下可用，默认 capture 仍由独立所有者处理。大批原文超出输出预算时缩小批次；不是所有语言都已有翻译界面。
+
+完整命令及恢复边界见 [所有者管理](owner-management.md)。本地开发命令尚未进入 npm 1.0.0；真实宿主模型会话仍未验收。

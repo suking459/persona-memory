@@ -6,3 +6,4 @@ export {HOST_PROFILES} from './profiles.js';
 export {prepareAgentBundle} from './bundle.js';
 export {applyAgentBundle,undoAgentBundle} from './install.js';
 export {inspectAgentCandidates} from './review.js';
+export {doctorAgent} from './doctor.js';

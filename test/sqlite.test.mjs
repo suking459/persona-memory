@@ -105,4 +105,21 @@ if(!available){
     assert.equal(run({name:'memory_recall',arguments:{scope:'project',query:'greeting'}}).matches[0].record.value,'مرحبا');
   });
 
+  test('SQLite hard-linked databases are refused before read or write; all aliases remain unchanged',t=>{
+    const {dir,file,store}=setup(t);const revision=store.writeSync({synthetic:'original'},{expectedRevision:null}).revision,alias=path.join(dir,'alias.sqlite');
+    fs.linkSync(file,alias);assert.equal(fs.lstatSync(file).nlink,2);const before=fs.readFileSync(file);
+    assert.throws(()=>store.readSync(),{code:'ERR_STORE_FILE'});
+    assert.throws(()=>store.writeSync({synthetic:'changed'},{expectedRevision:revision}),{code:'ERR_STORE_FILE'});
+    assert.throws(()=>new SQLiteSnapshotStore({file:alias}).readSync(),{code:'ERR_STORE_FILE'});
+    assert.deepEqual(fs.readFileSync(file),before);assert.deepEqual(fs.readFileSync(alias),before);
+  });
+
+  test('SQLite malformed UTF-8 payloads are rejected as bytes without repairing or rewriting the database',t=>{
+    const {file,store}=setup(t);store.writeSync({value:'original'},{expectedRevision:null});
+    const db=new Database(file),invalid=Buffer.concat([Buffer.from('{"value":"'),Buffer.from([0x80]),Buffer.from('"}')]);
+    db.prepare('UPDATE pm_snapshots SET snapshot=CAST(? AS TEXT)').run(invalid);db.close();
+    const before=fs.readFileSync(file);assert.throws(()=>store.readSync(),/encoded|encoding|UTF-8/i);assert.deepEqual(fs.readFileSync(file),before);
+    assert.throws(()=>new PersonaMemory({store}),/original file preserved/);assert.deepEqual(fs.readFileSync(file),before);
+  });
+
 }

@@ -37,7 +37,8 @@ test('an active capture session sees independent owner acceptance, correction an
   const accepted=await owner2.call('memory_review',decision(correction));
   await assert.rejects(session.call('memory_confirm',{contextId:context.contextId,turnId:'stale-turn'}),/unknown|expired/);
   assert.equal((await session.call('memory_recall',{scope:'project'})).matches[0].record.value,'العربية');
-  await owner2.call('memory_forget',{scope:'project',id:accepted.record.id,expectedRevision:accepted.record.revision});
+  const forget=await owner2.call('memory_forget_preview',{scope:'project',id:accepted.record.id,expectedRevision:accepted.record.revision});
+  await owner2.call('memory_forget',{previewId:forget.previewId,scope:'project',id:accepted.record.id,expectedRevision:accepted.record.revision});
   assert.equal((await session.call('memory_recall',{scope:'project'})).matches.length,0);
   const fresh=await propose(session,'English','message-3');assert.equal(fresh.candidate.status,'pending');
   assert.equal(pm.diagnostics().confirmedTurns,0);

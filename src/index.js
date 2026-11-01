@@ -6,3 +6,5 @@ export { PersonaMemory, PersonaMemory as default } from './memory.js';
 export {JsonFileStore,MemorySnapshotStore} from './storage.js';
 export {SQLiteSnapshotStore} from './sqlite.js';
 export {createMemoryBackup,inspectMemoryBackup,previewMemoryRestore,restoreMemoryBackup} from './backup.js';
+export {diagnoseMemory,explainMemoryRecall} from './diagnostics.js';
+export {previewCandidateReview,applyCandidateReview,previewMemoryForget,applyMemoryForget} from './management.js';
