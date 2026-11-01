@@ -7,7 +7,7 @@ import {displayLanguage} from '../../src/locale.js';
 import {agentWorkflow,bundleReadme} from './workflow.js';
 import {VERSION} from '../../src/version.js';
 import {HOST_PROFILES,hostConfiguration} from './profiles.js';
-export function prepareAgentBundle({host,out,project,userId,access='capture',storage,locale='en'}={}){
+export function prepareAgentBundle({host,out,project,userId,access='capture',storage,locale='en',retrieval}={}){
   if(!Object.hasOwn(HOST_PROFILES,host))throw new TypeError('unknown host');
   for(const [label,value] of Object.entries({out,project})){
     if(typeof value!=='string'||!path.isAbsolute(value)||value.includes('${')||/[\u0000-\u001f]/.test(value))throw new TypeError('absolute '+label+' path without interpolation required');
@@ -18,7 +18,7 @@ export function prepareAgentBundle({host,out,project,userId,access='capture',sto
   const identity=process.platform==='win32'?canonical.toLowerCase():canonical;
   const projectId='project-'+createHash('sha256').update(identity).digest('hex').slice(0,32);
   const binding=normalizeBinding({version:1,host,storage:storage??path.join(output,'data'),persona:'agent-memory',
-    namespace:host+'-'+projectId,access,locale,subjects:{project:{type:'project',id:projectId},...(userId===undefined?{}:{personal:{type:'user',id:userId}})}});
+    namespace:host+'-'+projectId,access,locale,...(retrieval===undefined?{}:{retrieval}),subjects:{project:{type:'project',id:projectId},...(userId===undefined?{}:{personal:{type:'user',id:userId}})}});
   const file=path.join(output,'binding.json'),server=fileURLToPath(new URL('./server.js',import.meta.url));
   const configuration=hostConfiguration(host,{command:process.execPath,args:[server,'--binding',file]});
   const workflow=agentWorkflow(binding.locale);
@@ -29,7 +29,7 @@ export function prepareAgentBundle({host,out,project,userId,access='capture',sto
   const write=(name,body)=>fs.writeFileSync(path.join(output,name),body,{flag:'wx',mode:0o600});
   write('binding.json',JSON.stringify(binding,null,2)+'\n');write(configuration.filename,configuration.text);
   write('WORKFLOW.md',workflow);write('manifest.json',JSON.stringify(manifest,null,2)+'\n');
-  write('README.md',bundleReadme(HOST_PROFILES[host],binding.locale));
+  write('README.md',bundleReadme(HOST_PROFILES[host],binding.locale)+(binding.retrieval?(displayLanguage(binding.locale)==='zh'?'\n可选语义检索已配置：查询及选定的正式记忆会发送到指定嵌入服务；凭据只按环境变量名引用。服务失败会回退本地检索；不会自动安装模型。\n':'\nOptional semantic retrieval is configured: queries and selected approved values go to the chosen embedding service. Credentials are referenced by environment variable name only. Service errors fall back to local search; no model is installed automatically.\n'):''));
   if(host==='workbuddy'){
     write('connector-meta.json',JSON.stringify({name:displayLanguage(binding.locale)==='zh'?'项目记忆':'Persona Memory',name_zh:'项目记忆',name_en:'Persona Memory',description:'Scoped approved memory and reviewed proposals.',source:'persona-memory-local',type:'mcp',version:VERSION},null,2)+'\n');
     write('icon.svg','<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#244f85"/><path d="M17 46V18h13q13 0 13 10T30 38h-5v8m0-20v4h5q5 0 5-2t-5-2z" fill="white"/></svg>\n');

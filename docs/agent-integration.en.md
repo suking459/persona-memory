@@ -81,6 +81,10 @@ Run npm test, npm run typecheck and npm run test:multilingual from a development
 
 The development roadmap uses local milestones 1.1–1.4, an optional validated 1.5 midpoint release, local 1.6–1.9 and a complete 2.0 release. Completing a milestone does not automatically authorize publication. Existing source notices and third-party copyright remain in place.
 
+## Optional semantic retrieval in local 1.3
+
+Bundles can explicitly select an Ollama or OpenAI-compatible embedding service. Lexical retrieval remains the default. See [configuration, data flow and limits](semantic.md). Preparation does not install a model, call the service or modify the host.
+
 ## 1.2 local additions
 
 See [write quality and corrections](quality.md) for assertion tags, derivedFrom references, stale-content filtering, cascading forget impact and schema 6 migration. Candidate hints never verify evidence or bypass owner review. This local build is not npm 1.0.0.

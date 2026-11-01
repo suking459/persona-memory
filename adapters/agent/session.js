@@ -1,4 +1,5 @@
 // Independently written scoped Agent boundary; no host settings or model calls.
+import {createSemanticRetriever,createHttpEmbedder} from '../semantic/index.js';
 import {createHash} from 'node:crypto';
 import {normalizeBinding} from './binding.js';
 import {copySnapshotJSON} from '../../src/snapshot.js';
@@ -43,6 +44,12 @@ export function createAgentSession(pm,raw){
     return result;
   });
   const byName=new Map(tools.map(t=>[t.name,t]));
+  const semantic=binding.retrieval,retrievers=new Map();let providerEmbed;
+  const embed=semantic?input=>{providerEmbed??=createHttpEmbedder(semantic,{apiKey:semantic.apiKeyEnv?process.env[semantic.apiKeyEnv]:undefined});return providerEmbed(input);}:null;
+  const retriever=alias=>{
+    if(!retrievers.has(alias))retrievers.set(alias,createSemanticRetriever(pm,{subject:binding.subjects[alias],embed,locale:binding.locale,timeoutMs:semantic.timeoutMs,maxCandidates:semantic.maxCandidates,cacheSize:semantic.cacheSize,minSimilarity:semantic.minSimilarity}));
+    return retrievers.get(alias);
+  };
   let unavailable=false,busy=false;
   const contexts=new Set();
   const subjectOf=alias=>{if(!Object.hasOwn(binding.subjects,alias))fail('scope is not granted');return binding.subjects[alias];};
@@ -61,9 +68,25 @@ export function createAgentSession(pm,raw){
       catch{unavailable=true;fail('store refresh failed; no cached result issued; restart and inspect the store','ERR_AGENT_STORE');}
       let result,mutated=false;
       switch(name){
-        case 'memory_status':return {host:binding.host,access:binding.access,scopes:binding.subjects,locale:binding.locale,persistent:true,unreviewedFactsAreSearchable:false};
-        case 'memory_recall':return pm.searchMemories({subject,query:query(a.query),locale:a.locale===undefined?binding.locale:a.locale,limit:count(a.limit,8,32)});
-        case 'memory_context':{const context=pm.buildMemoryContext({subject,query:query(a.query),locale:a.locale===undefined?binding.locale:a.locale,budget:count(a.budget,4000,16000)});contexts.add(context.contextId);if(contexts.size>128)contexts.delete(contexts.values().next().value);return context;}
+        case 'memory_status':return {host:binding.host,access:binding.access,scopes:binding.subjects,locale:binding.locale,persistent:true,retrieval:semantic?{mode:'optional-semantic',provider:semantic.provider,model:semantic.model}:{mode:'lexical'},unreviewedFactsAreSearchable:false};
+        case 'memory_recall':{
+          const args={query:query(a.query),locale:a.locale===undefined?binding.locale:a.locale,limit:count(a.limit,8,32)};
+          if(!semantic)return pm.searchMemories({subject,...args});
+          const epoch=pm._recordEpoch,result=await retriever(a.scope).search(args);
+          try{await pm.reload({ifChanged:true});}catch{unavailable=true;fail('store refresh failed; no cached result issued; restart and inspect the store','ERR_AGENT_STORE');}
+          return epoch===pm._recordEpoch?result:{...pm.searchMemories({subject,...args}),semantic:{mode:'fallback',called:result.semantic.called,reason:'store-changed'}};
+        }
+        case 'memory_context':{
+          const args={query:query(a.query),locale:a.locale===undefined?binding.locale:a.locale,budget:count(a.budget,4000,16000)};
+          let context;
+          if(!semantic)context=pm.buildMemoryContext({subject,...args});
+          else{
+            const epoch=pm._recordEpoch,result=await retriever(a.scope).buildContext(args);
+            try{await pm.reload({ifChanged:true});}catch{unavailable=true;fail('store refresh failed; no cached result issued; restart and inspect the store','ERR_AGENT_STORE');}
+            context=epoch===pm._recordEpoch?result:{...pm.buildMemoryContext({subject,...args}),semantic:{mode:'fallback',called:result.semantic.called,reason:'store-changed'}};
+          }
+          contexts.add(context.contextId);if(contexts.size>128)contexts.delete(contexts.values().next().value);return context;
+        }
         case 'memory_candidates':return {candidates:pm.listCandidates({subject,status:a.status,limit:count(a.limit,8,32)})};
         case 'memory_propose':{
           short(a.evidenceId,'evidenceId',256);if(!a.evidenceId.trim())throw new TypeError('evidenceId required');

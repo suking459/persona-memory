@@ -34,3 +34,12 @@ const quality=localeMemory.inspectCandidate('candidate',{limit:8});const verifie
 localeMemory.previewForgetMemory(qualityRecord.id);localeMemory.memoryStatus(qualityRecord.id);
 // @ts-expect-error Assertion labels do not accept a claim of verification.
 localeMemory.putMemory({subject:{type:'project',id:'p'},kind:'fact',key:'bad',value:'value',assertion:'verified'});
+
+import {createSemanticRetriever,createHttpEmbedder,type EmbeddingConfig} from 'persona-memory/adapters/semantic';
+const embedding:EmbeddingConfig={provider:'ollama',endpoint:'http://127.0.0.1:11434/api/embed',model:'owner-selected-model'};
+const semantic=createSemanticRetriever(localeMemory,{subject:{type:'project',id:'p'},embed:createHttpEmbedder(embedding)});
+const semanticResult=await semantic.search({query:'咖啡',locale:'zh'});const semanticMatches=semanticResult.matches;void semanticMatches;
+const semanticContext=await semantic.buildContext({query:'coffee',budget:2000});const selectedRecords=semanticContext.records;void selectedRecords;
+prepareAgentBundle({host:'workbuddy',out:'/tmp/semantic',project:'/tmp/project',retrieval:embedding});
+// @ts-expect-error Per-query callers cannot widen the fixed subject selection.
+semantic.search({query:'coffee',subject:{type:'user',id:'other'}});

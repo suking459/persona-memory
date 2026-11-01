@@ -1,8 +1,9 @@
 import type {PersonaMemory,MemorySubject,MemoryCandidate,MemoryRecord,CandidateStatus,CandidateQuality,MemoryAssertion} from '../../index.js';
+import type {EmbeddingConfig,NormalizedEmbeddingConfig} from '../semantic/index.js';
 export interface AgentBinding {
   readonly version:1;readonly host:string;readonly storage:string;readonly persona:string;
   readonly namespace:string;readonly access:'read'|'capture'|'review';
-  readonly locale:string;
+  readonly locale:string;readonly retrieval?:Readonly<NormalizedEmbeddingConfig>;
   readonly subjects:Readonly<Record<string,Readonly<MemorySubject>>>;
 }
 export interface AgentTool {name:string;description:string;inputSchema:Record<string,unknown>;annotations:Record<string,boolean>}
@@ -13,7 +14,7 @@ export declare function createAgentSession(pm:PersonaMemory,binding:unknown):Age
 export declare function createAgentRpc(session:AgentSession):(message:unknown)=>Promise<unknown>;
 export interface HostProfile {name:string;target:string;format:string;source:string;checked:string;hostEndToEnd:false}
 export declare const HOST_PROFILES:Readonly<Record<string,HostProfile>>;
-export declare function prepareAgentBundle(options:{host:string;out:string;project:string;userId?:string;access?:AgentBinding['access'];storage?:string;locale?:string}):{directory:string;manifest:Record<string,unknown>;binding:AgentBinding};
+export declare function prepareAgentBundle(options:{host:string;out:string;project:string;userId?:string;access?:AgentBinding['access'];storage?:string;locale?:string;retrieval?:EmbeddingConfig}):{directory:string;manifest:Record<string,unknown>;binding:AgentBinding};
 export declare function applyAgentBundle(options:{bundle:string;target:string}):{applied:true;target:string;recoveryRecord:string};
 export declare function undoAgentBundle(options:{bundle:string}):{restored:true;target:string};
 
