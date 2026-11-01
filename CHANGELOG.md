@@ -11,7 +11,9 @@ Internal 1.1–1.5 work; npm/GitHub 1.0.0 artifacts and notices are preserved. P
 - Read-only doctor, lexical explanations, whole-batch owner review previews and impact-guarded deletion. Detached staging prevents early live-state changes; compact receipts avoid post-commit output-size failures.
 - SDK/types, English owner/storage guidance, Chinese/English workflows, isolated protocol and multi-environment checks. New APIs are not available in public npm 1.0.0.
 
-Remaining gates: real vendor-host model lifecycle acceptance and historical-source disposition. Existing attribution is retained; no all-original or exhaustive-bug-freedom claim.
+- Real-model lifecycle acceptance: five cases each on Windows Codex CLI 0.166.0-alpha.5.1 and DSH headless 0.2.1-rc.5, covering pending capture, independent owner review, correction, new-process recovery and guarded forgetting. See [scope and evidence](docs/AGENT-ACCEPTANCE.md).
+
+Remaining gates: desktop UI and other vendor-host acceptance, plus historical-source disposition. Existing attribution is retained; no all-original or exhaustive-bug-freedom claim.
 
 
 ## 1.0.0 — 2026-10-29

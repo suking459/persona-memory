@@ -68,7 +68,7 @@ Backups/plans use exclusive creation and private file mode where the platform su
 
 ## Verification boundaries
 
-Windows runtime matrix, Linux isolated guest, real SQLite transactions, mid-transaction subprocess exit, lock contention, stale writers, logical JSON–SQLite–JSON migration and real MCP subprocess restart are tested. Process interruption is not proof of power-loss durability. Actual vendor model sessions and model accuracy are separate checks and remain unverified.
+Windows runtime matrix, Linux isolated guest, real SQLite transactions, mid-transaction subprocess exit, lock contention, stale writers, logical JSON–SQLite–JSON migration and real MCP subprocess restart are tested. Process interruption is not proof of power-loss durability. Follow-up real-model lifecycle checks passed for the specified Windows Codex CLI and DSH headless versions; see the [acceptance matrix](AGENT-ACCEPTANCE.md). These checks do not measure model accuracy or certify other hosts, desktop UI or vendor-driven storage migration.
 
 Primary implementation references: [Node 22 SQLite API](https://nodejs.org/download/release/latest-jod/docs/api/sqlite.html), [Node 24.16 SQLite API](https://nodejs.org/download/release/v24.16.0/docs/api/sqlite.html), [SQLite application_id](https://sqlite.org/pragma.html#pragma_application_id), [SQLite trusted_schema](https://sqlite.org/pragma.html#pragma_trusted_schema).
 

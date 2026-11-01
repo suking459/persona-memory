@@ -88,4 +88,4 @@ SDK plans bind logical identity, snapshot state/revision and configuration. They
 
 For backups, cross-machine identity preservation and JSON–SQLite migration, see [Storage and backup](storage-backup.md). For default capture, owner inspection and host setup see [English integration](agent-integration.en.md) / [中文接入](agent-integration.md).
 
-These are local SDK/CLI/protocol capabilities. Real Codex, DSH, Claude Code, WorkBuddy and other vendor model sessions remain experimental until their own lifecycle acceptance is recorded. This iteration does not install hooks in another app or merge its memory.
+These operations have local SDK/CLI/protocol coverage. Follow-up acceptance passed five real-model lifecycle cases each for the specified Windows Codex CLI and DSH headless versions. Desktop UI and the other nine host targets remain unverified; see the [acceptance matrix](AGENT-ACCEPTANCE.md). The tests do not enable this service in everyday applications or merge their native memory.

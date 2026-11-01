@@ -21,7 +21,7 @@ Windows absolute paths also work, for example D:/my-project. The parent of --out
 
 The bundle includes binding.json, host-specific configuration and WORKFLOW.md. Keep the bundle at its original location: generated commands reference absolute installation and binding paths. storage is a directory, not a JSON filename. --backend sqlite opts into native SQLite on Node 22.13+; JSON still supports Node 18. --storage can select a stable directory; otherwise data belongs to the new bundle. --user owner-id optionally adds a separately bound personal subject. --access defaults to capture; read and review must be selected explicitly.
 
-Profiles exist for codex, dsh, claude-code, workbuddy, gemini-cli, qwen-code, kimi-code, codebuddy, iflow, vscode-copilot and cursor. Each profile records an official reference. These are configuration generators: full target-host model sessions remain untested. The installed Codex CLI has parsed an isolated generated configuration, which is narrower evidence.
+Profiles exist for codex, dsh, claude-code, workbuddy, gemini-cli, qwen-code, kimi-code, codebuddy, iflow, vscode-copilot and cursor. Each profile records an official reference. Codex CLI 0.166.0-alpha.5.1 has passed five real-model lifecycle scenarios on Windows. DSH headless 0.2.1-rc.5 has also passed its native-client pipeline and five real-model lifecycle cases using the official API; other target/model/UI combinations need their own acceptance. See [versioned acceptance](AGENT-ACCEPTANCE.md) for current evidence; configuration generation alone remains experimental.
 
 DSH uses a local Cordis bundle. WorkBuddy uses a local custom connector with mcp.json, metadata, icon and workflow. Neither is a portable or marketplace-published package.
 
@@ -77,7 +77,7 @@ Synthetic literal-search fixtures cover 26 language tags, including Arabic, Hind
 
 ## Validation and release
 
-Library checks, real stdio subprocesses, generated configuration checks and installed-host end-to-end tests are reported separately. Target-host end-to-end sessions are still pending; no existing host configuration or QQA data was changed. The current review-flow batch passed six Windows Node environments and a fresh Ubuntu 24.04.5 / Node 26.13.0 x64 software-emulated test copy. The Linux suite passed 374 tests plus type checking; this is not native performance evidence. Other Linux versions, macOS and ARM remain untested for the current changes.
+Library checks, real stdio subprocesses, generated configuration checks and installed-host end-to-end tests are reported separately. Windows Codex CLI 0.166.0-alpha.5.1 and DSH headless 0.2.1-rc.5 have each passed five real-model lifecycle cases; desktop UI and the other nine generated host targets remain unverified. See the [current acceptance matrix](AGENT-ACCEPTANCE.md). No everyday host configuration or QQA data was changed. The earlier review-flow batch passed six Windows Node environments and a fresh Ubuntu 24.04.5 / Node 26.13.0 x64 software-emulated test copy. The Linux suite passed 374 tests plus type checking; this is not native performance evidence. Other Linux versions, macOS and ARM remain untested for the current changes.
 
 Run npm test, npm run typecheck and npm run test:multilingual from a development checkout. Do not publish original chats, credentials, bundles, recovery records or test artifacts.
 

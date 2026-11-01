@@ -27,8 +27,8 @@ node tools/connect.mjs prepare --host workbuddy --project D:/my-project --out D:
 
 | --host | 配置位置/启用方式 | 本轮状态 |
 |---|---|---|
-| codex | 项目 .codex/config.toml；需宿主信任项目 | 已安装 CLI 解析通过；真实模型任务未测 |
-| dsh | 本地 Cordis bundle，含 package.json 和 cordis.patch.yml | 生成并作协议/生命周期检查；宿主加载未测 |
+| codex | 项目 .codex/config.toml；需宿主信任项目 | CLI 0.166.0-alpha.5.1 的真实模型五场景通过；桌面 UI 未测 |
+| dsh | 本地 Cordis bundle，含 package.json 和 cordis.patch.yml | Windows headless 0.2.1-rc.5 真实模型五场景通过；桌面 UI 未测 |
 | claude-code | 项目 .mcp.json | 配置生成；宿主未测 |
 | workbuddy | 自定义连接器导入 mcp.json，附 connector-meta.json、图标和工作流 Skill | 本机连接器草案；不是已上架市场 |
 | gemini-cli | 项目 .gemini/settings.json | 配置生成；宿主未测 |
@@ -102,7 +102,7 @@ SDK 调用 createAgentSession 前，应先保存自己对核心所作的本地�
 - 库级：范围、候选、纠错、历史删除、写入失败与旧快照。
 - 协议级：真实 stdio 子进程的握手/工具调用、拆包 UTF-8、逐帧上限、背压、退出和重启。
 - 配置级：生成文件形状；已安装 Codex CLI 0.166.0-alpha.5.1 在隔离 CODEX_HOME 中解析。没有使用用户现有配置。
-- 宿主级：真实版本/账户中启用后，完成个人偏好、项目约束、更正、重启、遗忘、越权、拒绝审批、网络/模型失败和原生记忆共存；**当前未完成**。
+- 宿主级：真实版本/账户中启用后，完成个人偏好、项目约束、更正、重启、遗忘、越权、拒绝审批、网络/模型失败和原生记忆共存；**仅指定 Windows Codex CLI 与 DSH headless 的部分生命周期场景通过**，完整宿主覆盖仍未完成；按 [验收矩阵](AGENT-ACCEPTANCE.md) 逐项区分。
 - 跨系统：当前审阅流程批次在六个 Windows Node 环境及新建 Ubuntu 24.04.5 / Node 26.13.0 x64 软件模拟副本通过；Linux 完整 374 项及类型检查通过。其他 Linux 版本、macOS/ARM 尚未验证，最终候选继续按实际范围另跑，不沿用 1.0 结果。
 
 本轮测试使用合成数据，没有安装其他厂商 Agent，没有读取真实聊天、密钥或改变 QQA。本项目不保证零 bug、普遍提升模型能力或自动零维护接入。
@@ -132,4 +132,6 @@ See [write quality and corrections](quality.md) for assertion tags, derivedFrom 
 
 MCP 提供相应 memory_doctor、memory_explain、memory_review_preview、memory_review_batch、memory_forget_preview。批量和删除执行仅在 review 授权下可用，默认 capture 仍由独立所有者处理。大批原文超出输出预算时缩小批次；不是所有语言都已有翻译界面。
 
-完整命令及恢复边界见 [所有者管理](owner-management.md)。本地开发命令尚未进入 npm 1.0.0；真实宿主模型会话仍未验收。
+完整命令及恢复边界见 [所有者管理](owner-management.md)。本地开发命令尚未进入 npm 1.0.0；指定 Windows Codex CLI 与 DSH headless 的真实模型五场景已分别通过，其他入口仍需独立验收。
+
+最新具体版本和场景见 [Agent 验收矩阵](AGENT-ACCEPTANCE.md)，区分原生客户端、真实模型与桌面 UI。
