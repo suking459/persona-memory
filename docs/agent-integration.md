@@ -1,4 +1,4 @@
-# Agent 接入：1.1 开发版
+# Agent 接入：本地 1.x 开发版
 
 状态：本地开发，不是已发布版本；不能使用 npm 上的 1.0.0 运行这些新命令。
 
@@ -21,7 +21,7 @@ node tools/connect.mjs prepare --host workbuddy --project D:/my-project --out D:
 
 --project 是实际工作的已有目录，--out 必须是尚不存在的新目录，其父目录需存在。可选 --user owner-id 增加个人主体；--access 默认为 capture。--locale 默认为 en，可设 zh-CN 生成中文工作流和包内说明；其他语言暂用英文说明，原文数据不会自动翻译。memory_recall / memory_context 可单次指定查询 locale，不改变绑定范围。生成的绑定、数据与当前安装位置有引用关系；移动安装或接入包后应重新生成配置，不能继续引用已不存在的命令。
 
-生成器不会修改宿主设置。binding.json 的 storage 是**持久化目录**，内部由核心按 namespace/persona 写独立 JSON，不是一个直接指定的 JSON 文件。可用 --storage 显式选择稳定目录。启用后保留该目录，升级前停止写者并备份。
+生成器不会修改宿主设置。binding.json 的 storage 是**持久化目录**，默认由核心按 namespace/persona 写独立 JSON，不是一个直接指定的 JSON 文件。可用 --backend sqlite 选择 Node 22.13+ 内置 SQLite；JSON 仍支持 Node 18。可用 --storage 显式选择稳定目录。启用后保留该目录，升级前停止写者并备份。
 
 生成器为以下 11 类提供独立格式及官方来源：
 
@@ -55,6 +55,8 @@ node tools/connect.mjs undo --bundle D:/memory-codex
 应用前在接入包生成 installation.json，保存原文件和新文件哈希；撤销只在目标文件未被随后编辑时恢复，防止冲掉其他修改。这个恢复记录可能包含原配置中的敏感值，应保留在本机，不提交或分享。不得把整个接入包带入公开源码。检查与改写之间仍有文件系统竞争窗口；应用时关闭正在修改该配置的宿主。
 
 DSH 和 WorkBuddy 使用其本地 bundle/连接器启用流程，不使用此文件合并命令。生成包目前使用已安装 Node 和当前项目的绝对路径，是本机安装产物；不能当成所有机器通用的市场发布包。正式上架还需安装路径/运行时、市场 schema 和真实客户端验收。
+
+备份、更换电脑或 JSON/SQLite 迁移见 [存储与恢复指南](storage-backup.md)。完整备份包含私人数据；先预览影响，目标变化后重新预览。
 
 ## 日常记忆流程
 

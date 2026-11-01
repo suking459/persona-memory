@@ -43,3 +43,16 @@ const semanticContext=await semantic.buildContext({query:'coffee',budget:2000});
 prepareAgentBundle({host:'workbuddy',out:'/tmp/semantic',project:'/tmp/project',retrieval:embedding});
 // @ts-expect-error Per-query callers cannot widen the fixed subject selection.
 semantic.search({query:'coffee',subject:{type:'user',id:'other'}});
+
+
+import {SQLiteSnapshotStore,createMemoryBackup,inspectMemoryBackup,previewMemoryRestore,restoreMemoryBackup} from 'persona-memory';
+import {SQLiteSnapshotStore as SQLiteSubpath} from 'persona-memory/storage/sqlite';
+import {openAgentMemory} from 'persona-memory/adapters/agent';
+const sqliteStore=new SQLiteSnapshotStore({file:'./memory.sqlite',namespace:'project'});
+const sqliteMemory=new PersonaMemory({store:sqliteStore});
+const sqliteBackup=await createMemoryBackup(sqliteMemory);
+const sqlitePreview=await previewMemoryRestore(sqliteMemory,sqliteBackup);
+const sqliteRestored=await restoreMemoryBackup(sqliteMemory,sqliteBackup,sqlitePreview);
+const sqliteInspected=inspectMemoryBackup(sqliteBackup);
+new SQLiteSubpath({file:'./other.sqlite'});openAgentMemory({});
+const restoredFlag:boolean=sqliteRestored.committed;const memoryCount:number=sqliteInspected.counts.memories;

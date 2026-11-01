@@ -1,3 +1,4 @@
+export {openAgentMemory} from './store.js';
 export {normalizeBinding,readBinding} from './binding.js';
 export {createAgentSession} from './session.js';
 export {createAgentRpc} from './server.js';

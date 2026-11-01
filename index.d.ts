@@ -75,7 +75,7 @@ export interface PersonaMemoryConfig {
   scoreAmbient?:boolean;affinityContext?:boolean;maxProfiles?:number;maxSnapshotBytes?:number;maxVisitors?:number;visitorRetentionDays?:number;maxStyleFragments?:number;
   dedupeLimit?:number;dedupeDays?:number;historyLimit?:number;dimensions?:Record<string,DimensionRule>;
 }
-export interface PersonaMemoryOptions {storage?:string|null;persona?:string;scope?:string;config?:PersonaMemoryConfig;clock?:()=>number}
+export interface PersonaMemoryOptions {storage?:string|null;store?:SyncSnapshotStore;persona?:string;scope?:string;config?:PersonaMemoryConfig;clock?:()=>number}
 export interface IngestResult {matched:boolean;delta:number;reasons:string[];tags?:string[];visitor?:boolean;duplicate?:boolean;ignored?:'out-of-order'}
 export interface MaintainResult {decayed:number;expired:number;promoted:number;demoted:number;forcedOut:number;memoriesExpired:number;candidatesExpired:number}
 export interface BuildBlockOptions {chatId:string;userIds:string[];budget?:number;maxPeople?:number;priorityUserIds?:string[];now?:number;tokenBudget?:number;countTokens?:(text:string)=>number}
@@ -104,7 +104,7 @@ export interface HostEvent {chatId:string;userId:string;eventId?:string;type:str
 export interface DiagnosticStats {schemaVersion:number;candidates:number;memories:number;profiles:number;visitors:number;tags:number;dedupeEntries:number;confirmedTurns:number;historyEntries:number}
 export declare class PersonaMemory {
   constructor(options?:PersonaMemoryOptions);
-  static open(options:Omit<PersonaMemoryOptions,'storage'>&{store:SnapshotStore}):Promise<PersonaMemory>;
+  static open(options:Omit<PersonaMemoryOptions,'storage'|'store'>&{store:SnapshotStore}):Promise<PersonaMemory>;
   persist():Promise<void>;reload(options?:{discardChanges?:boolean;ifChanged?:boolean}):Promise<void>;
   readonly persona:string;readonly scope:string;readonly storage:string|null;config:PersonaMemoryConfig;
   ingest(msg:ChatMessage):IngestResult;
@@ -232,3 +232,28 @@ export interface CandidateQuality {
   similar:{id:string;revision:number;evidenceId:string;source:MemorySource;assertion:MemoryAssertion|'unspecified'}[];
   competing:CandidateQuality['similar'];similarCount:number;competingCount:number;sourceChanges:string[];truncated:boolean;limits:string;
 }
+
+export interface SyncSnapshotStore extends SnapshotStore {
+  readSync():{snapshot:MemorySnapshot|null;revision:string|null};
+  writeSync(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):{revision:string};
+}
+export declare class SQLiteSnapshotStore implements SyncSnapshotStore {
+  constructor(options:{file:string;namespace?:string;maxBytes?:number;maxNamespaces?:number});
+  readonly file:string;readonly namespace:string;readonly maxBytes:number;readonly maxNamespaces:number;
+  readSync():{snapshot:MemorySnapshot|null;revision:string|null};
+  writeSync(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):{revision:string};
+  read():Promise<{snapshot:MemorySnapshot|null;revision:string|null}>;
+  write(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
+}
+export interface MemoryBackupIdentity {persona:string;namespace:string;subjects:Record<string,MemorySubject>;locale?:string}
+export interface MemoryBackup {format:'persona-memory-backup';version:1;createdAt:number;snapshot:MemorySnapshot;identity?:MemoryBackupIdentity;checksum:string}
+export interface BackupCounts {memories:number;candidates:number;relationshipProfiles:number}
+export interface MemoryRestorePreview {
+  format:'persona-memory-restore-plan';version:1;createdAt:number;expiresAt:number;persona:string;scope:string;
+  expectedRevision:string|null;targetDigest:string;configDigest:string;backupChecksum:string;checksum:string;
+  replacing:BackupCounts;restoring:BackupCounts;
+}
+export declare function createMemoryBackup(pm:PersonaMemory,options?:{identity?:MemoryBackupIdentity;now?:number}):Promise<MemoryBackup>;
+export declare function inspectMemoryBackup(raw:unknown,options?:{config?:PersonaMemoryConfig}):{checksum:string;createdAt:number;snapshot:MemorySnapshot;identity?:MemoryBackupIdentity;counts:BackupCounts};
+export declare function previewMemoryRestore(pm:PersonaMemory,raw:unknown,options?:{now?:number}):Promise<MemoryRestorePreview>;
+export declare function restoreMemoryBackup(pm:PersonaMemory,raw:unknown,preview:unknown,options?:{now?:number}):Promise<{committed:true;persistent:boolean;requiresReload:boolean;counts:BackupCounts}>;

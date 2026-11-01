@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {pathToFileURL} from 'node:url';
-import {PersonaMemory} from '../../src/index.js';
+import {openAgentMemory} from './store.js';
 import {VERSION} from '../../src/version.js';
 import {readBinding} from './binding.js';
 import {createAgentSession} from './session.js';
@@ -41,7 +41,7 @@ export function createAgentRpc(session){
 }
 export async function runAgentServer(file){
   const binding=readBinding(file);
-  const pm=new PersonaMemory({storage:binding.storage,persona:binding.persona,scope:binding.namespace});
+  const pm=openAgentMemory(binding);
   const session=createAgentSession(pm,binding);
   await serveStdio(createAgentRpc(session));
 }

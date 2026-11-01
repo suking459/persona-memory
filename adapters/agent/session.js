@@ -1,6 +1,7 @@
 // Independently written scoped Agent boundary; no host settings or model calls.
 import {createSemanticRetriever,createHttpEmbedder} from '../semantic/index.js';
 import {createHash} from 'node:crypto';
+import {matchesAgentStore} from './store.js';
 import {normalizeBinding} from './binding.js';
 import {copySnapshotJSON} from '../../src/snapshot.js';
 import {MEMORY_KINDS,sameSubject,assertMemoryFields as fields} from '../../src/records.js';
@@ -36,7 +37,7 @@ function count(value,fallback,max){if(value===undefined)return fallback;if(!Numb
 function short(value,label,max=512){if(typeof value!=='string'||value.length>max)throw new TypeError('invalid '+label);return value;}
 export function createAgentSession(pm,raw){
   const binding=normalizeBinding(raw),aliases=Object.keys(binding.subjects);
-  if(pm.storage!==binding.storage)throw new TypeError('a matching persistent JSON store is required');
+  if(!matchesAgentStore(pm,binding))throw new TypeError('a matching persistent store is required');
   if(pm.persona!==binding.persona||pm.scope!==binding.namespace)throw new TypeError('memory instance does not match binding');
   const tools=[...READ,...(binding.access!=='read'?CAPTURE:[]),...(binding.access==='review'?REVIEW:[])].map(t=>{
     const result=structuredClone(t);

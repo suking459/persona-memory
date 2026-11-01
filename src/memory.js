@@ -67,10 +67,12 @@ function validateConfig(config) {
 }
 
 export class PersonaMemory {
-  constructor({ storage = null, persona = 'default', scope = '', config = {}, clock = Date.now } = {}) {
+  constructor({ storage = null, store = null, persona = 'default', scope = '', config = {}, clock = Date.now } = {}) {
     this.persona = key(persona, 'persona');
     this.scope = scope ? key(scope, 'scope') : '';
     this.storage = storage ? path.resolve(storage) : null;
+    if(storage&&store)throw new TypeError('choose storage directory or store');
+    if(store&&(!['read','write','readSync','writeSync'].every(k=>typeof store[k]==='function')))throw new TypeError('synchronous store required by constructor; use PersonaMemory.open for async stores');
     if (typeof clock !== 'function') throw new TypeError('clock must be a function');
     this.clock = clock;
     this.config = validateConfig({ ...clone(DEFAULTS), ...clone(config) });
@@ -79,8 +81,8 @@ export class PersonaMemory {
     this._pending = new Map();
     this._recordEpoch = {};this._learningEpoch={};
     this._imports=new Map();this._storeRevision=null;this._storeBusy=false;
-    this._store=this.storage?new JsonFileStore({file:this._file(),maxBytes:this.config.maxSnapshotBytes}):null;
-    if (this.storage) this._load();
+    this._store=store??(this.storage?new JsonFileStore({file:this._file(),maxBytes:this.config.maxSnapshotBytes}):null);
+    if (this._store) this._load();
   }
   _empty() {
     return { schemaVersion: 6, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
@@ -94,9 +96,12 @@ export class PersonaMemory {
   _load() {
     try{
       const loaded=this._store.readSync();
+      if(!loaded||!Object.hasOwn(loaded,'snapshot'))throw new TypeError('invalid store read result');
+      checkRevision(loaded.revision);
+      if((loaded.snapshot===null)!==(loaded.revision===null))throw new TypeError('inconsistent store read result');
       if(loaded.snapshot!==null)this.state=this._hydrate(loaded.snapshot);
       this._storeRevision=loaded.revision;
-    }catch(cause){throw new Error('Cannot load memory snapshot; original file preserved: '+this._file(),{cause});}
+    }catch(cause){throw new Error('Cannot load memory snapshot; original file preserved: '+(this._store.file??'configured store'),{cause});}
   }
   static async open({store,...options}={}) {
     if(!store || typeof store.read!=='function' || typeof store.write!=='function')throw new TypeError('snapshot store read/write required');
@@ -775,10 +780,10 @@ export class PersonaMemory {
     if(!this._store || !this._dirty)return;
     if(this._storeBusy)throw storageError('ERR_STORE_BUSY','another store operation is pending');
     if(typeof this._store.writeSync!=='function')throw storageError('ERR_STORE_ASYNC','this store requires await persist()');
-    if(Buffer.byteLength(JSON.stringify(this.state))>this.config.maxSnapshotBytes)throw capacityError('snapshot');
-    const saved=this._store.writeSync(this.state,{expectedRevision:this._storeRevision});
+    const snapshot=this.export();
+    const saved=this._store.writeSync(snapshot,{expectedRevision:this._storeRevision});
     checkRevision(saved?.revision,{empty:false});this._storeRevision=saved.revision;this._dirty=false;
   }
-  export() {return clone(this.state);}
+  export() {return copySnapshotJSON(this.state,this.config.maxSnapshotBytes,{omitUndefined:true});}
   import(snapshot) {const next=this._hydrate(snapshot);this.state=next;this._recordEpoch={};this._learningEpoch={};this._pending.clear();this._imports.clear();this._dirty=true;}
 }

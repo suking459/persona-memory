@@ -1,5 +1,5 @@
 // Read-only owner inspection. Does not run host tools or modify a snapshot.
-import {PersonaMemory} from '../../src/index.js';
+import {openAgentMemory} from './store.js';
 import {copySnapshotJSON} from '../../src/snapshot.js';
 import {assertMemoryFields as fields,memoryIdentifier,sameSubject} from '../../src/records.js';
 import {stageCandidateAcceptance} from '../../src/candidates.js';
@@ -19,7 +19,7 @@ export function inspectAgentCandidates(raw,request={}){
     if(query.after!==undefined)memoryIdentifier(query.after);
   }
   // Always open the operator's current on-disk view, not an Agent's cached state.
-  const pm=new PersonaMemory({storage:binding.storage,persona:binding.persona,scope:binding.namespace}),now=Date.now();
+  const pm=openAgentMemory(binding),now=Date.now();
   if(query.candidateId!==undefined){
     const candidate=pm.getCandidate(query.candidateId,{includeExpired:true});
     if(!candidate||!sameSubject(candidate.memory.subject,subject))throw new TypeError('candidate is unavailable in this scope');

@@ -3,11 +3,18 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {normalizeBinding} from './binding.js';
+import {copySnapshotJSON} from '../../src/snapshot.js';
+import {assertMemoryFields as fields} from '../../src/records.js';
 import {displayLanguage} from '../../src/locale.js';
 import {agentWorkflow,bundleReadme} from './workflow.js';
 import {VERSION} from '../../src/version.js';
 import {HOST_PROFILES,hostConfiguration} from './profiles.js';
-export function prepareAgentBundle({host,out,project,userId,access='capture',storage,locale='en',retrieval}={}){
+export function prepareAgentBundle({host,out,project,userId,access='capture',storage,locale='en',retrieval,backend,identity:restoredIdentity}={}){
+  if(restoredIdentity!==undefined){
+    restoredIdentity=copySnapshotJSON(restoredIdentity,8192);fields(restoredIdentity,new Set(['persona','namespace','subjects','locale']),'restored identity');
+    if(!restoredIdentity.persona||!restoredIdentity.namespace||!restoredIdentity.subjects)throw new TypeError('incomplete restored identity');
+    if(userId!==undefined)throw new TypeError('choose restored identity or a new user scope');
+  }
   if(!Object.hasOwn(HOST_PROFILES,host))throw new TypeError('unknown host');
   for(const [label,value] of Object.entries({out,project})){
     if(typeof value!=='string'||!path.isAbsolute(value)||value.includes('${')||/[\u0000-\u001f]/.test(value))throw new TypeError('absolute '+label+' path without interpolation required');
@@ -17,8 +24,8 @@ export function prepareAgentBundle({host,out,project,userId,access='capture',sto
   const canonical=fs.realpathSync(workspace);
   const identity=process.platform==='win32'?canonical.toLowerCase():canonical;
   const projectId='project-'+createHash('sha256').update(identity).digest('hex').slice(0,32);
-  const binding=normalizeBinding({version:1,host,storage:storage??path.join(output,'data'),persona:'agent-memory',
-    namespace:host+'-'+projectId,access,locale,...(retrieval===undefined?{}:{retrieval}),subjects:{project:{type:'project',id:projectId},...(userId===undefined?{}:{personal:{type:'user',id:userId}})}});
+  const binding=normalizeBinding({version:1,host,...(backend===undefined?{}:{backend}),storage:storage??path.join(output,'data'),persona:restoredIdentity?.persona??'agent-memory',
+    namespace:restoredIdentity?.namespace??host+'-'+projectId,access,locale:restoredIdentity?.locale??locale,...(retrieval===undefined?{}:{retrieval}),subjects:restoredIdentity?.subjects??{project:{type:'project',id:projectId},...(userId===undefined?{}:{personal:{type:'user',id:userId}})}});
   const file=path.join(output,'binding.json'),server=fileURLToPath(new URL('./server.js',import.meta.url));
   const configuration=hostConfiguration(host,{command:process.execPath,args:[server,'--binding',file]});
   const workflow=agentWorkflow(binding.locale);

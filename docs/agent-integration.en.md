@@ -1,6 +1,6 @@
-# Agent integration — local 1.1 development
+# Agent integration — local 1.x development
 
-This guide describes local 1.1.0-dev.0 changes. They are not published in npm 1.0.0. [中文说明](agent-integration.md) · [Language support and limitations](multilingual.md)
+This guide describes local unpublished 1.x changes. They are not published in npm 1.0.0. [中文说明](agent-integration.md) · [Language support and limitations](multilingual.md)
 
 ## Purpose
 
@@ -19,7 +19,7 @@ node tools/connect.mjs prepare --host claude-code --project /absolute/my-project
 
 Windows absolute paths also work, for example D:/my-project. The parent of --out must exist. Preparation creates files only; it does not modify the host.
 
-The bundle includes binding.json, host-specific configuration and WORKFLOW.md. Keep the bundle at its original location: generated commands reference absolute installation and binding paths. storage is a directory, not a JSON filename. --storage can select a stable directory; otherwise data belongs to the new bundle. --user owner-id optionally adds a separately bound personal subject. --access defaults to capture; read and review must be selected explicitly.
+The bundle includes binding.json, host-specific configuration and WORKFLOW.md. Keep the bundle at its original location: generated commands reference absolute installation and binding paths. storage is a directory, not a JSON filename. --backend sqlite opts into native SQLite on Node 22.13+; JSON still supports Node 18. --storage can select a stable directory; otherwise data belongs to the new bundle. --user owner-id optionally adds a separately bound personal subject. --access defaults to capture; read and review must be selected explicitly.
 
 Profiles exist for codex, dsh, claude-code, workbuddy, gemini-cli, qwen-code, kimi-code, codebuddy, iflow, vscode-copilot and cursor. Each profile records an official reference. These are configuration generators: full target-host model sessions remain untested. The installed Codex CLI has parsed an isolated generated configuration, which is narrower evidence.
 
@@ -33,6 +33,8 @@ node tools/connect.mjs undo --bundle /absolute/memory-connection
 ```
 
 Use the exact target filename/path for that host. Existing same-name servers, JSONC and changed targets during undo are rejected. Other JSON settings are preserved; Codex TOML is conservatively appended. installation.json retains the original configuration for recovery and may contain sensitive settings: keep it private. Stop concurrent configuration editors while applying; this is not an atomic transaction across applications. DSH and WorkBuddy use their import/enabling flow instead of this command.
+
+See [Storage, backups and migration](storage-backup.md) for private full backups, explicit identity preservation and guarded replacement previews.
 
 ## Daily flow
 
