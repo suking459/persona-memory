@@ -102,8 +102,9 @@ export class PersonaMemory {
     if(options.storage)throw new TypeError('choose storage directory or store');
     const pm=new PersonaMemory(options);pm._store=store;await pm.reload();return pm;
   }
-  async reload({discardChanges=false}={}) {
+  async reload({discardChanges=false,ifChanged=false}={}) {
     if(typeof discardChanges!=='boolean')throw new TypeError('discardChanges must be boolean');
+    if(typeof ifChanged!=='boolean')throw new TypeError('ifChanged must be boolean');
     if(!this._store)throw new TypeError('no snapshot store configured');
     if(this._storeBusy)throw storageError('ERR_STORE_BUSY','another store operation is pending');
     if(this._dirty && !discardChanges)throw storageError('ERR_STORE_DIRTY','local changes require persist or explicit discardChanges');
@@ -113,6 +114,12 @@ export class PersonaMemory {
       if(!loaded || !Object.hasOwn(loaded,'snapshot'))throw new TypeError('invalid store read result');
       checkRevision(loaded.revision);
       if((loaded.snapshot===null)!==(loaded.revision===null))throw new TypeError('inconsistent store read result');
+      // A clean, unchanged revision retains pending contexts and import previews.
+      // Dirty explicit discards and the default reload still replace state.
+      if(ifChanged && !this._dirty && loaded.revision===this._storeRevision){
+        if(JSON.stringify(this.state)!==before)throw storageError('ERR_STORE_DIRTY','memory changed during reload; local changes preserved');
+        return;
+      }
       const next=loaded.snapshot===null?this._empty():this._hydrate(loaded.snapshot);
       if(JSON.stringify(this.state)!==before)throw storageError('ERR_STORE_DIRTY','memory changed during reload; local changes preserved');
       this.state=next;this._storeRevision=loaded.revision;this._dirty=false;

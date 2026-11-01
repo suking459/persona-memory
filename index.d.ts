@@ -35,6 +35,8 @@ export interface ListMemoryOptions extends ReadMemoryOptions {
 export declare const MEMORY_KINDS:readonly MemoryKind[];
 export type MemorySelection={subject:MemorySubject;subjects?:never}|{subject?:never;subjects:MemorySubject[]};
 export interface MemorySearchFilters {
+  /** BCP 47 case mapping/segmentation and context display; never translates stored values. */
+  locale?:string;
   query?:string;kinds?:MemoryKind[];keys?:string[];sources?:MemorySource[];
   observedAfter?:number;observedBefore?:number;maxCandidates?:number;minScore?:number;
   relevance?:{id:string;score:number}[];now?:number;
@@ -99,7 +101,7 @@ export interface DiagnosticStats {schemaVersion:number;candidates:number;memorie
 export declare class PersonaMemory {
   constructor(options?:PersonaMemoryOptions);
   static open(options:Omit<PersonaMemoryOptions,'storage'>&{store:SnapshotStore}):Promise<PersonaMemory>;
-  persist():Promise<void>;reload(options?:{discardChanges?:boolean}):Promise<void>;
+  persist():Promise<void>;reload(options?:{discardChanges?:boolean;ifChanged?:boolean}):Promise<void>;
   readonly persona:string;readonly scope:string;readonly storage:string|null;config:PersonaMemoryConfig;
   ingest(msg:ChatMessage):IngestResult;
   buildBlock(options:BuildBlockOptions):string;

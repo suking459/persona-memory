@@ -1,0 +1,136 @@
+{
+  "name": "synthetic-multilingual-literal-v1",
+  "limits": "Mechanism fixtures only; not translation, morphology, natural-language understanding or production accuracy evidence.",
+  "cases": [
+    {
+      "locale": "en",
+      "value": "I prefer coffee without sugar.",
+      "query": "coffee"
+    },
+    {
+      "locale": "zh-CN",
+      "value": "我更喜欢不加糖的咖啡。",
+      "query": "咖啡"
+    },
+    {
+      "locale": "ja",
+      "value": "砂糖なしのコーヒーが好きです。",
+      "query": "コーヒー"
+    },
+    {
+      "locale": "ko",
+      "value": "좋아하는 음료는 커피 입니다.",
+      "query": "커피"
+    },
+    {
+      "locale": "fr",
+      "value": "Je préfère le café sans sucre.",
+      "query": "café"
+    },
+    {
+      "locale": "es",
+      "value": "Prefiero café sin azúcar.",
+      "query": "café"
+    },
+    {
+      "locale": "de",
+      "value": "Ich trinke Kaffee ohne Zucker.",
+      "query": "Kaffee"
+    },
+    {
+      "locale": "pt",
+      "value": "Prefiro café sem açúcar.",
+      "query": "açúcar"
+    },
+    {
+      "locale": "ru",
+      "value": "Я предпочитаю кофе без сахара.",
+      "query": "кофе"
+    },
+    {
+      "locale": "ar",
+      "value": "أفضّل القَهْوَة بدون سكر.",
+      "query": "القَهْوَة"
+    },
+    {
+      "locale": "he",
+      "value": "אני מעדיף קפה בלי סוכר.",
+      "query": "קפה"
+    },
+    {
+      "locale": "hi",
+      "value": "मुझे बिना चीनी की कॉफ़ी पसंद है।",
+      "query": "कॉफ़ी"
+    },
+    {
+      "locale": "bn",
+      "value": "আমি চিনি ছাড়া কফি পছন্দ করি।",
+      "query": "কফি"
+    },
+    {
+      "locale": "th",
+      "value": "ฉันชอบกาแฟดำ",
+      "query": "กาแฟ"
+    },
+    {
+      "locale": "lo",
+      "value": "ຂ້ອຍມັກກາເຟ",
+      "query": "ກາເຟ"
+    },
+    {
+      "locale": "km",
+      "value": "ខ្ញុំចូលចិត្តកាហ្វេ",
+      "query": "កាហ្វេ"
+    },
+    {
+      "locale": "my",
+      "value": "ကော်ဖီကြိုက်တယ်",
+      "query": "ကော်ဖီ"
+    },
+    {
+      "locale": "tr",
+      "value": "İSTANBUL için kahve tercihi",
+      "query": "istanbul"
+    },
+    {
+      "locale": "vi",
+      "value": "Tôi thích cà phê không đường.",
+      "query": "cà phê"
+    },
+    {
+      "locale": "id",
+      "value": "Saya suka kopi tanpa gula.",
+      "query": "kopi"
+    },
+    {
+      "locale": "ta",
+      "value": "எனக்கு சர்க்கரை இல்லாத காபி பிடிக்கும்.",
+      "query": "காபி"
+    },
+    {
+      "locale": "te",
+      "value": "నాకు చక్కెర లేని కాఫీ ఇష్టం.",
+      "query": "కాఫీ"
+    },
+    {
+      "locale": "fa",
+      "value": "من قهوهٔ بدون شکر را ترجیح می‌دهم.",
+      "query": "قهوهٔ"
+    },
+    {
+      "locale": "sw",
+      "value": "Ninapenda kahawa bila sukari.",
+      "query": "kahawa"
+    },
+    {
+      "locale": "uk",
+      "value": "Я люблю каву без цукру.",
+      "query": "каву"
+    },
+    {
+      "locale": "pl",
+      "value": "Wolę kawę bez cukru.",
+      "query": "kawę"
+    }
+  ]
+}

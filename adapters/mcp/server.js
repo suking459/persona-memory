@@ -5,7 +5,7 @@ import {VERSION} from '../../src/version.js';
 const tool=(name,description,properties,required=[])=>({name,description,inputSchema:{type:'object',properties,required}});
 const string={type:'string'};
 const subject={type:'object',properties:{type:{type:'string',enum:['user','project','task']},id:string,chatId:string},required:['type','id'],additionalProperties:false};
-const selection={subject,subjects:{type:'array',items:subject,minItems:1,maxItems:32},query:string,
+const selection={locale:{type:'string',maxLength:64},subject,subjects:{type:'array',items:subject,minItems:1,maxItems:32},query:string,
   kinds:{type:'array',items:{type:'string',enum:['preference','fact','constraint','decision','episode','state']},maxItems:6},
   keys:{type:'array',items:string,maxItems:32},sources:{type:'array',items:{type:'string',enum:['manual','user','host','rule','model','import']},maxItems:6},
   observedAfter:{type:'number',minimum:0},observedBefore:{type:'number',minimum:0},
