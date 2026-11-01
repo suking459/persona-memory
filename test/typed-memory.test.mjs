@@ -216,10 +216,10 @@ test('schema 4 persists typed records and keeps schema 2 and original 0.3 migrat
   const stored=new PersonaMemory({storage:dir,clock:now});
   stored.import(pm.export());stored.flush();
   const reloaded=new PersonaMemory({storage:dir,clock:now});
-  assert.equal(reloaded.export().schemaVersion,5);assert.deepEqual(reloaded.getMemory(record.id),record);
+  assert.equal(reloaded.export().schemaVersion,6);assert.deepEqual(reloaded.getMemory(record.id),record);
   const v2=new PersonaMemory().export();v2.schemaVersion=2;delete v2.memories;
   const migrated=new PersonaMemory();migrated.import(v2);
-  assert.equal(migrated.export().schemaVersion,5);assert.equal(migrated.diagnostics().memories,0);
+  assert.equal(migrated.export().schemaVersion,6);assert.equal(migrated.diagnostics().memories,0);
   const old=JSON.parse(fs.readFileSync(new URL('./fixtures/snapshot-0.3.json',import.meta.url),'utf8')).snapshot;
   const legacy=new PersonaMemory({persona:old.persona});legacy.import(old);
   assert.equal(legacy.diagnostics().profiles,2);assert.equal(legacy.diagnostics().memories,0);

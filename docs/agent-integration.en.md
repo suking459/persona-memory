@@ -80,3 +80,7 @@ Library checks, real stdio subprocesses, generated configuration checks and inst
 Run npm test, npm run typecheck and npm run test:multilingual from a development checkout. Do not publish original chats, credentials, bundles, recovery records or test artifacts.
 
 The development roadmap uses local milestones 1.1–1.4, an optional validated 1.5 midpoint release, local 1.6–1.9 and a complete 2.0 release. Completing a milestone does not automatically authorize publication. Existing source notices and third-party copyright remain in place.
+
+## 1.2 local additions
+
+See [write quality and corrections](quality.md) for assertion tags, derivedFrom references, stale-content filtering, cascading forget impact and schema 6 migration. Candidate hints never verify evidence or bypass owner review. This local build is not npm 1.0.0.

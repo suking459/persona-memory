@@ -74,7 +74,7 @@ test('expired or scheduled imports remain conflicts, and old effective values ca
 });
 test('malformed bundles, unknown fields, repeated IDs, prototype subjects and missing metadata fail purely',()=>{
   const pm=create(),before=pm.export();
-  const bads=[{...bundle(),version:2},{...bundle(),extra:true},
+  const bads=[{...bundle(),version:3},{...bundle(),extra:true},
     {...bundle(),records:[...bundle().records,...bundle().records]},
     {...bundle(),records:bundle().records.map(record=>({...record,subject:{type:'project',id:'__proto__'}}))},
     {...bundle(),records:bundle().records.map(record=>{const next={...record};delete next.source;return next;})}];

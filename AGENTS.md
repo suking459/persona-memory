@@ -10,7 +10,7 @@ Build a lightweight, host-independent memory and context library with explicit u
 - Validate bounded loops, retries, state growth, late results, snapshots and installation before publication.
 - Before starting the next internal batch, audit the previous batch, fix reproduced failures and complete its required regression checks. Report remaining verification boundaries; passing tests is not proof of exhaustive bug freedom.
 - Do not claim exhaustive bug freedom, production accuracy, live platform compatibility or external benchmark scores without evidence.
-- Public baseline is 1.0.0; current work is local 1.1 development. Keep 1.1–1.4 and 1.6–1.9 internal: no branch pushes, GitHub main updates, tags/releases or npm publication. A validated 1.5 midpoint release is optional; 2.0 is the next complete release. Neither is automatic: publication needs the owner’s explicit instruction. Preserve existing published history and copyright notices.
+- Public baseline is 1.0.0; current work is local 1.x development through the 1.5 candidate. Keep 1.1–1.4 and 1.6–1.9 internal: no branch pushes, GitHub main updates, tags/releases or npm publication. A validated 1.5 midpoint release is optional; 2.0 is the next complete release. Neither is automatic: publication needs the owner’s explicit instruction. Preserve existing published history and copyright notices.
 
 ## Isolation and data
 - Implementation and generated artifacts stay inside this project.

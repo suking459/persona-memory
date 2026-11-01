@@ -34,7 +34,7 @@ export function inspectAgentCandidates(raw,request={}){
         acceptance={allowed:true};
       }catch(error){acceptance={allowed:false,code:error.code??'ERR_CANDIDATE_INPUT',message:String(error.message).slice(0,1000)};}
     }
-    return {mode:'candidate',scope:query.scope,checkedAt:now,candidate,current,effect:current?'replace':'create',acceptance,evidenceVerified:false};
+    return {mode:'candidate',scope:query.scope,checkedAt:now,candidate,current,effect:current?'replace':'create',acceptance,quality:pm.inspectCandidate(candidate.id),evidenceVerified:false};
   }
   const status=query.status??'pending',limit=query.limit??20;
   const candidates=pm.listCandidates({subject,...(status==='all'?{}:{status}),includeExpired:true,limit:1000});
@@ -47,7 +47,7 @@ export function inspectAgentCandidates(raw,request={}){
   const page=candidates.slice(start,start+limit);
   return {mode:'list',scope:query.scope,checkedAt:now,status,candidates:page.map(candidate=>({
     id:candidate.id,revision:candidate.revision,status:candidate.status,kind:candidate.memory.kind,key:candidate.memory.key,
-    evidenceId:candidate.memory.evidenceId,source:candidate.memory.source,createdAt:candidate.createdAt,expiresAt:candidate.expiresAt,
+    evidenceId:candidate.memory.evidenceId,source:candidate.memory.source,assertion:candidate.memory.assertion??'unspecified',createdAt:candidate.createdAt,expiresAt:candidate.expiresAt,
     expired:now>=candidate.expiresAt,
   })),nextAfter:start+page.length<candidates.length?page.at(-1).id:null,evidenceVerified:false};
 }

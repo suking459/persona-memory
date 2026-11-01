@@ -71,7 +71,7 @@ test('schema 3 records migrate to immediate historical intervals, while schema 4
   const legacy=pm.export();legacy.schemaVersion=3;
   for(const record of Object.values(legacy.memories)){delete record.validFrom;delete record.validUntil;}
   const restored=new PersonaMemory({clock:()=>2000});restored.import(legacy);
-  assert.equal(restored.export().schemaVersion,5);assert.equal(restored.getMemory('a',{includeInactive:true}).validUntil,1100);
+  assert.equal(restored.export().schemaVersion,6);assert.equal(restored.getMemory('a',{includeInactive:true}).validUntil,1100);
   const bad=pm.export();delete bad.memories.a.validFrom;const before=restored.export();
   assert.throws(()=>restored.import(bad));assert.deepEqual(restored.export(),before);
 });
@@ -94,7 +94,7 @@ test('an actual prior 0.7 implementation snapshot migrates record intervals and 
   const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures/snapshot-0.7.json',import.meta.url)));
   assert.equal(fixture.snapshot.schemaVersion,3);assert.equal(fixture.snapshot.memories['legacy-a'].validFrom,undefined);
   const pm=new PersonaMemory({clock:()=>2000});pm.import(fixture.snapshot);
-  assert.equal(pm.export().schemaVersion,5);
+  assert.equal(pm.export().schemaVersion,6);
   assert.equal(pm.getMemory('legacy-a',{includeInactive:true}).validUntil,1100);
   assert.equal(pm.getMemory('legacy-b').value,'1.0 after checks');
   assert.equal(pm.export().uses[0].recordIds[0],'legacy-b');

@@ -27,5 +27,5 @@ test('MCP time lookup uses retained history and supports an async-only store',as
   pm.putMemory({id:'b',subject,kind:'decision',key:'phase',value:'scheduled',validFrom:3000,replaceId:'a'});
   const response=await handleMcp({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'memory_at',arguments:{subject,kind:'decision',key:'phase',at:3500}}},pm);
   assert.equal(response.result.isError,undefined);assert.equal(JSON.parse(response.result.content[0].text).memory.value,'scheduled');
-  assert.equal((await store.read()).snapshot.schemaVersion,5);
+  assert.equal((await store.read()).snapshot.schemaVersion,6);
 });

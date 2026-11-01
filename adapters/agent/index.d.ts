@@ -1,4 +1,4 @@
-import type {PersonaMemory,MemorySubject,MemoryCandidate,MemoryRecord,CandidateStatus} from '../../index.js';
+import type {PersonaMemory,MemorySubject,MemoryCandidate,MemoryRecord,CandidateStatus,CandidateQuality,MemoryAssertion} from '../../index.js';
 export interface AgentBinding {
   readonly version:1;readonly host:string;readonly storage:string;readonly persona:string;
   readonly namespace:string;readonly access:'read'|'capture'|'review';
@@ -20,11 +20,11 @@ export declare function undoAgentBundle(options:{bundle:string}):{restored:true;
 export interface AgentReviewQuery {scope:string;candidateId?:string;status?:CandidateStatus|'all';limit?:number;after?:string}
 export interface AgentReviewList {
   mode:'list';scope:string;checkedAt:number;status:CandidateStatus|'all';evidenceVerified:false;nextAfter:string|null;
-  candidates:(Pick<MemoryCandidate,'id'|'revision'|'status'|'createdAt'|'expiresAt'>&{kind:MemoryRecord['kind'];key:string;evidenceId:string;source:MemoryRecord['source'];expired:boolean})[];
+  candidates:(Pick<MemoryCandidate,'id'|'revision'|'status'|'createdAt'|'expiresAt'>&{kind:MemoryRecord['kind'];key:string;evidenceId:string;source:MemoryRecord['source'];assertion:MemoryAssertion|'unspecified';expired:boolean})[];
 }
 export interface AgentReviewDetail {
   mode:'candidate';scope:string;checkedAt:number;candidate:MemoryCandidate;current:MemoryRecord|null;effect:'create'|'replace';
-  acceptance:{allowed:boolean;code?:string;message?:string};evidenceVerified:false;
+  acceptance:{allowed:boolean;code?:string;message?:string};quality:CandidateQuality;evidenceVerified:false;
 }
 /** Opens a fresh, read-only view. Evidence references remain unverified; preview is not approval. */
 export declare function inspectAgentCandidates(binding:unknown,request:AgentReviewQuery):AgentReviewList|AgentReviewDetail;

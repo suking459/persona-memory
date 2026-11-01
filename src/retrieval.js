@@ -127,7 +127,7 @@ export function retrieveMemories(records,options,now){
   for(const record of Object.values(records)){
     if(!subjects.some(subject=>sameSubject(subject,record.subject)))continue;
     scoped++;
-    if(!isCurrentMemory(record,now) || (kinds && !kinds.includes(record.kind)) ||
+    if(!isCurrentMemory(record,now,records) || (kinds && !kinds.includes(record.kind)) ||
       (keys && !keys.includes(record.key)) || (sources && !sources.includes(record.source)) ||
       (observedAfter!==undefined && record.observedAt<observedAfter) ||
       (observedBefore!==undefined && record.observedAt>observedBefore))continue;

@@ -1,3 +1,4 @@
+import {candidateQuality} from './quality.js';
 import {copySnapshotJSON} from './snapshot.js';
 import {experienceInput,selectExperiences} from './experience.js';
 import {stageCandidateProposals,stageCandidateAcceptance,reviseCandidate as reviseProposal,rejectCandidate as rejectProposal,selectCandidates,hydrateCandidates,candidateConflict} from './candidates.js';
@@ -5,7 +6,7 @@ import {validateResourceLimits,capacityError} from './limits.js';
 import {validateTagRules} from './text-policy.js';
 import {normalizeMemorySearch,normalizeMemoryContext,retrieveMemories} from './retrieval.js';
 import {renderMemoryContext} from './record-context.js';
-import {prepareMemoryWrite,hydrateMemories,normalizeSubject,sameSubject,memoryIdentifier,memorySlot,memorySlotForId,isCurrentMemory,selectMemories,memoryAt,assertMemoryFields} from './records.js';
+import {prepareMemoryWrite,hydrateMemories,dependencyStatus,memoryForgetImpact,normalizeSubject,sameSubject,memoryIdentifier,memorySlot,memorySlotForId,isCurrentMemory,selectMemories,memoryAt,assertMemoryFields} from './records.js';
 import {exportMemoryBundle,prepareMemoryImport,stageMemoryImport} from './transfer.js';
 import {JsonFileStore,checkRevision,storageError} from './storage.js';
 import path from 'node:path';
@@ -82,7 +83,7 @@ export class PersonaMemory {
     if (this.storage) this._load();
   }
   _empty() {
-    return { schemaVersion: 5, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
+    return { schemaVersion: 6, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
       sessions: {}, tags: {}, visitors: {}, memories: {}, candidates: {}, seen: [], uses: [], history: [] };
   }
   _now(value = this.clock()) { number(value,'timestamp');if(value>8640000000000000)throw new RangeError('timestamp outside supported calendar');return value; }
@@ -141,16 +142,16 @@ export class PersonaMemory {
   }
   _hydrate(snapshot) {
     const raw=copySnapshotJSON(snapshot,this.config.maxSnapshotBytes);
-    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5});
-    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories);
-    if (!dictionary(raw) || ![1,2,3,4,5].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
+    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5,allowDerived:raw.schemaVersion>=6});
+    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories,{allowDerived:raw.schemaVersion>=6});
+    if (!dictionary(raw) || ![1,2,3,4,5,6].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
     if (raw.persona && raw.persona !== this.persona) throw new TypeError('snapshot persona mismatch');
     if ((raw.scope ?? '') !== this.scope) throw new TypeError('snapshot scope mismatch');
     if (raw.schemaVersion >= 2 && raw.tagScope !== this.config.tagScope) throw new TypeError('snapshot tagScope mismatch');
     if ((raw.schemaVersion??1) === 1 && this.config.tagScope !== 'user') throw new TypeError('v1 snapshot requires tagScope=user');
     if ((raw.schemaVersion??1)<3 && Object.keys(memories).length)throw new TypeError('memory records require schemaVersion=3');
     if(raw.schemaVersion>=3 && raw.memories===undefined)throw new TypeError('schemaVersion>=3 requires memories');
-    if(raw.schemaVersion===5&&raw.candidates===undefined)throw new TypeError('schemaVersion=5 requires candidates');
+    if(raw.schemaVersion>=5&&raw.candidates===undefined)throw new TypeError('schemaVersion>=5 requires candidates');
     if((raw.schemaVersion??1)<5&&Object.keys(candidates).length)throw new TypeError('candidates require schemaVersion=5');
     const next = this._empty();next.memories=memories;next.candidates=candidates;
     for (const [chatId, people] of Object.entries(raw.sessions)) {
@@ -467,12 +468,13 @@ export class PersonaMemory {
     const candidate=own(this.state.candidates,id)?this.state.candidates[id]:null;
     return candidate&&(includeExpired||candidate.expiresAt>this._now())?clone(candidate):null;
   }
+  inspectCandidate(id,options={}) {return clone(candidateQuality(this.state.memories,this.state.candidates,id,options,this._now()));}
   listCandidates(options) {return clone(selectCandidates(this.state.candidates,options,this._now()));}
   reviseCandidate(id,options) {
     id=memoryIdentifier(id);const candidate=own(this.state.candidates,id)?this.state.candidates[id]:null;
     if(!candidate)throw candidateConflict('candidate is unavailable');
-    const now=this._now(),next=reviseProposal(candidate,options,now,this.config),candidates={...this.state.candidates,[id]:next};
-    hydrateCandidates(candidates,this.config);this.state.candidates=candidates;this._learningEpoch={};this._dirty=true;
+    const now=this._now(),next=reviseProposal(candidate,options,now,this.config,this.state.memories),candidates={...this.state.candidates,[id]:next};
+    hydrateCandidates(candidates,this.config,this.state.memories);this.state.candidates=candidates;this._learningEpoch={};this._dirty=true;
     const subject=next.memory.subject;this._audit('candidate-revised',subject.chatId,subject.type==='user'?subject.id:undefined,{subject,candidateId:id},now);
     return clone(next);
   }
@@ -550,7 +552,7 @@ export class PersonaMemory {
     id=memoryIdentifier(id);now=this._now(now);
     if(typeof includeInactive!=='boolean')throw new TypeError('includeInactive must be boolean');
     const record=own(this.state.memories,id)?this.state.memories[id]:null;
-    return record && (includeInactive || isCurrentMemory(record,now))?clone(record):null;
+    return record && (includeInactive || isCurrentMemory(record,now,this.state.memories))?clone(record):null;
   }
   listMemories(options={}) {
     const now=this._now(options.now);
@@ -567,13 +569,16 @@ export class PersonaMemory {
     }
     return ids.size;
   }
+  memoryStatus(id,{now}={}) {
+    id=memoryIdentifier(id);now=this._now(now);
+    const record=own(this.state.memories,id)?this.state.memories[id]:null;
+    return record?dependencyStatus(record,this.state.memories,now):{usable:false,reason:'missing'};
+  }
+  previewForgetMemory(id) {return clone(memoryForgetImpact(this.state.memories,this.state.candidates,memoryIdentifier(id)));}
   forgetMemory(id) {
-    id=memoryIdentifier(id);this._imports.clear();this._learningEpoch={};
-    const reviewed=Object.values(this.state.candidates).find(candidate=>candidate.acceptedId===id);
-    const slot=memorySlotForId(this.state.memories,id)??(reviewed?memorySlot(reviewed.memory):null);
-    if(slot===null)return {removed:0};
-    const removed=this._removeMemories(item=>memorySlot(item)===slot)+this._removeCandidates(candidate=>memorySlot(candidate.memory)===slot);
-    return {removed};
+    const impact=this.previewForgetMemory(id),records=new Set(impact.recordIds),candidates=new Set(impact.candidateIds);
+    this._imports.clear();this._learningEpoch={};
+    return {removed:this._removeMemories(record=>records.has(record.id))+this._removeCandidates(candidate=>candidates.has(candidate.id))};
   }
   deleteSubject(subject) {
     subject=normalizeSubject(subject);this._imports.clear();
@@ -682,7 +687,7 @@ export class PersonaMemory {
         for(const ref of pending.refs){
           recordIds.add(ref.id);
           const record=own(this.state.memories,ref.id)?this.state.memories[ref.id]:null;
-          if(record && isCurrentMemory(record,now) && hash(record)===ref.fingerprint)memories.set(record.id,record);
+          if(record && isCurrentMemory(record,now,this.state.memories) && hash(record)===ref.fingerprint)memories.set(record.id,record);
         }
       }else{
         chats.add(pending.chatId);pending.userIds.forEach(id=>users.add(id));
@@ -758,7 +763,7 @@ export class PersonaMemory {
     return {removed};
   }
   diagnostics() {
-    return {schemaVersion:5,candidates:Object.keys(this.state.candidates).length,memories:Object.keys(this.state.memories).length,profiles:Object.values(this.state.sessions).reduce((n,p)=>n+Object.keys(p).length,0),
+    return {schemaVersion:6,candidates:Object.keys(this.state.candidates).length,memories:Object.keys(this.state.memories).length,profiles:Object.values(this.state.sessions).reduce((n,p)=>n+Object.keys(p).length,0),
       visitors:Object.keys(this.state.visitors).length,tags:Object.values(this.state.tags).reduce((n,t)=>n+t.length,0),
       dedupeEntries:this.state.seen.length,confirmedTurns:this.state.uses.length,historyEntries:this.state.history.length};
   }

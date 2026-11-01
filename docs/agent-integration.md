@@ -114,3 +114,7 @@ npm run typecheck
 ```
 
 每个真实宿主完成后，记录版本、环境、完整操作与失败证据，才能提升其适配状态；不能仅修改 manifest 中的 hostEndToEnd 字段代替证据。
+
+## 1.2 local additions
+
+See [write quality and corrections](quality.md) for assertion tags, derivedFrom references, stale-content filtering, cascading forget impact and schema 6 migration. Candidate hints never verify evidence or bypass owner review. This local build is not npm 1.0.0.

@@ -27,3 +27,10 @@ await localeMemory.reload({ifChanged:true});
 await localeMemory.reload({ifChanged:'yes'});
 // @ts-expect-error Inspection must use a supported status.
 inspectAgentCandidates(binding,{scope:'project',status:'unknown'});
+
+const qualityRecord=localeMemory.putMemory({id:'basis',subject:{type:'project',id:'p'},kind:'fact',key:'basis',value:'basis',assertion:'explicit'});
+localeMemory.putMemory({subject:{type:'project',id:'p'},kind:'fact',key:'summary',value:'summary',assertion:'inferred',derivedFrom:[{id:qualityRecord.id,revision:qualityRecord.revision}]});
+const quality=localeMemory.inspectCandidate('candidate',{limit:8});const verified:false=quality.evidenceVerified;void verified;
+localeMemory.previewForgetMemory(qualityRecord.id);localeMemory.memoryStatus(qualityRecord.id);
+// @ts-expect-error Assertion labels do not accept a claim of verification.
+localeMemory.putMemory({subject:{type:'project',id:'p'},kind:'fact',key:'bad',value:'value',assertion:'verified'});
