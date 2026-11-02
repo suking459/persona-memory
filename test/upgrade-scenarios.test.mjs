@@ -9,7 +9,7 @@ import {createPreset} from '../src/presets.js';
 const HOUR=3600000,DAY=24*HOUR;
 const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures/snapshot-0.3.json',import.meta.url),'utf8'));
 
-test('a real 0.3 disk snapshot migrates, preserves interactions and visitors, then reloads',t=>{
+test('a synthetic 0.3 snapshot with documented text sanitization migrates and reloads',t=>{
   assert.equal(fixture.provenance.sourceCommit,'cb1ed406e3dba989d5058096220de81a66122303');
   assert.equal(fixture.provenance.sourcePath,'src/index.js');
   assert.equal(fixture.provenance.synthetic,true);

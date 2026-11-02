@@ -4,6 +4,7 @@
 
 Internal 1.1–1.5 work; npm/GitHub 1.0.0 artifacts and notices are preserved. Publication requires owner instruction and release-gate review.
 
+- Independent policy candidate: default inferred tags and personality hints removed; host-supplied scoring, neutral bands, Unicode word observations and rewritten tag lifecycle. See [behavior migration](docs/1.5-POLICY-MIGRATION.md) and [source review](docs/1.5-ORIGIN-REVIEW.md); compatibility/version and exact copyright-file approval remain release gates.
 - Scoped Agent stdio channel, eleven experimental host configuration generators, default capture plus independent owner review, refresh after external decisions, multilingual Unicode retrieval and original-language storage.
 - Derived-source fingerprints and invalidation after correction/forgetting, cascade privacy, assertion categories and exact same-field proposal quality hints.
 - Optional bounded semantic retrieval and explicit Ollama/OpenAI-compatible embedding interfaces with lexical fallback, cancellation, stale-result rejection and synthetic evaluation tooling. No measured real-model quality claim.
@@ -14,7 +15,7 @@ Internal 1.1–1.5 work; npm/GitHub 1.0.0 artifacts and notices are preserved. P
 - Generated fixed-binding owner entry, localized operation guides, explicit guarded project enable/undo and offline installed-entry verification. See [operation batch](docs/1.5-OPERATIONS-BATCH.md).
 - Real-model lifecycle acceptance: five cases each on Windows Codex CLI 0.166.0-alpha.5.1 and DSH headless 0.2.1-rc.5, covering pending capture, independent owner review, correction, new-process recovery and guarded forgetting. See [scope and evidence](docs/AGENT-ACCEPTANCE.md).
 
-Remaining gates: desktop UI and other vendor-host acceptance, plus historical-source disposition. Existing attribution is retained; no all-original or exhaustive-bug-freedom claim.
+Remaining gates: exact copyright-file approval, compatibility/version decision and owner publication approval. Unverified host entries remain experimental; source-review limitations remain disclosed. Existing attribution is retained; no all-original or exhaustive-bug-freedom claim.
 
 
 ## 1.0.0 — 2026-10-29

@@ -1,7 +1,7 @@
 export interface ChatMessage {
   chatId:string; userId:string; text:string; ts?:number; eventId?:string;
   mentions?:string[]; replyTo?:string; isSelf?:boolean; mentionsSelf?:boolean;
-  replyToSelf?:boolean; directedToBot?:boolean; raw?:unknown;
+  replyToSelf?:boolean; directedToBot?:boolean; affinityDelta?:number; raw?:unknown;
 }
 export interface DimensionRule {min:number;max:number;baseline:number;decayPerDay?:number}
 export interface DimensionState {value:number;lastAt:number}
@@ -156,13 +156,13 @@ export interface ScoreRules {talkToBot:number;talkDailyCap:number;at:number;quot
 export declare const AFFINITY_MIN:number;
 export declare const AFFINITY_MAX:number;
 export declare const TIERS:readonly Tier[];
-export declare const SCORE_RULES:ScoreRules;
+export declare const SCORE_RULES:Readonly<ScoreRules>;
 export declare const TAG_RULES:readonly {tag:string;advice:string;words:string[]}[];
 export declare function tierOf(value:number):Tier;
 export declare function clampAffinity(value:number,min?:number,max?:number):number;
 export declare function applyDailyGain(used:number,delta:number,cap:number):number;
 export declare function decayAmount(value:number,baseline:number,perDay:number,days:number):number;
-export declare function scoreMessage(text:string,ctx?:{mentionsSelf?:boolean;replyToSelf?:boolean;directedToBot?:boolean;isSelf?:boolean},overrides?:Partial<ScoreRules>):{delta:number;reasons:string[]};
+export declare function scoreMessage(text:string,ctx?:{mentionsSelf?:boolean;replyToSelf?:boolean;directedToBot?:boolean;isSelf?:boolean;affinityDelta?:number},overrides?:Partial<ScoreRules>):{delta:number;reasons:string[]};
 export declare function isNight(ts:number):boolean;
 export declare function updateStyle(style:RawStyle|null|undefined,text:string,ts:number,blockWords?:string[]):RawStyle;
 export declare function summarizeStyle(style:Partial<RawStyle>|null|undefined):StyleProfile;

@@ -184,7 +184,8 @@ test('unrelated records and social corrections do not invalidate a selected reco
 
 test('one atomic confirmation combines overlapping record previews and a relationship block',()=>{
   const {pm,put}=setup();put({id:'one'});
-  pm.ingest({chatId:'r',userId:'u',text:'今天好累',directedToBot:true});
+  pm.ingest({chatId:'r',userId:'u',text:'synthetic interaction',directedToBot:true});
+  pm.setTag({chatId:'r',userId:'u',tag:'synthetic context',source:'host'});
   const social=pm.buildContext({chatId:'r',userIds:['u']});
   const first=pm.buildMemoryContext({subject:project,budget:2000});
   const second=pm.buildMemoryContext({subject:project,budget:2000});

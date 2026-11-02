@@ -11,7 +11,7 @@ import {exportMemoryBundle,prepareMemoryImport,stageMemoryImport} from './transf
 import {JsonFileStore,checkRevision,storageError} from './storage.js';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { SCORE_RULES, tierOf, clampAffinity, applyDailyGain, decayAmount, scoreMessage, updateStyle, summarizeStyle, matchTags, hitTag, normalizeTag, sweepTags } from './rules.js';
+import { tierOf, clampAffinity, applyDailyGain, decayAmount, scoreMessage, updateStyle, summarizeStyle, matchTags, hitTag, normalizeTag, sweepTags } from './rules.js';
 
 const DAY = 86400000;
 const own = (object, key) => Object.hasOwn(object, key);
@@ -199,7 +199,7 @@ export class PersonaMemory {
         if (t.advice!==undefined && (typeof t.advice!=='string' || t.advice.length>2000)) throw new TypeError('invalid tag advice');
         for(const field of ['hits','injections','addedAt','lastHitAt','lastEvidenceAt']) if(t[field]!==undefined) number(t[field],'tag.'+field);
         const normalized = normalizeTag(t);
-        normalized.lastEvidenceAt = t.lastEvidenceAt ?? t.lastHitAt ?? t.addedAt;
+        normalized.lastEvidenceAt = t.lastEvidenceAt ?? t.lastHitAt ?? t.addedAt ?? normalized.lastHitAt;
         this._now(normalized.addedAt); this._now(normalized.lastHitAt);
         if (normalized.expiresAt !== null) this._now(normalized.expiresAt);
         return normalized;
@@ -320,8 +320,8 @@ export class PersonaMemory {
     const mentionsSelf=msg.mentionsSelf ?? (msg.mentions || []).some((id)=>String(id)==='self' || (this.config.botId!==null && String(id)===String(this.config.botId)));
     const replyToSelf=msg.replyToSelf ?? (msg.replyTo==='self');
     const directed=Boolean(msg.directedToBot || mentionsSelf || replyToSelf || (this.config.attentionWindowSec>0 && Number.isFinite(existing?.lastAddressedAt) && ts>=existing.lastAddressedAt && ts-existing.lastAddressedAt<=this.config.attentionWindowSec*1000));
-    let score=scoreMessage(text,{mentionsSelf,replyToSelf,directedToBot:directed},{perMessageCap:this.config.perMessageCap});
-    if (!directed && !this.config.scoreAmbient) score={delta:0,reasons:[]};
+    let score=scoreMessage(text,{mentionsSelf,replyToSelf,directedToBot:directed,...(msg.affinityDelta===undefined?{}:{affinityDelta:msg.affinityDelta})},{perMessageCap:this.config.perMessageCap});
+    if (!directed && !this.config.scoreAmbient && msg.affinityDelta===undefined) score={delta:0,reasons:[]};
     const tagHits=matchTags(text,this.config.extraRules);
     const pkey=this._personKey(chatId,userId);
     const visitorOnly=!existing && score.delta===0 && !tagHits.length && !directed && this.config.visitorTracking;
@@ -345,7 +345,7 @@ export class PersonaMemory {
     p.style.catch=Object.fromEntries(Object.entries(p.style.catch).sort((a,b)=>b[1]-a[1]).slice(0,this.config.maxStyleFragments));
     const a=p.affinity, dayKey=this._dayKey(ts);
     if (a.dayKey!==dayKey) { a.dayKey=dayKey; a.dayGain=0; a.talkCount=0; }
-    if (score.reasons.includes('说了话')) {
+    if (score.reasons.includes('direct')) {
       if (a.talkCount>=this.config.talkDailyCap) score={delta:0,reasons:['普通互动日额度已满']};
       else a.talkCount++;
     }
@@ -638,7 +638,7 @@ export class PersonaMemory {
         if (this.config.affinityContext) {
           parts.push(t.tier+'（'+Math.round(c.p.affinity.value)+' 分）');
           // Current state guidance takes priority over a generic relationship tone.
-          if (!tags.some(tag=>tag.advice?.trim())) parts.push(t.hint);
+          if (t.hint && !tags.some(tag=>tag.advice?.trim())) parts.push(t.hint);
         }
         if (style.catchphrases.length) parts.push('常带 '+JSON.stringify(clean(style.catchphrases[0])));
         const dims=Object.entries(c.p.dimensions);
