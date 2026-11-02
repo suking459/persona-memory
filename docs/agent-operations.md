@@ -1,6 +1,6 @@
 # 接入与日常管理
 
-本地 1.5 候选，尚未发布到 npm。已有的 Codex CLI、DSH headless 实测范围见 [验收矩阵](AGENT-ACCEPTANCE.md)；本页介绍本批新增的包内管理入口，不把它等同于桌面 UI 已验收。[English](agent-operations.en.md)。
+适用于 1.5.0。已有的 Codex CLI、DSH headless 实测范围见 [验收矩阵](AGENT-ACCEPTANCE.md)；本页介绍本批新增的包内管理入口，不把它等同于桌面 UI 已验收。[English](agent-operations.en.md)。
 
 ## 准备
 

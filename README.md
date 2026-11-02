@@ -18,7 +18,12 @@ Host-independent agent memory: typed records, scoped retrieval, temporal version
 
 完整场景、组合方式和接入选择见 [用途与选型](docs/use-cases.md)。
 
-## 1.0 的能力
+## 1.5 的能力
+
+新增：默认候选/独立审阅的 Agent 通道、来源纠错失效、可选语义检索、可选原生 SQLite、完整备份恢复、doctor/解释/批量预览，以及接入包自带的中英管理入口。
+
+**默认行为变化**：不再内置情绪/健康词表或亲疏口吻，档位显示为中性编号；宿主明确给出判断，自定义规则与旧数据保留。见 [迁移](docs/1.5-POLICY-MIGRATION.md)。核心由本项目需求驱动、AI 辅助实现；来源核查有明确范围，不宣称全网完全原创。
+
 
 - **明确的主体与类型**：user / project / task；preference、fact、constraint、decision、episode、state 六种记忆，支持 JSON 值、来源和证据编号。项目事实独立于关系评分。
 - **有范围的检索**：按主体、类型、来源、字段与时间筛选，使用本地词法匹配和可解释排序；返回选中/省略原因，约束处理量和上下文长度。
@@ -29,23 +34,33 @@ Host-independent agent memory: typed records, scoped retrieval, temporal version
 - **实际使用确认**：查看或预览不增加使用次数；一次成功模型调用按 turnId 确认，重试有界去重，组合上下文可原子确认。
 - **数据管理**：应用/频道范围、删除主体、清空、维护、诊断、快照迁移；失败保留原状态或原文件，不静默覆盖坏数据。
 
-当前快照为 schema 5，支持读取并迁移 schema 1–4。升级与回退见 [迁移说明](docs/migration.md)。
+当前快照为 schema 6，支持读取并迁移 schema 1–5。升级与回退见 [迁移说明](docs/migration.md)。
+
+## Agent 接入
+
+使用 [中英接入流程](docs/agent-operations.md) 准备本机接入包，生成配置不自动修改宿主。指定 Windows Codex CLI 与 DSH headless 版本已有真实模型生命周期测试；其他九类配置和桌面入口的边界见 [验收矩阵](docs/AGENT-ACCEPTANCE.md)。无需安装订阅所有厂商产品。
 
 ## 安装
 
-GitHub v1.0.0 源码：
+稳定版 1.5.0（默认关系策略含不兼容变化，请先读 [迁移说明](docs/1.5-POLICY-MIGRATION.md)）：
+
+~~~sh
+npm install persona-memory@1.5.0
+~~~
+
+GitHub 固定标签源码：
 
 ```sh
-npm install "github:suking459/persona-memory#v1.0.0"
+npm install "github:suking459/persona-memory#v1.5.0"
 ```
 
-也可以从 [GitHub Release](https://github.com/suking459/persona-memory/releases/tag/v1.0.0) 下载 persona-memory-1.0.0.tgz 后：
+也可以从 [GitHub Release](https://github.com/suking459/persona-memory/releases/tag/v1.5.0) 下载 persona-memory-1.5.0.tgz 后：
 
 ```sh
-npm install ./persona-memory-1.0.0.tgz
+npm install ./persona-memory-1.5.0.tgz
 ```
 
-npm registry 的发布独立管理；不要用 registry 中的旧版本判断本页接口。部署选择维护中的 Node LTS。Node 18/20 保留兼容测试，具体范围见 [接入与验证](docs/integrations.md)。
+1.0.0 仍可固定安装用于旧默认行为；已发布旧版本和原许可保持原样。1.5.0 经所有者明确选择作为稳定版本发布，但并非对旧默认策略完全兼容，请固定版本并先验证迁移。部署选择维护中的 Node LTS。Node 18/20 保留兼容测试，具体范围见 [接入与验证](docs/integrations.md)。
 
 ## 最小示例：项目记忆与上下文
 
@@ -136,4 +151,4 @@ npm run evaluate:learning
 
 设计取舍与历史复核见 [路线](docs/ROADMAP.md)、[设计](docs/DESIGN.md)、[研究记录](docs/RESEARCH-20261029.md)。
 
-MIT。早期关系设计参考 [Kondius/qq-agent](https://github.com/Kondius/qq-agent) 的 memory-tree，现有核心和通用记忆模块由本项目独立实现并持续演进；保留原有版权与来源记录，见 [NOTICE](NOTICE.md) 和 [LICENSE](LICENSE)。
+MIT。当前版本由本项目维护，代码演进、历史参考和来源复核边界见 [NOTICE](NOTICE.md) 与 [本轮复核报告](docs/1.5-ORIGIN-REVIEW.md)，许可证见 [LICENSE](LICENSE)。不把公开思想、兼容接口或全部历史声明为排他原创。

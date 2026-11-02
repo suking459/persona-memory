@@ -1,6 +1,6 @@
 # Connection and daily operations
 
-Local unpublished 1.5 candidate. [中文](agent-operations.md). See [host acceptance](AGENT-ACCEPTANCE.md) for exact tested CLI versions; desktop UI is unverified.
+1.5.0 release. [中文](agent-operations.md). See [host acceptance](AGENT-ACCEPTANCE.md) for exact tested CLI versions; desktop UI is unverified.
 
 Prepare with the current local checkout or verified local tarball. Public npm 1.0.0 does not include these commands. Choose an existing project and a new output directory:
 

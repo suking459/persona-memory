@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.5.0-dev.0 — local unpublished candidate
+## 1.5.0 — 2026-11-02
 
-Internal 1.1–1.5 work; npm/GitHub 1.0.0 artifacts and notices are preserved. Publication requires owner instruction and release-gate review.
+Consolidates 1.1–1.5 work. Owner selected stable 1.5.0 with explicit incompatible-default and source-review disclosures. Pin your dependency and read the migration guide; do not assume unchanged 1.0 default relationship behavior. Published 1.0.0 history and its license rights are preserved.
 
 - Independent policy candidate: default inferred tags and personality hints removed; host-supplied scoring, neutral bands, Unicode word observations and rewritten tag lifecycle. See [behavior migration](docs/1.5-POLICY-MIGRATION.md) and [source review](docs/1.5-ORIGIN-REVIEW.md); compatibility/version and exact copyright-file approval remain release gates.
 - Scoped Agent stdio channel, eleven experimental host configuration generators, default capture plus independent owner review, refresh after external decisions, multilingual Unicode retrieval and original-language storage.
@@ -15,7 +15,7 @@ Internal 1.1–1.5 work; npm/GitHub 1.0.0 artifacts and notices are preserved. P
 - Generated fixed-binding owner entry, localized operation guides, explicit guarded project enable/undo and offline installed-entry verification. See [operation batch](docs/1.5-OPERATIONS-BATCH.md).
 - Real-model lifecycle acceptance: five cases each on Windows Codex CLI 0.166.0-alpha.5.1 and DSH headless 0.2.1-rc.5, covering pending capture, independent owner review, correction, new-process recovery and guarded forgetting. See [scope and evidence](docs/AGENT-ACCEPTANCE.md).
 
-Remaining gates: exact copyright-file approval, compatibility/version decision and owner publication approval. Unverified host entries remain experimental; source-review limitations remain disclosed. Existing attribution is retained; no all-original or exhaustive-bug-freedom claim.
+The owner approved the exact copyright-file proposal and stable release choice. Root LICENSE lists the current maintainer; truthful historical references and third-party component obligations remain. Unverified host entries remain experimental; source-review limitations remain disclosed. Existing attribution is retained; no all-original or exhaustive-bug-freedom claim.
 
 
 ## 1.0.0 — 2026-10-29

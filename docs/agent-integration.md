@@ -132,7 +132,7 @@ See [write quality and corrections](quality.md) for assertion tags, derivedFrom 
 
 MCP 提供相应 memory_doctor、memory_explain、memory_review_preview、memory_review_batch、memory_forget_preview。批量和删除执行仅在 review 授权下可用，默认 capture 仍由独立所有者处理。大批原文超出输出预算时缩小批次；不是所有语言都已有翻译界面。
 
-完整命令及恢复边界见 [所有者管理](owner-management.md)。本地开发命令尚未进入 npm 1.0.0；指定 Windows Codex CLI 与 DSH headless 的真实模型五场景已分别通过，其他入口仍需独立验收。
+完整命令及恢复边界见 [所有者管理](owner-management.md)。这些命令需 1.5.0，npm 1.0.0 不包含它们；指定 Windows Codex CLI 与 DSH headless 的真实模型五场景已分别通过，其他入口仍需独立验收。
 
 最新具体版本和场景见 [Agent 验收矩阵](AGENT-ACCEPTANCE.md)，区分原生客户端、真实模型与桌面 UI。
 
