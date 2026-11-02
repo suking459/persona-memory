@@ -32,6 +32,6 @@ export function agentWorkflow(locale='en'){
 }
 export function bundleReadme(profile,locale='en'){
   return displayLanguage(locale)==='zh'?
-    '# '+profile.name+' 本地接入包\n\n将生成的服务条目加入 '+profile.target+'。保留本目录：配置引用其 binding.json。只有实际写入时才创建持久化数据。\n\n阅读 WORKFLOW.md，并按宿主要求启用。配置生成不代表宿主端到端测试完成；准备过程没有改动宿主设置。完整步骤见 docs/agent-integration.md。\n\n官方来源：'+profile.source+'\n':
-    '# '+profile.name+' local connection bundle\n\nAdd the generated server entry to '+profile.target+'. Keep this directory: the command references binding.json. Persistent data is created only on actual writes.\n\nRead WORKFLOW.md and enable the workflow in your host. Configuration generation is not a host end-to-end test. Preparation does not change host settings. See docs/agent-integration.en.md for verification.\n\nOfficial reference: '+profile.source+'\n';
+    '# '+profile.name+' 本地接入包\n\n将生成的服务条目加入 '+profile.target+'。保留本目录：配置引用其 binding.json。只有实际写入时才创建持久化数据。\n\n阅读 WORKFLOW.md，并按宿主要求启用。配置生成不代表宿主端到端测试完成；准备过程没有改动宿主设置。在本目录打开独立终端运行 node owner.mjs help。安装、审阅、备份、遗忘与停用步骤见 [OPERATIONS.md](OPERATIONS.md)；它包含本机实际路径。\n\n官方来源：'+profile.source+'\n':
+    '# '+profile.name+' local connection bundle\n\nAdd the generated server entry to '+profile.target+'. Keep this directory: the command references binding.json. Persistent data is created only on actual writes.\n\nRead WORKFLOW.md and enable the workflow in your host. Configuration generation is not a host end-to-end test. Preparation does not change host settings. Run node owner.mjs help in a separate terminal in this directory. See [OPERATIONS.md](OPERATIONS.md) for local enablement, review, backup, forgetting and disable steps.\n\nOfficial reference: '+profile.source+'\n';
 }

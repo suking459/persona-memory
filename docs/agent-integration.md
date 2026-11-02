@@ -135,3 +135,6 @@ MCP 提供相应 memory_doctor、memory_explain、memory_review_preview、memory
 完整命令及恢复边界见 [所有者管理](owner-management.md)。本地开发命令尚未进入 npm 1.0.0；指定 Windows Codex CLI 与 DSH headless 的真实模型五场景已分别通过，其他入口仍需独立验收。
 
 最新具体版本和场景见 [Agent 验收矩阵](AGENT-ACCEPTANCE.md)，区分原生客户端、真实模型与桌面 UI。
+
+
+新接入包包含固定绑定的 owner.mjs 和中英 OPERATIONS.md；启用、审阅、备份、遗忘与停用见 [接入与日常管理](agent-operations.md)。prepare 不启用宿主。

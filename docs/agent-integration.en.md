@@ -94,3 +94,6 @@ See [write quality and corrections](quality.md) for assertion tags, derivedFrom 
 ## Owner operations in local 1.5
 
 See [Owner management](owner-management.md) for doctor, explicit lexical explanation, atomic batch-review previews, same-connection deletion previews, expiry/change guards and recovery. These capabilities are not published in npm 1.0.0.
+
+
+New bundles include a fixed-binding owner.mjs and localized OPERATIONS.md. See [connection and daily operations](agent-operations.en.md) for explicit enablement, review, backup, forgetting and disable flows. Preparation enables no host.
