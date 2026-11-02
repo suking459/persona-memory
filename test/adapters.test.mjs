@@ -1,3 +1,4 @@
+import {withLoadRule} from './fixtures/explicit-tag-rules.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
@@ -10,7 +11,7 @@ import {createLangChainBridge} from '../adapters/langchain/index.js';
 import {createLlamaIndexBridge} from '../adapters/llamaindex/index.js';
 
 test('HTTP preserves core flags, previews are pure, admin is opt-in',async()=>{
-  const pm=new PersonaMemory(),server=createMemoryServer({pm,token:'test-only'});
+  const pm=new PersonaMemory(withLoadRule()),server=createMemoryServer({pm,token:'test-only'});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   const url='http://127.0.0.1:'+server.address().port;
   const post=async(route,body,token='test-only')=>{
@@ -20,7 +21,7 @@ test('HTTP preserves core flags, previews are pure, admin is opt-in',async()=>{
   try{
     assert.equal((await post('/api/ingest',{},'wrong')).status,401);
     const input={chatId:'r',userId:'u',text:'好累',mentionsSelf:true,eventId:'1'};
-    const core=new PersonaMemory();const direct=core.ingest(input);
+    const core=new PersonaMemory(withLoadRule());const direct=core.ingest(input);
     const http=await post('/api/ingest',input);assert.equal(http.body.delta,direct.delta);
     const before=pm.export(),c=await post('/api/context',{chatId:'r',userIds:['u']});
     assert.deepEqual(pm.export(),before);
@@ -30,7 +31,7 @@ test('HTTP preserves core flags, previews are pure, admin is opt-in',async()=>{
   }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
 test('MCP handshake, record, preview and acknowledgement follow the same semantics',async()=>{
-  const pm=new PersonaMemory();
+  const pm=new PersonaMemory(withLoadRule());
   const request=(id,method,params)=>handleMcp({jsonrpc:'2.0',id,method,params},pm);
   assert.equal((await request(1,'initialize',{protocolVersion:'2025-06-18'})).result.protocolVersion,'2025-06-18');
   assert.equal(await handleMcp({jsonrpc:'2.0',method:'notifications/initialized'},pm),null);
@@ -49,11 +50,11 @@ test('Discord fixture normalizes mention, reply, scope and self messages',()=>{
 });
 test('OneBot explicit flags survive ingestion',()=>{
   const r=parseOneBot({post_type:'message',message_type:'group',group_id:1,self_id:2,user_id:3,time:123,message:[{type:'at',data:{qq:'2'}},{type:'text',data:{text:' hi'}}]});
-  assert.equal(new PersonaMemory().ingest(r).delta,2);
+  assert.equal(new PersonaMemory(withLoadRule()).ingest(r).delta,2);
 });
 test('real LangChain Runnable receives relationship context',async()=>{
   const {RunnableLambda}=await import('@langchain/core/runnables');
-  const pm=new PersonaMemory(),bridge=createLangChainBridge(pm,{chatId:'r',userId:'u'});
+  const pm=new PersonaMemory(withLoadRule()),bridge=createLangChainBridge(pm,{chatId:'r',userId:'u'});
   const model=RunnableLambda.from(input=>input.persona_memory);
   const chain=RunnableLambda.from(input=>bridge.invoke(input,v=>model.invoke(v)));
   const r=await chain.invoke({text:'今天好累',turnId:'run'});
@@ -61,7 +62,7 @@ test('real LangChain Runnable receives relationship context',async()=>{
 });
 test('real LlamaIndex Memory supplies history plus relationship context',async()=>{
   const {Memory}=await import('@llamaindex/core/memory');
-  const pm=new PersonaMemory(),memory=new Memory();
+  const pm=new PersonaMemory(withLoadRule()),memory=new Memory();
   const bridge=createLlamaIndexBridge(pm,{memory,chatId:'r',userId:'u'});
   let received;
   await bridge.invoke({text:'今天好累',turnId:'run',call:async messages=>{received=messages;return '收到';}});

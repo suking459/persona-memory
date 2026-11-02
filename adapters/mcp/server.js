@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import {isMainModule} from '../../src/main.js';
 import {pathToFileURL} from 'node:url';
 import {PersonaMemory} from '../../src/index.js';
 import {VERSION} from '../../src/version.js';
 const tool=(name,description,properties,required=[])=>({name,description,inputSchema:{type:'object',properties,required}});
 const string={type:'string'};
 const subject={type:'object',properties:{type:{type:'string',enum:['user','project','task']},id:string,chatId:string},required:['type','id'],additionalProperties:false};
-const selection={subject,subjects:{type:'array',items:subject,minItems:1,maxItems:32},query:string,
+const selection={locale:{type:'string',maxLength:64},subject,subjects:{type:'array',items:subject,minItems:1,maxItems:32},query:string,
   kinds:{type:'array',items:{type:'string',enum:['preference','fact','constraint','decision','episode','state']},maxItems:6},
   keys:{type:'array',items:string,maxItems:32},sources:{type:'array',items:{type:'string',enum:['manual','user','host','rule','model','import']},maxItems:6},
   observedAfter:{type:'number',minimum:0},observedBefore:{type:'number',minimum:0},
@@ -59,7 +60,7 @@ export async function handleMcp(msg,pm){
     await pm.persist();return reply({content:[{type:'text',text:JSON.stringify(result)}]});
   }catch(e){return reply({isError:true,content:[{type:'text',text:e.message}]});}
 }
-if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
+if(isMainModule(import.meta.url)){
   const pm=new PersonaMemory({storage:process.env.PM_STORAGE||null,persona:process.env.PM_PERSONA||'assistant',scope:process.env.PM_SCOPE||''});
   const decoder=new TextDecoder('utf-8',{fatal:true});let buffer='';
   const write=async value=>{

@@ -9,7 +9,7 @@ import {createPreset} from '../src/presets.js';
 const HOUR=3600000,DAY=24*HOUR;
 const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures/snapshot-0.3.json',import.meta.url),'utf8'));
 
-test('a real 0.3 disk snapshot migrates, preserves interactions and visitors, then reloads',t=>{
+test('a synthetic 0.3 snapshot with documented text sanitization migrates and reloads',t=>{
   assert.equal(fixture.provenance.sourceCommit,'cb1ed406e3dba989d5058096220de81a66122303');
   assert.equal(fixture.provenance.sourcePath,'src/index.js');
   assert.equal(fixture.provenance.synthetic,true);
@@ -25,7 +25,7 @@ test('a real 0.3 disk snapshot migrates, preserves interactions and visitors, th
   let now=fixture.provenance.generatedAt;
   const options={storage,persona:fixture.snapshot.persona,clock:()=>now};
   const migrated=new PersonaMemory(options),state=migrated.export();
-  assert.equal(state.schemaVersion,5);
+  assert.equal(state.schemaVersion,6);
   assert.equal(migrated.diagnostics().profiles,2);
   for(const chatId of ['synthetic-chat-a','synthetic-chat-b']) {
     const old=fixture.snapshot.sessions[chatId]['synthetic-member'];
@@ -45,7 +45,7 @@ test('a real 0.3 disk snapshot migrates, preserves interactions and visitors, th
   now+=DAY;
   migrated.maintain();
   migrated.flush();
-  assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).schemaVersion,5);
+  assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).schemaVersion,6);
   const reloaded=new PersonaMemory(options);
   assert.deepEqual(reloaded.export(),migrated.export());
   for(const chatId of ['synthetic-chat-a','synthetic-chat-b']) {

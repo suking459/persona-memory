@@ -1,13 +1,13 @@
 // Candidate review is an explicit state machine; proposals never participate in retrieval.
 import {createHash} from 'node:crypto';
 import {capacityError} from './limits.js';
-import {assertMemoryFields as fields,normalizeSubject,memoryIdentifier,memorySlot,sameSubject,copyMemoryValue,prepareMemoryWrite,MEMORY_KINDS,memoryArray} from './records.js';
+import {assertMemoryFields as fields,normalizeSubject,memoryIdentifier,memorySlot,sameSubject,copyMemoryValue,prepareMemoryWrite,normalizeDependencies,normalizeAssertion,MEMORY_KINDS,memoryArray} from './records.js';
 const HOUR=3600000,MAX_TIME=8640000000000000;
 const own=(o,k)=>Object.hasOwn(o,k);
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 const hash=v=>createHash('sha256').update(JSON.stringify(canonical(v))).digest('hex');
 const INPUT_FIELDS=new Set(['id','memory','reason','confidence','ttlHours']);
-const MEMORY_FIELDS=new Set(['subject','kind','key','value','source','evidenceId','observedAt','validFrom','expiresAt']);
+const MEMORY_FIELDS=new Set(['subject','kind','key','value','source','evidenceId','observedAt','validFrom','expiresAt','derivedFrom','assertion']);
 const RECORD_FIELDS=new Set(['id','memory','reason','confidence','base','createdAt','updatedAt','expiresAt','revision','status','reviewedAt','decisionReason','acceptedId']);
 const STATUSES=['pending','accepted','rejected'];
 export function candidateConflict(message){return Object.assign(new Error(message),{code:'ERR_CANDIDATE_CONFLICT'});}
@@ -23,12 +23,13 @@ function baseOf(group=[]){
   return {id:head?.id??null,revision:head?.revision??0,
     fingerprint:hash(head??group.map(record=>[record.id,record.revision,record.updatedAt]).sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0))};
 }
-function memoryInput(raw,now,config,fallback){
+function memoryInput(raw,now,config,fallback,records={}, {saved=false,allowDerived=true}={}){
   fields(raw,MEMORY_FIELDS,'candidate memory');
   const input={...raw,source:raw.source===undefined?'model':raw.source,evidenceId:memoryIdentifier(raw.evidenceId,'candidate evidenceId')};
   for(const field of ['observedAt','validFrom','expiresAt'])if(input[field]===undefined&&fallback)input[field]=fallback[field];
-  const record=prepareMemoryWrite({},input,now,{...config,maxMemories:1},()=> 'candidate-validation').record;
-  return Object.fromEntries([...MEMORY_FIELDS].map(key=>[key,record[key]]));
+  if(!allowDerived&&(input.derivedFrom!==undefined||input.assertion!==undefined))throw new TypeError('dependency metadata requires schemaVersion=6');
+  const record=prepareMemoryWrite({},input,now,{...config,maxMemories:1},()=> 'candidate-validation',{dependencyRecords:records,savedDependencies:saved,validationOnly:true}).record;
+  return Object.fromEntries([...MEMORY_FIELDS].filter(key=>record[key]!==undefined).map(key=>[key,record[key]]));
 }
 function pool(candidates,config){
   if(Object.keys(candidates).length>config.maxCandidates)throw capacityError('candidate');
@@ -81,12 +82,16 @@ export function stageCandidateProposals(records,candidates,inputs,options,now,co
   const next={...candidates},groups=indexRecords(records),ids=[],newIds=[];
   for(const input of inputs){
     fields(input,INPUT_FIELDS,'candidate proposal');fields(input.memory,MEMORY_FIELDS,'candidate memory');
-    const identity={subject:normalizeSubject(input.memory.subject),kind:input.memory.kind,
+    if(!MEMORY_KINDS.includes(input.memory.kind)||!['manual','user','host','rule','model','import'].includes(input.memory.source===undefined?'model':input.memory.source))throw new TypeError('invalid candidate kind or source');
+    const assertion=normalizeAssertion(input.memory.assertion);
+    const identitySubject=normalizeSubject(input.memory.subject);
+    const derivedFrom=normalizeDependencies(input.memory.derivedFrom,{records,subject:identitySubject,now,slot:memorySlot({...input.memory,subject:identitySubject})});
+    const identity={subject:identitySubject,kind:input.memory.kind,
       key:memoryIdentifier(input.memory.key,'candidate key'),value:copyMemoryValue(input.memory.value),
-      source:input.memory.source===undefined?'model':input.memory.source,evidenceId:memoryIdentifier(input.memory.evidenceId,'candidate evidenceId')};
+      source:input.memory.source===undefined?'model':input.memory.source,evidenceId:memoryIdentifier(input.memory.evidenceId,'candidate evidenceId'),...(derivedFrom===undefined?{}:{derivedFrom}),...(assertion===undefined?{}:{assertion})};
     const id=input.id===undefined?'proposal-'+hash(identity):memoryIdentifier(input.id,'candidate id');
     const existing=own(next,id)?next[id]:null;
-    const memory=memoryInput(input.memory,existing?.createdAt??now,config,existing?.memory);
+    const memory=memoryInput(input.memory,existing?.createdAt??now,config,existing?.memory,records);
     const reason=input.reason===undefined?'':text(input.reason,'candidate reason');
     const certainty=input.confidence===undefined?undefined:confidence(input.confidence);
     const ttl=input.ttlHours===undefined?config.candidateTtlHours:input.ttlHours;
@@ -118,12 +123,12 @@ export function stageCandidateProposals(records,candidates,inputs,options,now,co
     {records,candidates:next,removed:new Set(),results:[]};
   return {...accepted,ids,newIds,omitted};
 }
-export function reviseCandidate(candidate,options,now,config){
+export function reviseCandidate(candidate,options,now,config,records={}){
   fields(options,new Set(['expectedRevision','memory','reason','confidence']),'candidate revision');
   if(candidate.status!=='pending'||revision(options.expectedRevision)!==candidate.revision||now<candidate.updatedAt||now>=candidate.expiresAt)throw candidateConflict('candidate cannot be revised');
   const patch=options.memory===undefined?{}:options.memory;
-  fields(patch,new Set(['value','evidenceId','observedAt','validFrom','expiresAt']),'candidate memory correction');
-  const memory=memoryInput({...candidate.memory,...patch},now,config);
+  fields(patch,new Set(['value','evidenceId','observedAt','validFrom','expiresAt','derivedFrom','assertion']),'candidate memory correction');
+  const memory=memoryInput({...candidate.memory,...patch},now,config,undefined,records);
   // A correction does not renew its review deadline or reset its original formal-memory precondition.
   const revised={...candidate,memory,reason:options.reason===undefined?candidate.reason:text(options.reason,'candidate reason'),
     updatedAt:now,revision:candidate.revision+1,expiresAt:Math.min(candidate.expiresAt,memory.expiresAt??MAX_TIME)};
@@ -149,7 +154,7 @@ export function selectCandidates(candidates,options,now){
     (options.status===undefined||candidate.status===options.status)&&(options.includeExpired||candidate.expiresAt>now))
     .sort((a,b)=>b.createdAt-a.createdAt||(a.id<b.id?-1:a.id>b.id?1:0)).slice(0,limit);
 }
-export function hydrateCandidates(raw,config,records){
+export function hydrateCandidates(raw,config,records={}, {allowDerived=true}={}){
   if(!raw||typeof raw!=='object'||![Object.prototype,null].includes(Object.getPrototypeOf(raw)))throw new TypeError('invalid candidate collection');
   const keys=Reflect.ownKeys(raw);if(keys.length>config.maxCandidates)throw capacityError('candidate import');
   const next={};
@@ -161,8 +166,8 @@ export function hydrateCandidates(raw,config,records){
     const createdAt=time(candidate.createdAt,'candidate creation'),updatedAt=time(candidate.updatedAt,'candidate update'),expiresAt=time(candidate.expiresAt,'candidate expiry');
     if(updatedAt<createdAt||updatedAt>expiresAt||expiresAt<createdAt||expiresAt>Math.min(MAX_TIME,createdAt+720*HOUR))throw new TypeError('invalid candidate chronology');
     fields(candidate.memory,MEMORY_FIELDS,'candidate memory');
-    for(const key of MEMORY_FIELDS)if(!own(candidate.memory,key))throw new TypeError('incomplete candidate memory');
-    const memory=memoryInput(candidate.memory,updatedAt,config);
+    for(const key of MEMORY_FIELDS)if(!['derivedFrom','assertion'].includes(key)&&!own(candidate.memory,key))throw new TypeError('incomplete candidate memory');
+    const memory=memoryInput(candidate.memory,updatedAt,config,undefined,records,{saved:true,allowDerived});
     if(memory.expiresAt!==null&&expiresAt>memory.expiresAt)throw new TypeError('candidate outlives evidence');
     fields(candidate.base,new Set(['id','revision','fingerprint']),'candidate base');
     const base=candidate.base;

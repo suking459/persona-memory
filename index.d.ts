@@ -1,7 +1,7 @@
 export interface ChatMessage {
   chatId:string; userId:string; text:string; ts?:number; eventId?:string;
   mentions?:string[]; replyTo?:string; isSelf?:boolean; mentionsSelf?:boolean;
-  replyToSelf?:boolean; directedToBot?:boolean; raw?:unknown;
+  replyToSelf?:boolean; directedToBot?:boolean; affinityDelta?:number; raw?:unknown;
 }
 export interface DimensionRule {min:number;max:number;baseline:number;decayPerDay?:number}
 export interface DimensionState {value:number;lastAt:number}
@@ -19,12 +19,15 @@ export type MemoryKind='preference'|'fact'|'constraint'|'decision'|'episode'|'st
 export type MemorySource='manual'|'user'|'host'|'rule'|'model'|'import';
 export type MemoryValue=null|boolean|number|string|MemoryValue[]|{[key:string]:MemoryValue};
 export interface MemorySubject {type:'user'|'project'|'task';id:string;chatId?:string}
+export type MemoryAssertion='explicit'|'observed'|'inferred'|'external';
+export interface MemoryDependency {id:string;revision:number;fingerprint?:string;slotFingerprint?:string}
+export interface StoredMemoryDependency extends MemoryDependency {fingerprint:string;slotFingerprint:string}
 export interface MemoryInput {
-  id?:string;subject:MemorySubject;kind:MemoryKind;key:string;value:MemoryValue;
+  id?:string;subject:MemorySubject;kind:MemoryKind;key:string;value:MemoryValue;derivedFrom?:MemoryDependency[];assertion?:MemoryAssertion;
   experience?:ExperienceMetadata;source?:MemorySource;evidenceId?:string;observedAt?:number;validFrom?:number;expiresAt?:number|null;replaceId?:string;expectedRevision?:number;
 }
 export interface MemoryRecord {
-  id:string;subject:MemorySubject;kind:MemoryKind;key:string;value:MemoryValue;source:MemorySource;
+  id:string;subject:MemorySubject;kind:MemoryKind;key:string;value:MemoryValue;source:MemorySource;derivedFrom?:StoredMemoryDependency[];assertion?:MemoryAssertion;
   experience?:ExperienceMetadata;evidenceId?:string;observedAt:number;expiresAt:number|null;createdAt:number;updatedAt:number;
   revision:number;validFrom:number;validUntil:number|null;status:'current'|'superseded';supersedes?:string;supersededBy?:string;
 }
@@ -35,6 +38,8 @@ export interface ListMemoryOptions extends ReadMemoryOptions {
 export declare const MEMORY_KINDS:readonly MemoryKind[];
 export type MemorySelection={subject:MemorySubject;subjects?:never}|{subject?:never;subjects:MemorySubject[]};
 export interface MemorySearchFilters {
+  /** BCP 47 case mapping/segmentation and context display; never translates stored values. */
+  locale?:string;
   query?:string;kinds?:MemoryKind[];keys?:string[];sources?:MemorySource[];
   observedAfter?:number;observedBefore?:number;maxCandidates?:number;minScore?:number;
   relevance?:{id:string;score:number}[];now?:number;
@@ -70,7 +75,7 @@ export interface PersonaMemoryConfig {
   scoreAmbient?:boolean;affinityContext?:boolean;maxProfiles?:number;maxSnapshotBytes?:number;maxVisitors?:number;visitorRetentionDays?:number;maxStyleFragments?:number;
   dedupeLimit?:number;dedupeDays?:number;historyLimit?:number;dimensions?:Record<string,DimensionRule>;
 }
-export interface PersonaMemoryOptions {storage?:string|null;persona?:string;scope?:string;config?:PersonaMemoryConfig;clock?:()=>number}
+export interface PersonaMemoryOptions {storage?:string|null;store?:SyncSnapshotStore;persona?:string;scope?:string;config?:PersonaMemoryConfig;clock?:()=>number}
 export interface IngestResult {matched:boolean;delta:number;reasons:string[];tags?:string[];visitor?:boolean;duplicate?:boolean;ignored?:'out-of-order'}
 export interface MaintainResult {decayed:number;expired:number;promoted:number;demoted:number;forcedOut:number;memoriesExpired:number;candidatesExpired:number}
 export interface BuildBlockOptions {chatId:string;userIds:string[];budget?:number;maxPeople?:number;priorityUserIds?:string[];now?:number;tokenBudget?:number;countTokens?:(text:string)=>number}
@@ -79,27 +84,28 @@ export interface MemoryContext {
   contextId:string;chatId:string;text:string;people:ContextPerson[];
   omitted:{userId:string;tag?:string;reason:string}[];budget:number;characters:number;createdAt:number;tokens?:number;tokenBudget?:number;
 }
-export type LegacyMemoryRecord=Omit<MemoryRecord,'validFrom'|'validUntil'|'experience'>;
+export type LegacyMemoryRecord=Omit<MemoryRecord,'validFrom'|'validUntil'|'experience'|'derivedFrom'|'assertion'>;
 export interface MemorySnapshotBase {
   persona:string;scope?:string;tagScope?:'user'|'chat';
   sessions:Record<string,Record<string,unknown>>;tags:Record<string,Tag[]>;
   visitors:Record<string,Omit<Visitor,'userId'>>;seen?:unknown[];uses?:unknown[];history?:unknown[];
 }
 export interface CurrentMemorySnapshot extends MemorySnapshotBase {
-  schemaVersion:5;memories:Record<string,MemoryRecord>;candidates:Record<string,MemoryCandidate>;
+  schemaVersion:6;memories:Record<string,MemoryRecord>;candidates:Record<string,MemoryCandidate>;
 }
 export type MemorySnapshot=CurrentMemorySnapshot | (MemorySnapshotBase & (
   {schemaVersion:1|2;memories?:Record<string,never>} |
   {schemaVersion:3;memories:Record<string,LegacyMemoryRecord>} |
-  {schemaVersion:4;memories:Record<string,Omit<MemoryRecord,'experience'>>;candidates?:Record<string,never>}
+  {schemaVersion:4;memories:Record<string,Omit<MemoryRecord,'experience'|'derivedFrom'|'assertion'>>;candidates?:Record<string,never>} |
+  {schemaVersion:5;memories:Record<string,Omit<MemoryRecord,'derivedFrom'|'assertion'>>;candidates:Record<string,Omit<MemoryCandidate,'memory'>&{memory:Omit<CandidateMemory,'derivedFrom'|'assertion'>}>}
 ));
 export interface TagInput {chatId:string;userId:string;tag:string;advice?:string;source?:Tag['source'];eventId?:string;expiresAt?:number|null;replace?:string[];ts?:number}
 export interface HostEvent {chatId:string;userId:string;eventId?:string;type:string;changes:Record<string,number>;ts?:number}
 export interface DiagnosticStats {schemaVersion:number;candidates:number;memories:number;profiles:number;visitors:number;tags:number;dedupeEntries:number;confirmedTurns:number;historyEntries:number}
 export declare class PersonaMemory {
   constructor(options?:PersonaMemoryOptions);
-  static open(options:Omit<PersonaMemoryOptions,'storage'>&{store:SnapshotStore}):Promise<PersonaMemory>;
-  persist():Promise<void>;reload(options?:{discardChanges?:boolean}):Promise<void>;
+  static open(options:Omit<PersonaMemoryOptions,'storage'|'store'>&{store:SnapshotStore}):Promise<PersonaMemory>;
+  persist():Promise<void>;reload(options?:{discardChanges?:boolean;ifChanged?:boolean}):Promise<void>;
   readonly persona:string;readonly scope:string;readonly storage:string|null;config:PersonaMemoryConfig;
   ingest(msg:ChatMessage):IngestResult;
   buildBlock(options:BuildBlockOptions):string;
@@ -115,6 +121,7 @@ export declare class PersonaMemory {
   proposeMemory(input:CandidateInput):MemoryCandidate;
   proposeMemories(inputs:CandidateInput[],options?:{autoAccept?:AutoAcceptPolicy}):CandidateBatchResult;
   getCandidate(id:string,options?:{includeExpired?:boolean}):MemoryCandidate|null;
+  inspectCandidate(id:string,options?:{limit?:number}):CandidateQuality;
   listCandidates(options:{subject:MemorySubject;status?:CandidateStatus;limit?:number;includeExpired?:boolean}):MemoryCandidate[];
   reviseCandidate(id:string,options:CandidateRevision):MemoryCandidate;
   rejectCandidate(id:string,options:{expectedRevision:number;reason?:string}):MemoryCandidate;
@@ -127,6 +134,8 @@ export declare class PersonaMemory {
   getMemory(id:string,options?:ReadMemoryOptions):MemoryRecord|null;
   listMemories(options:ListMemoryOptions):MemoryRecord[];
   forgetMemory(id:string):{removed:number};
+  previewForgetMemory(id:string):{recordIds:string[];candidateIds:string[]};
+  memoryStatus(id:string,options?:{now?:number}):{usable:boolean;reason:string;dependencyId?:string};
   deleteSubject(subject:MemorySubject):{removed:number};
   getProfile(chatId:string,userId:string):Profile|null;
   getVisitor(userId:string,options?:{chatId?:string}):Visitor|null;
@@ -147,13 +156,13 @@ export interface ScoreRules {talkToBot:number;talkDailyCap:number;at:number;quot
 export declare const AFFINITY_MIN:number;
 export declare const AFFINITY_MAX:number;
 export declare const TIERS:readonly Tier[];
-export declare const SCORE_RULES:ScoreRules;
+export declare const SCORE_RULES:Readonly<ScoreRules>;
 export declare const TAG_RULES:readonly {tag:string;advice:string;words:string[]}[];
 export declare function tierOf(value:number):Tier;
 export declare function clampAffinity(value:number,min?:number,max?:number):number;
 export declare function applyDailyGain(used:number,delta:number,cap:number):number;
 export declare function decayAmount(value:number,baseline:number,perDay:number,days:number):number;
-export declare function scoreMessage(text:string,ctx?:{mentionsSelf?:boolean;replyToSelf?:boolean;directedToBot?:boolean;isSelf?:boolean},overrides?:Partial<ScoreRules>):{delta:number;reasons:string[]};
+export declare function scoreMessage(text:string,ctx?:{mentionsSelf?:boolean;replyToSelf?:boolean;directedToBot?:boolean;isSelf?:boolean;affinityDelta?:number},overrides?:Partial<ScoreRules>):{delta:number;reasons:string[]};
 export declare function isNight(ts:number):boolean;
 export declare function updateStyle(style:RawStyle|null|undefined,text:string,ts:number,blockWords?:string[]):RawStyle;
 export declare function summarizeStyle(style:Partial<RawStyle>|null|undefined):StyleProfile;
@@ -164,8 +173,8 @@ export declare function sweepTags(tags:Tag[],now:number,options?:Pick<PersonaMem
 
 export interface MemoryAtOptions {subject:MemorySubject;kind:MemoryKind;key:string;at:number;knownAt?:number}
 export type ExportMemoriesOptions=MemorySelection&Pick<MemorySearchFilters,'kinds'|'keys'|'sources'>;
-export type PortableMemory=Pick<MemoryRecord,'id'|'subject'|'kind'|'key'|'value'|'source'|'evidenceId'|'observedAt'|'validFrom'|'expiresAt'>;
-export interface MemoryBundle {format:'persona-memory/records';version:1;exportedAt:number;records:PortableMemory[]}
+export type PortableMemory=Pick<MemoryRecord,'id'|'subject'|'kind'|'key'|'value'|'source'|'evidenceId'|'observedAt'|'validFrom'|'expiresAt'|'assertion'>;
+export interface MemoryBundle {format:'persona-memory/records';version:1|2;exportedAt:number;records:PortableMemory[]}
 export interface SubjectMapping {from:MemorySubject;to:MemorySubject}
 export interface MemoryImportPreview {
   planId:string;createdAt:number;expiresAt:number;counts:Record<'add'|'same'|'update'|'conflict',number>;
@@ -191,7 +200,7 @@ export declare class JsonFileStore implements SnapshotStore {
 }
 
 export type CandidateStatus='pending'|'accepted'|'rejected';
-export type CandidateMemory=Omit<PortableMemory,'id'|'evidenceId'>&{evidenceId:string};
+export type CandidateMemory=Omit<PortableMemory,'id'|'evidenceId'>&{evidenceId:string;derivedFrom?:StoredMemoryDependency[]};
 export interface CandidateInput {
   id?:string;memory:Omit<MemoryInput,'id'|'replaceId'|'expectedRevision'|'experience'>&{evidenceId:string};
   reason?:string;confidence?:number;ttlHours?:number;
@@ -203,7 +212,7 @@ export interface MemoryCandidate {
   reviewedAt?:number;decisionReason?:string;acceptedId?:string;
 }
 export interface CandidateRevision {
-  expectedRevision:number;memory?:Partial<Pick<CandidateMemory,'value'|'evidenceId'|'observedAt'|'validFrom'|'expiresAt'>>;
+  expectedRevision:number;memory?:Partial<Pick<CandidateMemory,'value'|'evidenceId'|'observedAt'|'validFrom'|'expiresAt'|'assertion'>>&{derivedFrom?:MemoryDependency[]};
   reason?:string;confidence?:number;
 }
 export interface CandidateAcceptance {candidate:MemoryCandidate;record:MemoryRecord|null;duplicate:boolean}
@@ -216,3 +225,69 @@ export interface ExperienceInput extends Omit<MemoryInput,'kind'|'value'|'source
   task:string;context?:MemoryValue;attempt:string;result:string;conditions?:string[];outcome:ExperienceOutcome;verified?:boolean;
 }
 export type ExperienceRecord=MemoryRecord&{kind:'episode';source:'host';experience:ExperienceMetadata;value:ExperienceValue};
+
+export interface CandidateQuality {
+  assertion:MemoryAssertion|'unspecified';evidenceVerified:false;warnings:string[];
+  current:null|{id:string;revision:number;source:MemorySource;assertion:MemoryAssertion|'unspecified';relation:'same-value'|'different-value';usable:boolean};
+  similar:{id:string;revision:number;evidenceId:string;source:MemorySource;assertion:MemoryAssertion|'unspecified'}[];
+  competing:CandidateQuality['similar'];similarCount:number;competingCount:number;sourceChanges:string[];truncated:boolean;limits:string;
+}
+
+export interface SyncSnapshotStore extends SnapshotStore {
+  readSync():{snapshot:MemorySnapshot|null;revision:string|null};
+  writeSync(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):{revision:string};
+}
+export declare class SQLiteSnapshotStore implements SyncSnapshotStore {
+  constructor(options:{file:string;namespace?:string;maxBytes?:number;maxNamespaces?:number});
+  readonly file:string;readonly namespace:string;readonly maxBytes:number;readonly maxNamespaces:number;
+  readSync():{snapshot:MemorySnapshot|null;revision:string|null};
+  writeSync(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):{revision:string};
+  read():Promise<{snapshot:MemorySnapshot|null;revision:string|null}>;
+  write(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
+}
+export interface MemoryBackupIdentity {persona:string;namespace:string;subjects:Record<string,MemorySubject>;locale?:string}
+export interface MemoryBackup {format:'persona-memory-backup';version:1;createdAt:number;snapshot:MemorySnapshot;identity?:MemoryBackupIdentity;checksum:string}
+export interface BackupCounts {memories:number;candidates:number;relationshipProfiles:number}
+export interface MemoryRestorePreview {
+  format:'persona-memory-restore-plan';version:1;createdAt:number;expiresAt:number;persona:string;scope:string;
+  expectedRevision:string|null;targetDigest:string;configDigest:string;backupChecksum:string;checksum:string;
+  replacing:BackupCounts;restoring:BackupCounts;
+}
+export declare function createMemoryBackup(pm:PersonaMemory,options?:{identity?:MemoryBackupIdentity;now?:number}):Promise<MemoryBackup>;
+export declare function inspectMemoryBackup(raw:unknown,options?:{config?:PersonaMemoryConfig}):{checksum:string;createdAt:number;snapshot:MemorySnapshot;identity?:MemoryBackupIdentity;counts:BackupCounts};
+export declare function previewMemoryRestore(pm:PersonaMemory,raw:unknown,options?:{now?:number}):Promise<MemoryRestorePreview>;
+export declare function restoreMemoryBackup(pm:PersonaMemory,raw:unknown,preview:unknown,options?:{now?:number}):Promise<{committed:true;persistent:boolean;requiresReload:boolean;counts:BackupCounts}>;
+
+export interface MemoryDoctorReport {
+  ok:true;readOnly:true;schemaVersion:6;persistent:boolean;dirty:boolean;
+  counts:{records:number;currentHeads:number;candidates:number;pending:number;expiredPending:number};
+  sourceCheck:{inspected:number;unusable:number;reasons:Record<string,number>;samples:{id:string;reason:string}[];truncated:boolean};
+  warnings:string[];evidenceVerified:false;externalServicesContacted:false;repairsApplied:false;limits:string;
+}
+export declare function diagnoseMemory(pm:PersonaMemory,options?:{subjects?:MemorySubject[];maxRecords?:number}):MemoryDoctorReport;
+export declare function explainMemoryRecall(pm:PersonaMemory,options:{subject:MemorySubject;query?:string;locale?:string;limit?:number;id?:string}):{
+  mode:'local-lexical-diagnostic';semanticConsulted:false;subject:MemorySubject;result:MemorySearchResult;
+  inspected?:{available:boolean;id?:string;validity?:{usable:boolean;reason:string;dependencyId?:string};selected?:boolean;reason:string};
+  explanation:Record<string,unknown>;limits:string;
+};
+export interface ManagementPreview {
+  format:'persona-memory-management-plan';version:1;kind:'review'|'forget';subject:MemorySubject;
+  createdAt:number;expiresAt:number;persona:string;scope:string;expectedRevision:string|null;
+  targetDigest:string;configDigest:string;checksum:string;allowed:boolean;
+}
+export interface CandidateReviewPreview extends ManagementPreview {
+  kind:'review';decision:'accept'|'reject';requests:{id:string;expectedRevision:number}[];reason?:string;
+  rows:{id:string;revision:number;status:CandidateStatus;kind:MemoryKind;key:string;proposedValue:MemoryValue;
+    before:{id:string;revision:number;value:MemoryValue;validFrom:number;expiresAt:number|null}|null;
+    evidenceId:string;reason:string;source:MemorySource;assertion:MemoryAssertion|'unspecified';quality:CandidateQuality}[];
+  evidenceVerified:false;denial?:{code:string;message:string};
+}
+export interface MemoryForgetPreview extends ManagementPreview {
+  kind:'forget';id:string;expectedMemoryRevision:number;
+  impact:{memories:number;candidates:number;recordIds:string[];candidateIds:string[];truncated:boolean};
+}
+export interface ManagedCommitResult {committed:true;persistent:boolean;requiresReload:boolean;counts:BackupCounts}
+export declare function previewCandidateReview(pm:PersonaMemory,options:{subject:MemorySubject;requests:{id:string;expectedRevision:number}[];decision:'accept'|'reject';reason?:string}):Promise<CandidateReviewPreview>;
+export declare function applyCandidateReview(pm:PersonaMemory,preview:unknown):Promise<ManagedCommitResult&{decision:'accept'|'reject';reviewed:number;results:{candidateId:string;recordId?:string;status:'accepted'|'rejected'}[]}>;
+export declare function previewMemoryForget(pm:PersonaMemory,options:{subject:MemorySubject;id:string;expectedRevision:number}):Promise<MemoryForgetPreview>;
+export declare function applyMemoryForget(pm:PersonaMemory,preview:unknown):Promise<ManagedCommitResult&{removed:number}>;

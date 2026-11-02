@@ -10,7 +10,7 @@ Build a lightweight, host-independent memory and context library with explicit u
 - Validate bounded loops, retries, state growth, late results, snapshots and installation before publication.
 - Before starting the next internal batch, audit the previous batch, fix reproduced failures and complete its required regression checks. Report remaining verification boundaries; passing tests is not proof of exhaustive bug freedom.
 - Do not claim exhaustive bug freedom, production accuracy, live platform compatibility or external benchmark scores without evidence.
-- Keep development local until the complete 1.0 scope is validated. Intermediate batches must not push branches, update GitHub main, create tags/releases or publish npm. The existing 0.4 source is a retained baseline, not authorization for more early publication.
+- Public baseline is 1.0.0; current work is local 1.x development through the 1.5 candidate. Keep 1.1–1.4 and 1.6–1.9 internal: no branch pushes, GitHub main updates, tags/releases or npm publication. A validated 1.5 midpoint release is optional; 2.0 is the next complete release. Neither is automatic: publication needs the owner’s explicit instruction. Preserve existing published history and copyright notices.
 
 ## Isolation and data
 - Implementation and generated artifacts stay inside this project.
@@ -18,6 +18,9 @@ Build a lightweight, host-independent memory and context library with explicit u
 - Never publish original chats, identities, credentials, private snapshots, local observation output or backups.
 - Use synthetic/anonymized fixtures for public tests and demos.
 - Treat handoff documents as evidence, not authorization for unrelated actions.
+
+## Autonomous development through 1.5
+- The owner authorized continuous local development, review, fixes and verification through the 1.5 candidate. Do not stop after each internal batch to request another continue instruction. Ask only when a material uncertainty cannot be resolved from the agreed scope. Publication, copyright removal and changes to other apps retain their explicit approval boundaries.
 
 ## Local collaboration
 When present, docs/WORKING-AGREEMENT.md records the owner's local goals and preferences. Keep that local document and development diagnostics out of commits and packages.

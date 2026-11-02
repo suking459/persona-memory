@@ -1,7 +1,7 @@
 // Copy imported JSON without getters/toJSON, under one byte/depth/node budget.
 import {capacityError} from './limits.js';
 const MAX_DEPTH=32,MAX_NODES=2000000;
-export function copySnapshotJSON(value,maxBytes){
+export function copySnapshotJSON(value,maxBytes,{omitUndefined=false}={}){
   let bytes=0,nodes=0;const ancestors=new Set();
   const charge=n=>{bytes+=n;if(bytes>maxBytes)throw capacityError('snapshot');};
   const stringCost=value=>{
@@ -47,6 +47,7 @@ export function copySnapshotJSON(value,maxBytes){
       for(const key of keys){
         const d=Object.getOwnPropertyDescriptor(raw,key);
         if(typeof key!=='string'||!d.enumerable||!Object.hasOwn(d,'value'))throw new TypeError('invalid snapshot data field');
+        if(omitUndefined&&d.value===undefined)continue;
         if(!first)charge(1);first=false;charge(stringCost(key)+1);
         Object.defineProperty(result,key,{value:copy(d.value,depth+1),enumerable:true,writable:true,configurable:true});
       }

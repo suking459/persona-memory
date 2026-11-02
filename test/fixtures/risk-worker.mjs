@@ -9,7 +9,7 @@ if(mode==='quotes'){
   for(const text of ['“'.repeat(100000),'“'.repeat(99998)+'好累','「'.repeat(100000)])assert.deepEqual(matchTags(text),[]);
   assert.ok(performance.now()-started<1000,'quote filtering exceeded its processing budget');
 }else if(mode==='repetition'){
-  assert.throws(()=>matchTags('不加班'.repeat(25000)),/excessive repeated/);
+  assert.throws(()=>matchTags('不部署窗口'.repeat(19000),{release:{words:['部署窗口'],advice:''}}),/excessive repeated/);
   assert.throws(()=>matchTags('hi',{x:{words:['']}}),/keyword/);
   const tags=Array.from({length:4096},(_,i)=>({tag:'tag-'+i,longTerm:true,addedAt:1,lastHitAt:1,expiresAt:null,injections:1}));
   assert.equal(sweepTags(tags,2,{maxTagsPerPerson:16}).tags.length,16);

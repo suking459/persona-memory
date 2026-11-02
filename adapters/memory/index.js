@@ -7,7 +7,7 @@ import {normalizeMemoryContext} from '../../src/retrieval.js';
 export function createMemoryBridge(pm,options={}){
   const {timeoutMs=30000,...contextOptions}=options;
   const settings=normalizeMemoryContext(contextOptions,pm.config.maxChars),selection=settings.search;
-  const base={subjects:selection.subjects,kinds:selection.kinds,keys:selection.keys,sources:selection.sources,
+  const base={locale:selection.locale,subjects:selection.subjects,kinds:selection.kinds,keys:selection.keys,sources:selection.sources,
     observedAfter:selection.observedAfter,observedBefore:selection.observedBefore,
     maxCandidates:selection.maxCandidates,minScore:selection.minScore,now:selection.now,
     relevance:[...selection.relevance].map(([id,score])=>({id,score})),

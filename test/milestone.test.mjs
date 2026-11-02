@@ -1,3 +1,4 @@
+import {withLoadRule} from './fixtures/explicit-tag-rules.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +8,7 @@ import {PersonaMemory,scoreMessage,matchTags,hitTag,sweepTags} from '../src/inde
 import {parse} from '../adapters/generic/index.js';
 import {createPreset} from '../src/presets.js';
 const DAY=86400000, start=Date.UTC(2026,0,1);
-function memory(config={}) {let now=start;const pm=new PersonaMemory({clock:()=>now,config});return {pm,tick:(ms)=>now+=ms};}
+function memory(config={}) {let now=start;const pm=new PersonaMemory(withLoadRule({clock:()=>now,config}));return {pm,tick:(ms)=>now+=ms};}
 const message=(extra={})=>({chatId:'room',userId:'u',text:'你好',mentionsSelf:true,...extra});
 
 test('configured score cap and transport flags are honored',()=>{
@@ -64,7 +65,7 @@ test('event dedupe and stale messages cannot reset daily budgets',()=>{
   assert.equal(pm.ingest(message({eventId:'old',ts:start})).ignored,'out-of-order');
 });
 test('maintenance decays incrementally and preserves actual interaction time',()=>{
-  const {pm,tick}=memory();pm.ingest(message({text:'你好厉害'}));
+  const {pm,tick}=memory();pm.ingest(message({text:'synthetic host judgement',affinityDelta:5}));
   const last=pm.getProfile('room','u').affinity.lastInteractiveAt;
   tick(DAY);pm.maintain();assert.equal(pm.getProfile('room','u').affinity.value,3);
   tick(DAY);pm.maintain();assert.equal(pm.getProfile('room','u').affinity.value,1);
@@ -74,7 +75,7 @@ test('configured chat tag scope and instance scope isolate identities',()=>{
   const {pm}=memory({tagScope:'chat'});
   pm.ingest(message({text:'好累'}));pm.ingest(message({chatId:'other'}));
   assert.equal(pm.getProfile('other','u').tags.length,0);
-  const other=new PersonaMemory({scope:'tenant-2'});
+  const other=new PersonaMemory(withLoadRule({scope:'tenant-2'}));
   assert.throws(()=>other.import(pm.export()),/scope/);
 });
 test('manual correction removes old status and preserves provenance',()=>{
@@ -91,10 +92,11 @@ test('host trust events differ from ordinary praise and deduplicate',()=>{
   assert.equal(pm.getProfile('room','u').dimensions.trust.value,60);
 });
 test('conservative matching skips simple negation and quoted observations',()=>{
-  assert.equal(matchTags('我不是在找工作').length,0);
-  assert.equal(matchTags('他说“我在找工作”').length,0);
-  assert.ok(matchTags('我在找工作').length);
-  assert.equal(matchTags('我在找工作',{压力大:{words:[],advice:''}}).length,0);
+  const rule={search:{words:['找工作'],advice:'Synthetic search note'}};
+  assert.equal(matchTags('我不是在找工作',rule).length,0);
+  assert.equal(matchTags('他说“我在找工作”',rule).length,0);
+  assert.ok(matchTags('我在找工作',rule).length);
+  assert.equal(matchTags('我在找工作',{search:{words:[],advice:''}}).length,0);
 });
 test('pure tag helpers and profile results cannot mutate internal state',()=>{
   const raw=[{tag:'累',hits:1,lastHitAt:start,addedAt:start,expiresAt:start+DAY,injections:0}];
@@ -120,11 +122,11 @@ test('persistence upgrades v1, restores exact scope, and preserves corrupt origi
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'persona-memory-test-'));
   try {
     const {pm}=memory();pm.ingest(message({text:'好累'}));const v1=pm.export();v1.schemaVersion=1;delete v1.scope;delete v1.tagScope;
-    const restored=new PersonaMemory({storage:dir,clock:()=>start});restored.import(v1);restored.flush();
-    const read=new PersonaMemory({storage:dir,clock:()=>start});assert.equal(read.getProfile('room','u').tags[0].tag,'最近很累');
-    assert.equal(read.export().schemaVersion,5);
+    const restored=new PersonaMemory(withLoadRule({storage:dir,clock:()=>start}));restored.import(v1);restored.flush();
+    const read=new PersonaMemory(withLoadRule({storage:dir,clock:()=>start}));assert.equal(read.getProfile('room','u').tags[0].tag,'最近很累');
+    assert.equal(read.export().schemaVersion,6);
     const file=path.join(dir,'default.json');fs.writeFileSync(file,'{bad');
-    assert.throws(()=>new PersonaMemory({storage:dir}),/original file preserved/);
+    assert.throws(()=>new PersonaMemory(withLoadRule({storage:dir})),/original file preserved/);
     assert.equal(fs.readFileSync(file,'utf8'),'{bad');
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });

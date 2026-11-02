@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {isMainModule} from '../../src/main.js';
 import http from 'node:http';
 import {pathToFileURL} from 'node:url';
 import {PersonaMemory} from '../../src/index.js';
@@ -89,7 +90,7 @@ export function createMemoryServer({pm=new PersonaMemory(),token='',allowAdmin=f
     }
   });
 }
-if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
+if(isMainModule(import.meta.url)){
   const pm=new PersonaMemory({storage:process.env.PM_STORAGE||null,persona:process.env.PM_PERSONA||'assistant',scope:process.env.PM_SCOPE||''});
   const server=createMemoryServer({pm,token:process.env.PM_TOKEN||'',allowAdmin:process.env.PM_ALLOW_ADMIN==='1'});
   server.listen(Number(process.env.PM_PORT)||8791,'127.0.0.1',()=>console.log('persona-memory '+VERSION+' listening on loopback'));

@@ -49,7 +49,8 @@
         "synthetic-member",
         "synthetic-visitor"
       ]
-    }
+    },
+    "postprocessing": "For the 1.5 source review, advisory display text was replaced with a newly written synthetic migration note. Historical source metadata describes the original generator, not byte identity of this edited fixture."
   },
   "snapshot": {
     "schemaVersion": 1,
@@ -155,7 +156,7 @@
         {
           "tag": "最近很累",
           "source": "builtin",
-          "advice": "话少一点、别催回复、别拉着熬夜聊",
+          "advice": "Synthetic migration note",
           "addedAt": 1767268800000,
           "lastHitAt": 1767268800000,
           "lastEvidenceAt": 1767268800000,

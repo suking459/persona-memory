@@ -3,7 +3,7 @@ import {createTurnRunner} from '../../src/turns.js';
 import {normalizeMemorySearch} from '../../src/retrieval.js';
 import {assertMemoryFields as fields,memoryIdentifier,sameSubject,normalizeSubject,memoryArray} from '../../src/records.js';
 import {normalizeAutoAccept,candidateConflict} from '../../src/candidates.js';
-const OUTPUT_FIELDS=new Set(['subject','kind','key','value','reason','confidence','observedAt','validFrom','expiresAt']);
+const OUTPUT_FIELDS=new Set(['subject','kind','key','value','reason','confidence','observedAt','validFrom','expiresAt','derivedFrom','assertion']);
 /** The host supplies the extractor and credentials. No background calls or automatic learning by default. */
 export function createMemoryLearner(pm,options={}){
   fields(options,new Set(['subject','subjects','kinds','source','maxCandidatesPerCall','timeoutMs','autoAccept']),'memory learner options');
@@ -37,7 +37,7 @@ export function createMemoryLearner(pm,options={}){
               if(!selected.subjects.some(subject=>sameSubject(subject,normalizedSubject))||
                 (selected.kinds&&!selected.kinds.includes(output.kind)))throw new TypeError('extractor proposal is outside the authorized subjects or kinds');
               const memory={subject:normalizedSubject,kind:output.kind,key:output.key,value:output.value,source,evidenceId:eventId};
-              for(const key of ['observedAt','validFrom','expiresAt'])if(output[key]!==undefined)memory[key]=output[key];
+              for(const key of ['observedAt','validFrom','expiresAt','derivedFrom','assertion'])if(output[key]!==undefined)memory[key]=output[key];
               inputs.push({memory,...(output.reason===undefined?{}:{reason:output.reason}),...(output.confidence===undefined?{}:{confidence:output.confidence})});
             }
             const result=inputs.length?pm.proposeMemories(inputs,{autoAccept}):{candidates:[],accepted:[],omitted:[]};

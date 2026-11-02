@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {isMainModule} from '../src/main.js';
 import {pathToFileURL} from 'node:url';
 import {PersonaMemory} from '../src/index.js';
 import {assertMemoryFields} from '../src/records.js';
@@ -16,7 +17,7 @@ export function review(pm,request){
     default:throw new TypeError('operation must be list/get/accept/reject/revise/forget/experiences');
   }
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+if(isMainModule(import.meta.url)){
   try{
     if(!process.env.PM_STORAGE)throw new TypeError('PM_STORAGE is required; review uses an explicit project data directory');
     let size=0;const chunks=[];

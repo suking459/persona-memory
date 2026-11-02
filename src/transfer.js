@@ -4,7 +4,7 @@ import {assertMemoryFields,normalizeSubject,sameSubject,memorySlot,prepareMemory
 import {normalizeMemorySearch} from './retrieval.js';
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const MAX_BYTES=4194304;
-const ENTRY_FIELDS=new Set(['id','subject','kind','key','value','source','evidenceId','observedAt','validFrom','expiresAt']);
+const ENTRY_FIELDS=new Set(['id','subject','kind','key','value','source','evidenceId','observedAt','validFrom','expiresAt','assertion']);
 const portable=record=>Object.fromEntries([...ENTRY_FIELDS].filter(key=>record[key]!==undefined).map(key=>[key,record[key]]));
 const validTime=value=>typeof value==='number' && Number.isFinite(value) && value>=0 && value<=8640000000000000;
 function checkSize(value){if(Buffer.byteLength(JSON.stringify(value))>MAX_BYTES)throw new RangeError('memory transfer exceeds 4 MiB');}
@@ -12,18 +12,19 @@ export function exportMemoryBundle(records,options,now){
   assertMemoryFields(options,new Set(['subject','subjects','kinds','keys','sources']),'memory export options');
   const selected=normalizeMemorySearch(options),items=[];
   for(const record of Object.values(records)){
-    if(!selected.subjects.some(subject=>sameSubject(subject,record.subject)) || !isCurrentMemory(record,now) ||
+    if(!selected.subjects.some(subject=>sameSubject(subject,record.subject)) || !isCurrentMemory(record,now,records) ||
       (selected.kinds && !selected.kinds.includes(record.kind)) || (selected.keys && !selected.keys.includes(record.key)) ||
       (selected.sources && !selected.sources.includes(record.source)))continue;
+    if(record.derivedFrom)throw new TypeError('derived records require a full snapshot backup or explicit re-derivation; portable v1 cannot preserve dependencies');
     if(items.length>=1000)throw new RangeError('select fewer records; memory transfer limit is 1000');
     items.push(portable(record));
   }
   items.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
-  const bundle={format:'persona-memory/records',version:1,exportedAt:now,records:items};checkSize(bundle);return bundle;
+  const bundle={format:'persona-memory/records',version:items.some(item=>item.assertion!==undefined)?2:1,exportedAt:now,records:items};checkSize(bundle);return bundle;
 }
 export function prepareMemoryImport(records,bundle,options,now,config){
   assertMemoryFields(bundle,new Set(['format','version','exportedAt','records']),'memory bundle');
-  if(bundle.format!=='persona-memory/records' || bundle.version!==1 || !validTime(bundle.exportedAt) ||
+  if(bundle.format!=='persona-memory/records' || ![1,2].includes(bundle.version) || !validTime(bundle.exportedAt) ||
     !Array.isArray(bundle.records) || bundle.records.length>1000)throw new TypeError('invalid memory bundle');
   assertMemoryFields(options,new Set(['mappings']),'memory import options');
   if(!Array.isArray(options.mappings) || options.mappings.length>32)throw new RangeError('explicit subject mappings required, at most 32');
@@ -40,6 +41,7 @@ export function prepareMemoryImport(records,bundle,options,now,config){
   const incomingIds=new Set(),destinations=new Set(),entries=[],rows=[],counts={add:0,same:0,update:0,conflict:0};
   for(const raw of bundle.records){
     assertMemoryFields(raw,ENTRY_FIELDS,'portable memory');
+    if(bundle.version===1&&raw.assertion!==undefined)throw new TypeError('assertion metadata requires portable version 2');
     for(const name of ['id','subject','kind','key','value','source','observedAt','validFrom','expiresAt'])if(!Object.hasOwn(raw,name))throw new TypeError('incomplete portable memory');
     if(!validTime(raw.expiresAt) && raw.expiresAt!==null)throw new TypeError('invalid portable expiry');
     if(raw.expiresAt!==null && (raw.expiresAt<raw.validFrom || raw.expiresAt<raw.observedAt))throw new TypeError('invalid portable chronology');
@@ -55,7 +57,7 @@ export function prepareMemoryImport(records,bundle,options,now,config){
     const id='transfer-'+hash([incoming,target]);
     const input={...incoming,id,subject:target,expectedRevision:current?.revision??0,
       ...(current?{replaceId:current.id}:{})};
-    const content=record=>JSON.stringify([record.value,record.source,record.evidenceId??null,record.observedAt,record.validFrom,record.expiresAt]);
+    const content=record=>JSON.stringify([record.value,record.source,record.evidenceId??null,record.observedAt,record.validFrom,record.expiresAt,record.assertion??null]);
     let action='add',reason;
     if(destinations.has(slot)){action='conflict';reason='mapped-slot-collision';}
     else if(incoming.expiresAt!==null && incoming.expiresAt<=now){action='conflict';reason='expired-incoming';}

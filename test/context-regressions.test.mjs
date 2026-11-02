@@ -31,11 +31,12 @@ test('support context includes resolved guidance without social qualification',(
   assert.equal(pm.confirmContext(context,{turnId:'resolved'}).tagCount,1);
 });
 
-test('current mood guidance overrides generic familiar teasing advice',()=>{
+test('explicit host guidance is rendered without a built-in personality tone',()=>{
   const pm=new PersonaMemory({clock:()=>1000,config:{decayBaseline:80}});
   pm.ingest({chatId:'room',userId:'friend',text:'今天好烦',directedToBot:true});
+  pm.setTag({chatId:'room',userId:'friend',tag:'host-note',advice:'Synthetic host guidance',source:'host'});
   const context=pm.buildContext({chatId:'room',userIds:['friend']});
-  const tag=context.people[0].tags.find(t=>t.tag==='心情不好');
+  const tag=context.people[0].tags.find(t=>t.tag==='host-note');
   assert.ok(tag?.advice);
   assert.ok(context.text.includes(tag.advice));
   assert.doesNotMatch(context.text,/互怼|开玩笑就行/);

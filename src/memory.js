@@ -1,3 +1,4 @@
+import {candidateQuality} from './quality.js';
 import {copySnapshotJSON} from './snapshot.js';
 import {experienceInput,selectExperiences} from './experience.js';
 import {stageCandidateProposals,stageCandidateAcceptance,reviseCandidate as reviseProposal,rejectCandidate as rejectProposal,selectCandidates,hydrateCandidates,candidateConflict} from './candidates.js';
@@ -5,12 +6,12 @@ import {validateResourceLimits,capacityError} from './limits.js';
 import {validateTagRules} from './text-policy.js';
 import {normalizeMemorySearch,normalizeMemoryContext,retrieveMemories} from './retrieval.js';
 import {renderMemoryContext} from './record-context.js';
-import {prepareMemoryWrite,hydrateMemories,normalizeSubject,sameSubject,memoryIdentifier,memorySlot,memorySlotForId,isCurrentMemory,selectMemories,memoryAt,assertMemoryFields} from './records.js';
+import {prepareMemoryWrite,hydrateMemories,dependencyStatus,memoryForgetImpact,normalizeSubject,sameSubject,memoryIdentifier,memorySlot,memorySlotForId,isCurrentMemory,selectMemories,memoryAt,assertMemoryFields} from './records.js';
 import {exportMemoryBundle,prepareMemoryImport,stageMemoryImport} from './transfer.js';
 import {JsonFileStore,checkRevision,storageError} from './storage.js';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { SCORE_RULES, tierOf, clampAffinity, applyDailyGain, decayAmount, scoreMessage, updateStyle, summarizeStyle, matchTags, hitTag, normalizeTag, sweepTags } from './rules.js';
+import { tierOf, clampAffinity, applyDailyGain, decayAmount, scoreMessage, updateStyle, summarizeStyle, matchTags, hitTag, normalizeTag, sweepTags } from './rules.js';
 
 const DAY = 86400000;
 const own = (object, key) => Object.hasOwn(object, key);
@@ -66,10 +67,12 @@ function validateConfig(config) {
 }
 
 export class PersonaMemory {
-  constructor({ storage = null, persona = 'default', scope = '', config = {}, clock = Date.now } = {}) {
+  constructor({ storage = null, store = null, persona = 'default', scope = '', config = {}, clock = Date.now } = {}) {
     this.persona = key(persona, 'persona');
     this.scope = scope ? key(scope, 'scope') : '';
     this.storage = storage ? path.resolve(storage) : null;
+    if(storage&&store)throw new TypeError('choose storage directory or store');
+    if(store&&(!['read','write','readSync','writeSync'].every(k=>typeof store[k]==='function')))throw new TypeError('synchronous store required by constructor; use PersonaMemory.open for async stores');
     if (typeof clock !== 'function') throw new TypeError('clock must be a function');
     this.clock = clock;
     this.config = validateConfig({ ...clone(DEFAULTS), ...clone(config) });
@@ -78,11 +81,11 @@ export class PersonaMemory {
     this._pending = new Map();
     this._recordEpoch = {};this._learningEpoch={};
     this._imports=new Map();this._storeRevision=null;this._storeBusy=false;
-    this._store=this.storage?new JsonFileStore({file:this._file(),maxBytes:this.config.maxSnapshotBytes}):null;
-    if (this.storage) this._load();
+    this._store=store??(this.storage?new JsonFileStore({file:this._file(),maxBytes:this.config.maxSnapshotBytes}):null);
+    if (this._store) this._load();
   }
   _empty() {
-    return { schemaVersion: 5, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
+    return { schemaVersion: 6, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
       sessions: {}, tags: {}, visitors: {}, memories: {}, candidates: {}, seen: [], uses: [], history: [] };
   }
   _now(value = this.clock()) { number(value,'timestamp');if(value>8640000000000000)throw new RangeError('timestamp outside supported calendar');return value; }
@@ -93,17 +96,21 @@ export class PersonaMemory {
   _load() {
     try{
       const loaded=this._store.readSync();
+      if(!loaded||!Object.hasOwn(loaded,'snapshot'))throw new TypeError('invalid store read result');
+      checkRevision(loaded.revision);
+      if((loaded.snapshot===null)!==(loaded.revision===null))throw new TypeError('inconsistent store read result');
       if(loaded.snapshot!==null)this.state=this._hydrate(loaded.snapshot);
       this._storeRevision=loaded.revision;
-    }catch(cause){throw new Error('Cannot load memory snapshot; original file preserved: '+this._file(),{cause});}
+    }catch(cause){throw new Error('Cannot load memory snapshot; original file preserved: '+(this._store.file??'configured store'),{cause});}
   }
   static async open({store,...options}={}) {
     if(!store || typeof store.read!=='function' || typeof store.write!=='function')throw new TypeError('snapshot store read/write required');
     if(options.storage)throw new TypeError('choose storage directory or store');
     const pm=new PersonaMemory(options);pm._store=store;await pm.reload();return pm;
   }
-  async reload({discardChanges=false}={}) {
+  async reload({discardChanges=false,ifChanged=false}={}) {
     if(typeof discardChanges!=='boolean')throw new TypeError('discardChanges must be boolean');
+    if(typeof ifChanged!=='boolean')throw new TypeError('ifChanged must be boolean');
     if(!this._store)throw new TypeError('no snapshot store configured');
     if(this._storeBusy)throw storageError('ERR_STORE_BUSY','another store operation is pending');
     if(this._dirty && !discardChanges)throw storageError('ERR_STORE_DIRTY','local changes require persist or explicit discardChanges');
@@ -113,6 +120,12 @@ export class PersonaMemory {
       if(!loaded || !Object.hasOwn(loaded,'snapshot'))throw new TypeError('invalid store read result');
       checkRevision(loaded.revision);
       if((loaded.snapshot===null)!==(loaded.revision===null))throw new TypeError('inconsistent store read result');
+      // A clean, unchanged revision retains pending contexts and import previews.
+      // Dirty explicit discards and the default reload still replace state.
+      if(ifChanged && !this._dirty && loaded.revision===this._storeRevision){
+        if(JSON.stringify(this.state)!==before)throw storageError('ERR_STORE_DIRTY','memory changed during reload; local changes preserved');
+        return;
+      }
       const next=loaded.snapshot===null?this._empty():this._hydrate(loaded.snapshot);
       if(JSON.stringify(this.state)!==before)throw storageError('ERR_STORE_DIRTY','memory changed during reload; local changes preserved');
       this.state=next;this._storeRevision=loaded.revision;this._dirty=false;
@@ -134,16 +147,16 @@ export class PersonaMemory {
   }
   _hydrate(snapshot) {
     const raw=copySnapshotJSON(snapshot,this.config.maxSnapshotBytes);
-    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5});
-    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories);
-    if (!dictionary(raw) || ![1,2,3,4,5].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
+    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5,allowDerived:raw.schemaVersion>=6});
+    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories,{allowDerived:raw.schemaVersion>=6});
+    if (!dictionary(raw) || ![1,2,3,4,5,6].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
     if (raw.persona && raw.persona !== this.persona) throw new TypeError('snapshot persona mismatch');
     if ((raw.scope ?? '') !== this.scope) throw new TypeError('snapshot scope mismatch');
     if (raw.schemaVersion >= 2 && raw.tagScope !== this.config.tagScope) throw new TypeError('snapshot tagScope mismatch');
     if ((raw.schemaVersion??1) === 1 && this.config.tagScope !== 'user') throw new TypeError('v1 snapshot requires tagScope=user');
     if ((raw.schemaVersion??1)<3 && Object.keys(memories).length)throw new TypeError('memory records require schemaVersion=3');
     if(raw.schemaVersion>=3 && raw.memories===undefined)throw new TypeError('schemaVersion>=3 requires memories');
-    if(raw.schemaVersion===5&&raw.candidates===undefined)throw new TypeError('schemaVersion=5 requires candidates');
+    if(raw.schemaVersion>=5&&raw.candidates===undefined)throw new TypeError('schemaVersion>=5 requires candidates');
     if((raw.schemaVersion??1)<5&&Object.keys(candidates).length)throw new TypeError('candidates require schemaVersion=5');
     const next = this._empty();next.memories=memories;next.candidates=candidates;
     for (const [chatId, people] of Object.entries(raw.sessions)) {
@@ -186,7 +199,7 @@ export class PersonaMemory {
         if (t.advice!==undefined && (typeof t.advice!=='string' || t.advice.length>2000)) throw new TypeError('invalid tag advice');
         for(const field of ['hits','injections','addedAt','lastHitAt','lastEvidenceAt']) if(t[field]!==undefined) number(t[field],'tag.'+field);
         const normalized = normalizeTag(t);
-        normalized.lastEvidenceAt = t.lastEvidenceAt ?? t.lastHitAt ?? t.addedAt;
+        normalized.lastEvidenceAt = t.lastEvidenceAt ?? t.lastHitAt ?? t.addedAt ?? normalized.lastHitAt;
         this._now(normalized.addedAt); this._now(normalized.lastHitAt);
         if (normalized.expiresAt !== null) this._now(normalized.expiresAt);
         return normalized;
@@ -307,8 +320,8 @@ export class PersonaMemory {
     const mentionsSelf=msg.mentionsSelf ?? (msg.mentions || []).some((id)=>String(id)==='self' || (this.config.botId!==null && String(id)===String(this.config.botId)));
     const replyToSelf=msg.replyToSelf ?? (msg.replyTo==='self');
     const directed=Boolean(msg.directedToBot || mentionsSelf || replyToSelf || (this.config.attentionWindowSec>0 && Number.isFinite(existing?.lastAddressedAt) && ts>=existing.lastAddressedAt && ts-existing.lastAddressedAt<=this.config.attentionWindowSec*1000));
-    let score=scoreMessage(text,{mentionsSelf,replyToSelf,directedToBot:directed},{perMessageCap:this.config.perMessageCap});
-    if (!directed && !this.config.scoreAmbient) score={delta:0,reasons:[]};
+    let score=scoreMessage(text,{mentionsSelf,replyToSelf,directedToBot:directed,...(msg.affinityDelta===undefined?{}:{affinityDelta:msg.affinityDelta})},{perMessageCap:this.config.perMessageCap});
+    if (!directed && !this.config.scoreAmbient && msg.affinityDelta===undefined) score={delta:0,reasons:[]};
     const tagHits=matchTags(text,this.config.extraRules);
     const pkey=this._personKey(chatId,userId);
     const visitorOnly=!existing && score.delta===0 && !tagHits.length && !directed && this.config.visitorTracking;
@@ -332,7 +345,7 @@ export class PersonaMemory {
     p.style.catch=Object.fromEntries(Object.entries(p.style.catch).sort((a,b)=>b[1]-a[1]).slice(0,this.config.maxStyleFragments));
     const a=p.affinity, dayKey=this._dayKey(ts);
     if (a.dayKey!==dayKey) { a.dayKey=dayKey; a.dayGain=0; a.talkCount=0; }
-    if (score.reasons.includes('说了话')) {
+    if (score.reasons.includes('direct')) {
       if (a.talkCount>=this.config.talkDailyCap) score={delta:0,reasons:['普通互动日额度已满']};
       else a.talkCount++;
     }
@@ -460,12 +473,13 @@ export class PersonaMemory {
     const candidate=own(this.state.candidates,id)?this.state.candidates[id]:null;
     return candidate&&(includeExpired||candidate.expiresAt>this._now())?clone(candidate):null;
   }
+  inspectCandidate(id,options={}) {return clone(candidateQuality(this.state.memories,this.state.candidates,id,options,this._now()));}
   listCandidates(options) {return clone(selectCandidates(this.state.candidates,options,this._now()));}
   reviseCandidate(id,options) {
     id=memoryIdentifier(id);const candidate=own(this.state.candidates,id)?this.state.candidates[id]:null;
     if(!candidate)throw candidateConflict('candidate is unavailable');
-    const now=this._now(),next=reviseProposal(candidate,options,now,this.config),candidates={...this.state.candidates,[id]:next};
-    hydrateCandidates(candidates,this.config);this.state.candidates=candidates;this._learningEpoch={};this._dirty=true;
+    const now=this._now(),next=reviseProposal(candidate,options,now,this.config,this.state.memories),candidates={...this.state.candidates,[id]:next};
+    hydrateCandidates(candidates,this.config,this.state.memories);this.state.candidates=candidates;this._learningEpoch={};this._dirty=true;
     const subject=next.memory.subject;this._audit('candidate-revised',subject.chatId,subject.type==='user'?subject.id:undefined,{subject,candidateId:id},now);
     return clone(next);
   }
@@ -543,7 +557,7 @@ export class PersonaMemory {
     id=memoryIdentifier(id);now=this._now(now);
     if(typeof includeInactive!=='boolean')throw new TypeError('includeInactive must be boolean');
     const record=own(this.state.memories,id)?this.state.memories[id]:null;
-    return record && (includeInactive || isCurrentMemory(record,now))?clone(record):null;
+    return record && (includeInactive || isCurrentMemory(record,now,this.state.memories))?clone(record):null;
   }
   listMemories(options={}) {
     const now=this._now(options.now);
@@ -560,13 +574,16 @@ export class PersonaMemory {
     }
     return ids.size;
   }
+  memoryStatus(id,{now}={}) {
+    id=memoryIdentifier(id);now=this._now(now);
+    const record=own(this.state.memories,id)?this.state.memories[id]:null;
+    return record?dependencyStatus(record,this.state.memories,now):{usable:false,reason:'missing'};
+  }
+  previewForgetMemory(id) {return clone(memoryForgetImpact(this.state.memories,this.state.candidates,memoryIdentifier(id)));}
   forgetMemory(id) {
-    id=memoryIdentifier(id);this._imports.clear();this._learningEpoch={};
-    const reviewed=Object.values(this.state.candidates).find(candidate=>candidate.acceptedId===id);
-    const slot=memorySlotForId(this.state.memories,id)??(reviewed?memorySlot(reviewed.memory):null);
-    if(slot===null)return {removed:0};
-    const removed=this._removeMemories(item=>memorySlot(item)===slot)+this._removeCandidates(candidate=>memorySlot(candidate.memory)===slot);
-    return {removed};
+    const impact=this.previewForgetMemory(id),records=new Set(impact.recordIds),candidates=new Set(impact.candidateIds);
+    this._imports.clear();this._learningEpoch={};
+    return {removed:this._removeMemories(record=>records.has(record.id))+this._removeCandidates(candidate=>candidates.has(candidate.id))};
   }
   deleteSubject(subject) {
     subject=normalizeSubject(subject);this._imports.clear();
@@ -621,7 +638,7 @@ export class PersonaMemory {
         if (this.config.affinityContext) {
           parts.push(t.tier+'（'+Math.round(c.p.affinity.value)+' 分）');
           // Current state guidance takes priority over a generic relationship tone.
-          if (!tags.some(tag=>tag.advice?.trim())) parts.push(t.hint);
+          if (t.hint && !tags.some(tag=>tag.advice?.trim())) parts.push(t.hint);
         }
         if (style.catchphrases.length) parts.push('常带 '+JSON.stringify(clean(style.catchphrases[0])));
         const dims=Object.entries(c.p.dimensions);
@@ -675,7 +692,7 @@ export class PersonaMemory {
         for(const ref of pending.refs){
           recordIds.add(ref.id);
           const record=own(this.state.memories,ref.id)?this.state.memories[ref.id]:null;
-          if(record && isCurrentMemory(record,now) && hash(record)===ref.fingerprint)memories.set(record.id,record);
+          if(record && isCurrentMemory(record,now,this.state.memories) && hash(record)===ref.fingerprint)memories.set(record.id,record);
         }
       }else{
         chats.add(pending.chatId);pending.userIds.forEach(id=>users.add(id));
@@ -751,7 +768,7 @@ export class PersonaMemory {
     return {removed};
   }
   diagnostics() {
-    return {schemaVersion:5,candidates:Object.keys(this.state.candidates).length,memories:Object.keys(this.state.memories).length,profiles:Object.values(this.state.sessions).reduce((n,p)=>n+Object.keys(p).length,0),
+    return {schemaVersion:6,candidates:Object.keys(this.state.candidates).length,memories:Object.keys(this.state.memories).length,profiles:Object.values(this.state.sessions).reduce((n,p)=>n+Object.keys(p).length,0),
       visitors:Object.keys(this.state.visitors).length,tags:Object.values(this.state.tags).reduce((n,t)=>n+t.length,0),
       dedupeEntries:this.state.seen.length,confirmedTurns:this.state.uses.length,historyEntries:this.state.history.length};
   }
@@ -763,10 +780,10 @@ export class PersonaMemory {
     if(!this._store || !this._dirty)return;
     if(this._storeBusy)throw storageError('ERR_STORE_BUSY','another store operation is pending');
     if(typeof this._store.writeSync!=='function')throw storageError('ERR_STORE_ASYNC','this store requires await persist()');
-    if(Buffer.byteLength(JSON.stringify(this.state))>this.config.maxSnapshotBytes)throw capacityError('snapshot');
-    const saved=this._store.writeSync(this.state,{expectedRevision:this._storeRevision});
+    const snapshot=this.export();
+    const saved=this._store.writeSync(snapshot,{expectedRevision:this._storeRevision});
     checkRevision(saved?.revision,{empty:false});this._storeRevision=saved.revision;this._dirty=false;
   }
-  export() {return clone(this.state);}
+  export() {return copySnapshotJSON(this.state,this.config.maxSnapshotBytes,{omitUndefined:true});}
   import(snapshot) {const next=this._hydrate(snapshot);this.state=next;this._recordEpoch={};this._learningEpoch={};this._pending.clear();this._imports.clear();this._dirty=true;}
 }

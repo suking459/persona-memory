@@ -1,17 +1,21 @@
 // Bounded, local retrieval. External relevance is data supplied by the host, never a callback.
+import {normalizeLocale,dictionaryWords} from './locale.js';
 import {MEMORY_KINDS,normalizeSubject,memoryIdentifier,sameSubject,isCurrentMemory,assertMemoryFields} from './records.js';
 
 const SOURCES=['manual','user','host','rule','model','import'];
-const SEARCH_FIELDS=new Set(['subject','subjects','query','kinds','keys','sources','observedAfter','observedBefore','limit','maxCandidates','minScore','relevance','now']);
+const SEARCH_FIELDS=new Set(['subject','subjects','query','kinds','keys','sources','observedAfter','observedBefore','limit','maxCandidates','minScore','relevance','now','locale']);
 const CONTEXT_FIELDS=new Set([...SEARCH_FIELDS].filter(key=>key!=='limit').concat(['budget','maxRecords','tokenBudget','countTokens']));
 const STOP=new Set(['a','an','the','is','are','what','when','how','do','does','i','you','my','please','can','could','should','to','of','and','for','it','be',
   '的','了','吗','呢','我','你','他','她','是','和','与','在','这个','那个','什么','怎么','如何','我们','你们','他们','请问','一下','是否','可以','现在','时候']);
 const CJK=/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
 const WORD=/[\p{L}\p{N}]/u;
+const MARK=/\p{M}/u;
+const DICTIONARY=/[\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+const JOINER=new Set(['\u200c','\u200d']);
 const CONNECTORS=new Set(['_','+','#','.','-']);
 const MAX_TIME=8640000000000000;
 const binary=(a,b)=>a<b?-1:a>b?1:0;
-const normalized=text=>text.normalize('NFC').toLowerCase();
+const normalized=(text,locale)=>locale===undefined?text.normalize('NFC').toLowerCase():text.normalize('NFC').toLocaleLowerCase(locale);
 function integer(value,label,max){
   if(!Number.isSafeInteger(value) || value<0 || value>max)throw new RangeError('invalid '+label);
   return value;
@@ -31,15 +35,19 @@ function strings(value,label,allowed,max=32){
   }
   return result;
 }
-function tokenize(text,query=false){
+function tokenize(text,query=false,locale){
   const tokens=new Set();let run='',mode='';
+  const language=locale?.split('-')[0];
+  const stopWords=language===undefined||language==='en'||language==='zh'?STOP:null;
   const add=word=>{
-    if(!word || (query && STOP.has(word)))return;
+    if(!word || (query && stopWords?.has(word)))return;
     tokens.add(word);
     if(query && tokens.size>64)throw new RangeError('too many query terms');
   };
   function flush(){
-    if(mode==='cjk'){
+    if(mode==='dictionary'){
+      for(const word of dictionaryWords(run,locale))add(word);
+    }else if(mode==='cjk'){
       const chars=Array.from(run);
       if(!query || chars.length===1)for(const char of chars)add(char);
       for(let i=0;i+1<chars.length;i++)add(chars[i]+chars[i+1]);
@@ -52,7 +60,8 @@ function tokenize(text,query=false){
     run='';mode='';
   }
   for(const char of text){
-    const next=CJK.test(char)?'cjk':WORD.test(char)?'word':'';
+    if(mode&&(MARK.test(char)||JOINER.has(char))){run+=char;continue;}
+    const next=DICTIONARY.test(char)?'dictionary':CJK.test(char)?'cjk':WORD.test(char)?'word':'';
     if(next){if(mode && mode!==next)flush();mode=next;run+=char;}
     else if(mode==='word' && CONNECTORS.has(char))run+=char;
     else flush();
@@ -71,7 +80,8 @@ export function normalizeMemorySearch(options={}){
   }
   const query=options.query===undefined?'':options.query;
   if(typeof query!=='string' || query.length>1024)throw new RangeError('invalid or oversized memory query');
-  const queryText=normalized(query.trim()),terms=[...tokenize(queryText,true)];
+  const locale=normalizeLocale(options.locale);
+  const queryText=normalized(query.trim(),locale),terms=[...tokenize(queryText,true,locale)];
   const limit=integer((options.limit===undefined?10:options.limit),'memory search limit',1000);
   const maxCandidates=integer((options.maxCandidates===undefined?1000:options.maxCandidates),'memory search candidates',10000);
   const minScore=options.minScore===undefined?0:options.minScore;
@@ -90,7 +100,7 @@ export function normalizeMemorySearch(options={}){
   const observedAfter=options.observedAfter===undefined?undefined:time(options.observedAfter,'observedAfter');
   const observedBefore=options.observedBefore===undefined?undefined:time(options.observedBefore,'observedBefore');
   if(observedAfter!==undefined && observedBefore!==undefined && observedAfter>observedBefore)throw new RangeError('invalid observation time range');
-  return {subjects,query:query.trim(),queryText,terms,limit,maxCandidates,minScore,relevance,
+  return {subjects,query:query.trim(),queryText,terms,limit,maxCandidates,minScore,relevance,...(locale===undefined?{}:{locale}),
     kinds:strings(options.kinds,'memory kinds',MEMORY_KINDS,6),
     keys:strings(options.keys,'memory keys',null),
     sources:strings(options.sources,'memory sources',SOURCES,6),observedAfter,observedBefore,
@@ -109,7 +119,7 @@ export function normalizeMemoryContext(options={},defaultBudget=700){
     tokenBudget=integer(options.tokenBudget,'memory token budget',1000000);
     if(typeof options.countTokens!=='function')throw new TypeError('tokenBudget requires a tokenizer');
   }else if(options.countTokens!==undefined && typeof options.countTokens!=='function')throw new TypeError('invalid tokenizer');
-  return {search,budget,maxRecords,tokenBudget,countTokens:options.countTokens};
+  return {search,budget,maxRecords,tokenBudget,countTokens:options.countTokens,locale:search.locale};
 }
 export function retrieveMemories(records,options,now){
   const {subjects,kinds,keys,sources,observedAfter,observedBefore,maxCandidates,queryText,terms,relevance,minScore}=options;
@@ -117,7 +127,7 @@ export function retrieveMemories(records,options,now){
   for(const record of Object.values(records)){
     if(!subjects.some(subject=>sameSubject(subject,record.subject)))continue;
     scoped++;
-    if(!isCurrentMemory(record,now) || (kinds && !kinds.includes(record.kind)) ||
+    if(!isCurrentMemory(record,now,records) || (kinds && !kinds.includes(record.kind)) ||
       (keys && !keys.includes(record.key)) || (sources && !sources.includes(record.source)) ||
       (observedAfter!==undefined && record.observedAt<observedAfter) ||
       (observedBefore!==undefined && record.observedAt>observedBefore))continue;
@@ -139,8 +149,8 @@ export function retrieveMemories(records,options,now){
         if(scannedCharacters+cost>1000000){textLimit++;}
         else {
         scannedCharacters+=cost;
-        const keyText=normalized(record.key),valueText=normalized(rawValue);
-        const keyTokens=tokenize(keyText),valueTokens=tokenize(valueText);
+        const keyText=normalized(record.key,options.locale),valueText=normalized(rawValue,options.locale);
+        const keyTokens=tokenize(keyText,false,options.locale),valueTokens=tokenize(valueText,false,options.locale);
         let keyHits=0,valueHits=0;
         for(const term of terms){
           const inKey=keyTokens.has(term),inValue=valueTokens.has(term);

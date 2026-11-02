@@ -1,0 +1,110 @@
+{
+  "name": "synthetic-semantic-relevance-v1",
+  "limits": "Small synthetic labeled set. Oracle vectors are orchestration fixtures, not measured model quality.",
+  "records": [
+    {
+      "id": "drink",
+      "key": "beverage",
+      "value": "I prefer coffee without sugar."
+    },
+    {
+      "id": "release",
+      "key": "publishing",
+      "value": "Publish only after tests pass."
+    },
+    {
+      "id": "storage",
+      "key": "storage",
+      "value": "Project memories stay on the local machine."
+    }
+  ],
+  "cases": [
+    {
+      "locale": "en",
+      "query": "What is my preferred beverage?",
+      "expected": [
+        "drink"
+      ]
+    },
+    {
+      "locale": "zh-CN",
+      "query": "我喜欢喝什么？",
+      "expected": [
+        "drink"
+      ]
+    },
+    {
+      "locale": "fr",
+      "query": "Quelle boisson est-ce que je préfère ?",
+      "expected": [
+        "drink"
+      ]
+    },
+    {
+      "locale": "es",
+      "query": "¿Qué bebida prefiero?",
+      "expected": [
+        "drink"
+      ]
+    },
+    {
+      "locale": "ar",
+      "query": "ما المشروب الذي أفضله؟",
+      "expected": [
+        "drink"
+      ]
+    },
+    {
+      "locale": "hi",
+      "query": "मुझे कौन सा पेय पसंद है?",
+      "expected": [
+        "drink"
+      ]
+    },
+    {
+      "locale": "ja",
+      "query": "好きな飲み物は何ですか？",
+      "expected": [
+        "drink"
+      ]
+    },
+    {
+      "locale": "en",
+      "query": "When may the project be published?",
+      "expected": [
+        "release"
+      ]
+    },
+    {
+      "locale": "zh-CN",
+      "query": "项目满足什么条件才能发布？",
+      "expected": [
+        "release"
+      ]
+    },
+    {
+      "locale": "en",
+      "query": "Where do project memories stay?",
+      "expected": [
+        "storage"
+      ]
+    },
+    {
+      "locale": "es",
+      "query": "¿Dónde se guardan los recuerdos del proyecto?",
+      "expected": [
+        "storage"
+      ]
+    },
+    {
+      "locale": "en",
+      "query": "What shoe size do I wear?",
+      "expected": []
+    },
+    {
+      "locale": "zh-CN",
+      "query": "我的鞋码是多少？",
+      "expected": []
+    }
+  ]
+}

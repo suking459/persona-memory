@@ -1,30 +1,28 @@
+import {withLoadRule} from './fixtures/explicit-tag-rules.mjs';
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PersonaMemory, scoreMessage, tierOf, sweepTags, summarizeStyle, updateStyle, matchTags } from '../src/index.js';
 
 test('tier boundaries', () => {
-  assert.equal(tierOf(0).tier, '生疏');
-  assert.equal(tierOf(19).tier, '生疏');
-  assert.equal(tierOf(20).tier, '眼熟');
-  assert.equal(tierOf(45).tier, '熟了');
-  assert.equal(tierOf(65).tier, '亲近');
-  assert.equal(tierOf(100).tier, '很铁');
+  assert.equal(tierOf(0).tier, 'band-0');
+  assert.equal(tierOf(19).tier, 'band-0');
+  assert.equal(tierOf(20).tier, 'band-1');
+  assert.equal(tierOf(45).tier, 'band-2');
+  assert.equal(tierOf(65).tier, 'band-3');
+  assert.equal(tierOf(100).tier, 'band-4');
 });
 
-test('score: praise + mention caps at per-message limit', () => {
-  const r = scoreMessage('你好厉害', { mentionsSelf: true });
-  assert.equal(r.delta, 5); // 3 + 2
-  const big = scoreMessage('好厉害真棒太强了喜欢你爱你', { mentionsSelf: true });
-  assert.equal(big.delta, 5); // 夸词只计一次(3) + @(2)
+test('score: structural flags and explicit host delta respect the message cap', () => {
+  assert.equal(scoreMessage('synthetic interaction', { mentionsSelf: true }).delta,2);
+  assert.equal(scoreMessage('synthetic interaction', { affinityDelta:50 }).delta,8);
 });
 
-test('score: insult goes negative', () => {
-  const r = scoreMessage('傻逼', { mentionsSelf: true });
-  assert.ok(r.delta < 0);
+test('score: negative host judgement is explicit, never inferred from text', () => {
+  assert.equal(scoreMessage('synthetic negative observation',{affinityDelta:-4}).delta,-4);
 });
 
 test('ingest then profile', () => {
-  const pm = new PersonaMemory({ storage: null });
+  const pm = new PersonaMemory(withLoadRule({ storage: null }));
   const now = Date.now();
   pm.ingest({ chatId: 'g', userId: 'u', text: '你好呀', ts: now, mentionsSelf: true });
   const p = pm.getProfile('g', 'u');
@@ -33,7 +31,7 @@ test('ingest then profile', () => {
 });
 
 test('buildBlock respects budget', () => {
-  const pm = new PersonaMemory({ storage: null });
+  const pm = new PersonaMemory(withLoadRule({ storage: null }));
   pm.ingest({ chatId: 'g', userId: 'u', text: '你好呀', mentionsSelf: true });
   const b = pm.buildBlock({ chatId: 'g', userIds: ['u'], budget: 50 });
   assert.ok(b.length <= 50);
@@ -79,7 +77,7 @@ test('score: isSelf returns object not number (regression)', () => {
 });
 
 test('ingest: bot own message does not crash', () => {
-  const pm = new PersonaMemory({ storage: null });
+  const pm = new PersonaMemory(withLoadRule({ storage: null }));
   const r = pm.ingest({ chatId: 'g', userId: 'bot', text: '我是回复', isSelf: true });
   assert.equal(r.matched, false);
 });
@@ -94,7 +92,7 @@ test('catchphrase: punctuation fragments are ignored', () => {
 // ─── v0.3.0 新机制 ─────────────────────────────────────────────
 
 test('v3: 0-score chat does not create profile, only visitor', () => {
-  const pm = new PersonaMemory({ storage: null });
+  const pm = new PersonaMemory(withLoadRule({ storage: null }));
   const now = Date.now();
   pm.ingest({ chatId: 'g', userId: 'u', text: '666', ts: now });
   assert.equal(pm.getProfile('g', 'u'), null);
@@ -105,7 +103,7 @@ test('v3: 0-score chat does not create profile, only visitor', () => {
 });
 
 test('v3: tag hit creates profile even without score', () => {
-  const pm = new PersonaMemory({ storage: null });
+  const pm = new PersonaMemory(withLoadRule({ storage: null }));
   pm.ingest({ chatId: 'g', userId: 'u', text: '今天好累啊', ts: Date.now() });
   const p = pm.getProfile('g', 'u');
   assert.ok(p, 'should create profile');
@@ -113,7 +111,7 @@ test('v3: tag hit creates profile even without score', () => {
 });
 
 test('v3: visitor hint appears in block', () => {
-  const pm = new PersonaMemory({ storage: null });
+  const pm = new PersonaMemory(withLoadRule({ storage: null }));
   const now = Date.now();
   pm.ingest({ chatId: 'g', userId: 'v', text: '666', ts: now });
   pm.ingest({ chatId: 'g', userId: 'v', text: '777', ts: now + 1 });
@@ -123,7 +121,7 @@ test('v3: visitor hint appears in block', () => {
 });
 
 test('v3: visitorHint=false suppresses hint', () => {
-  const pm = new PersonaMemory({ storage: null, config: { visitorHint: false } });
+  const pm = new PersonaMemory(withLoadRule({ storage: null, config: { visitorHint: false } }));
   const now = Date.now();
   pm.ingest({ chatId: 'g', userId: 'v', text: '666', ts: now });
   pm.ingest({ chatId: 'g', userId: 'v', text: '777', ts: now + 1 });
@@ -172,8 +170,7 @@ test('v3: over-injected short tag is forced out', () => {
   assert.equal(r.forcedOut, 1);
 });
 
-test('v3: matchTags finds builtin tags', () => {
-  assert.ok(matchTags('今天加班到十点').some((h) => h.tag === '最近很累'));
-  assert.ok(matchTags('我升职了！').some((h) => h.tag === '有喜事'));
-  assert.equal(matchTags('今天天气不错').length, 0);
+test('matchTags has no default judgement and only uses configured rules', () => {
+  assert.deepEqual(matchTags('a synthetic statement'),[]);
+  assert.equal(matchTags('部署窗口',{release:{words:['部署窗口'],advice:'Synthetic release note'}})[0].tag,'release');
 });

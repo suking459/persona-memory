@@ -1,10 +1,10 @@
-import type {PersonaMemory,MemorySelection,MemoryKind,MemorySubject,MemoryValue,AutoAcceptPolicy,MemoryCandidate} from '../../index.js';
+import type {PersonaMemory,MemorySelection,MemoryKind,MemorySubject,MemoryValue,AutoAcceptPolicy,MemoryCandidate,MemoryDependency,MemoryAssertion} from '../../index.js';
 export type MemoryLearnerOptions=MemorySelection&{
   kinds?:MemoryKind[];source?:'model'|'rule';maxCandidatesPerCall?:number;timeoutMs?:number;autoAccept?:AutoAcceptPolicy;
 };
 export interface ExtractedMemory {
   subject:MemorySubject;kind:MemoryKind;key:string;value:MemoryValue;reason?:string;confidence?:number;
-  observedAt?:number;validFrom?:number;expiresAt?:number|null;
+  observedAt?:number;validFrom?:number;expiresAt?:number|null;derivedFrom?:MemoryDependency[];assertion?:MemoryAssertion;
 }
 export interface LearningResult {candidates:MemoryCandidate[];accepted:string[];omitted:{id:string;reason:string}[];unavailable:string[]}
 export declare function createMemoryLearner(pm:PersonaMemory,options:MemoryLearnerOptions):{

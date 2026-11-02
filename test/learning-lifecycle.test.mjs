@@ -41,7 +41,7 @@ test('fixed-seed review, correction, expiry and deletion replay stays atomic and
 
 test('an actual 0.8 schema 4 snapshot preserves future activation when migrating to schema 5',()=>{
   const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures/snapshot-0.8.json',import.meta.url)));assert.equal(fixture.snapshot.schemaVersion,4);
-  let now=1000;const pm=new PersonaMemory({clock:()=>now});pm.import(fixture.snapshot);assert.equal(pm.export().schemaVersion,5);
+  let now=1000;const pm=new PersonaMemory({clock:()=>now});pm.import(fixture.snapshot);assert.equal(pm.export().schemaVersion,6);
   assert.equal(pm.getMemory('old-current').value,'preview');assert.equal(pm.getMemory('old-future'),null);
   now=2000;assert.equal(pm.getMemory('old-future').value,'stable');assert.equal(pm.diagnostics().candidates,0);
 });
