@@ -291,3 +291,17 @@ export declare function previewCandidateReview(pm:PersonaMemory,options:{subject
 export declare function applyCandidateReview(pm:PersonaMemory,preview:unknown):Promise<ManagedCommitResult&{decision:'accept'|'reject';reviewed:number;results:{candidateId:string;recordId?:string;status:'accepted'|'rejected'}[]}>;
 export declare function previewMemoryForget(pm:PersonaMemory,options:{subject:MemorySubject;id:string;expectedRevision:number}):Promise<MemoryForgetPreview>;
 export declare function applyMemoryForget(pm:PersonaMemory,preview:unknown):Promise<ManagedCommitResult&{removed:number}>;
+
+export interface TaskCheckpoint {goal:string;completed:string[];pending:string[];blockers:string[];nextSteps:string[]}
+export interface TaskHandoff {
+ format:'persona-memory/handoff';version:1;identity:{persona:string;namespace:string};
+ subject:MemorySubject;createdAt:number;expiresAt:number;checkpoint:TaskCheckpoint;
+ references:{id:string;revision:number;fingerprint:string}[];checksum:string;
+}
+export interface OpenTaskHandoffResult {
+ status:'ready'|'expired'|'not-yet-valid'|'needs-review';subject:MemorySubject;checkpoint:TaskCheckpoint;
+ references:{id:string;revision:number;status:'current'|'unavailable'}[];
+ claimsVerified:false;taskExecuted:false;authorAuthenticated:false;instructionsTrusted:false;
+}
+export function createTaskHandoff(pm:PersonaMemory,options:{subject:MemorySubject;checkpoint:TaskCheckpoint;references:{id:string;revision:number}[];ttlHours?:number}):TaskHandoff;
+export function openTaskHandoff(pm:PersonaMemory,bundle:TaskHandoff,options:{subject:MemorySubject}):OpenTaskHandoffResult;

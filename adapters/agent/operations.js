@@ -16,7 +16,7 @@ export function ownerEntry({cli,bindingFile,bundle,project,host,locale}) {
     'const target='+JSON.stringify(path.join(project,'.codex','config.toml'))+';',
     'const configDirectory='+JSON.stringify(path.join(project,'.codex'))+';',
     'const help='+JSON.stringify(help)+';',
-    "const allowed=new Set(['doctor','inspect','review','explain','backup','restore-preview','restore-apply','review-preview','review-apply','forget-preview','forget-apply']);",
+    "const allowed=new Set(['doctor','inspect','review','explain','backup','restore-preview','restore-apply','review-preview','review-apply','forget-preview','forget-apply','handoff-export','handoff-open']);",
     "const [action,...args]=process.argv.slice(2);",
     'try {',
     "  if(action===undefined||action==='help') { if(args.length) throw new Error('help takes no options'); process.stdout.write(help+'\\n'); }",
@@ -55,6 +55,7 @@ export function operationsGuide({host,locale,bundle,project}) {
     'node owner.mjs forget-preview --scope project --memory ACTUAL_MEMORY_ID --revision 1 --out forget-plan.json',
     'node owner.mjs forget-apply --plan forget-plan.json',
   ];
+  const handoff=['node owner.mjs handoff-export --scope project --notes handoff-notes.json --out handoff.json','node owner.mjs handoff-open --scope project --file handoff.json'];
   const recovery=[
     'node owner.mjs backup --out memory-backup.json',
     'node owner.mjs restore-preview --backup memory-backup.json --out restore-plan.json',
@@ -82,6 +83,8 @@ export function operationsGuide({host,locale,bundle,project}) {
     '先 doctor，再看候选列表与详情。ACTUAL_ID 和 revision 必须来自当前详情；示例中的 1 不是永远有效。证据编号须自行核对，预检不代表批准。','',
     code(common),
     '如要拒绝候选，使用同一 review 命令，把 accept 改为 reject。更正由宿主提出同一 scope/kind/key 的新候选，独立审阅后，下次读取看到新值。capture 模式的模型没有审阅权限；不要让模型通过终端运行本管理入口绕过边界。若绑定没有 project 范围，改用 binding.json 中实际获准的别名。','',
+    '## 任务交接','',
+    '先在 handoff-notes.json 写 checkpoint 和 references（正式记忆的 id/revision），可选 ttlHours。格式见库文档 docs/handoff.md。输出文件不能已存在；包含私人检查点，仅显式交给获准接收者。同一逻辑身份和范围打开时重新检查引用；ready 不证明已完成、不认证作者，也不执行任务。跨宿主先由所有者配置相同逻辑身份和存储，不自动合并个人记忆。','',code(handoff),
     '## 遗忘与恢复','',
     '先 explain 找到正式记忆的 ID/revision，再预览删除影响。核对派生记忆、历史与候选影响后显式执行；变化或过期后重新预览，不能循环强试。','',
     code(forget),
@@ -108,6 +111,8 @@ export function operationsGuide({host,locale,bundle,project}) {
     '## Review and correct','',
     'Run doctor, list pending candidates, inspect a real candidate, then explicitly decide. Replace ACTUAL_ID and example revision 1 with current values. Check evidence yourself; a preflight is not approval.','',code(common),
     'To reject, use the same review command with reject instead of accept. Corrections use a new host proposal for the same scope/kind/key, then separate owner review. The next recall sees the update. A capture Agent must not run this owner entry through shell tools. If project is not granted, use an actual binding scope alias.','',
+    '## Task handoff','',
+    'Create handoff-notes.json with checkpoint and references (approved id/revision), plus optional ttlHours; see docs/handoff.md. Output must be a new file. Checkpoints may be private: explicitly choose the recipient. Opening requires the same logical identity and granted scope and rechecks current references. ready authenticates no author, verifies no completion and executes no task. Configure shared logical identity/storage explicitly before moving hosts; never automatically merge personal memory.','',code(handoff),
     '## Forget and recover','',
     'Use explain to obtain the current memory ID/revision. Inspect the preview impact, then explicitly apply. Changed/expired plans require a fresh preview, never unlimited retries.','',code(forget),
     'Full backups are private. Output files must not already exist. Restore replaces the store: inspect the preview and separately back up current data first. Preserve an old-schema backup before upgrading; use that backup when rolling back.','',code(recovery),

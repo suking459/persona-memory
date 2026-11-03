@@ -2,6 +2,7 @@
 import {isMainModule} from '../src/main.js';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {agentHandoffCommand} from '../adapters/agent/handoff.js';
 import {agentManagementCommand} from '../adapters/agent/manage.js';
 import {openAgentMemory} from '../adapters/agent/store.js';
 import {agentBackupCommand,identityFromBackup} from '../adapters/agent/backup.js';
@@ -17,7 +18,7 @@ export async function connectCommand(args){
     if(!/^--[a-z-]+$/.test(rest[i])||rest[i+1]===undefined||Object.hasOwn(options,rest[i].slice(2)))throw new TypeError('expected unique --name value options');
     options[rest[i].slice(2)]=rest[i+1];
   }
-  const allowed={doctor:['binding'],explain:['binding','scope','query','memory','limit','locale'],'review-preview':['binding','scope','requests','decision','reason','out'],'review-apply':['binding','plan'],'forget-preview':['binding','scope','memory','revision','out'],'forget-apply':['binding','plan'],list:[],prepare:['host','out','project','user','access','storage','locale','embedding-provider','embedding-model','embedding-endpoint','embedding-key-env','backend','identity-from'],backup:['binding','out'],'restore-preview':['binding','backup','out'],'restore-apply':['binding','backup','plan'],apply:['bundle','target'],undo:['bundle'],inspect:['binding','scope','candidate','status','limit','after'],review:['binding','scope','candidate','revision','decision','reason']};
+  const allowed={'handoff-export':['binding','scope','notes','out'],'handoff-open':['binding','scope','file'],doctor:['binding'],explain:['binding','scope','query','memory','limit','locale'],'review-preview':['binding','scope','requests','decision','reason','out'],'review-apply':['binding','plan'],'forget-preview':['binding','scope','memory','revision','out'],'forget-apply':['binding','plan'],list:[],prepare:['host','out','project','user','access','storage','locale','embedding-provider','embedding-model','embedding-endpoint','embedding-key-env','backend','identity-from'],backup:['binding','out'],'restore-preview':['binding','backup','out'],'restore-apply':['binding','backup','plan'],apply:['bundle','target'],undo:['bundle'],inspect:['binding','scope','candidate','status','limit','after'],review:['binding','scope','candidate','revision','decision','reason']};
   if(!Object.hasOwn(allowed,action)||Object.keys(options).some(k=>!allowed[action].includes(k)))throw new TypeError('usage: persona-memory-connect list | prepare | apply | undo | inspect | review (see docs/agent-integration.md)');
   if(action==='list')return HOST_PROFILES;
   if(action==='prepare'){
@@ -42,6 +43,7 @@ export async function connectCommand(args){
   }
   if(!options.binding)throw new TypeError('--binding required');
   const binding=readBinding(path.resolve(options.binding));
+  if(['handoff-export','handoff-open'].includes(action))return agentHandoffCommand(action,binding,options);
   if(['doctor','explain','review-preview','review-apply','forget-preview','forget-apply'].includes(action))return agentManagementCommand(action,binding,options);
   if(['backup','restore-preview','restore-apply'].includes(action)){
     if(action==='restore-apply'&&!options.plan)throw new TypeError('--plan required');

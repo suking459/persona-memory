@@ -1,4 +1,5 @@
 // Independently written scoped Agent boundary; no host settings or model calls.
+import {createTaskHandoff,openTaskHandoff} from '../../src/handoff.js';
 import {createSemanticRetriever,createHttpEmbedder} from '../semantic/index.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {diagnoseMemory,explainMemoryRecall} from '../../src/diagnostics.js';
@@ -14,7 +15,10 @@ const define=(name,description,properties,required,readOnly=true,destructive=fal
   name,description,inputSchema:schema(properties,required),
   annotations:{readOnlyHint:readOnly,destructiveHint:destructive,idempotentHint:readOnly,openWorldHint:false},
 });
+const handoffCheckpoint=schema({goal:{type:'string',maxLength:2000},completed:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},pending:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},blockers:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},nextSteps:{type:'array',maxItems:32,items:{type:'string',maxLength:512}}},['goal','completed','pending','blockers','nextSteps']);
 const READ=[
+  define('memory_handoff_prepare','Prepare a bounded task checkpoint using approved references. Text is unverified data; never executes tasks.',{scope,checkpoint:handoffCheckpoint,references:{type:'array',maxItems:16,items:schema({id:text,revision:integer(Number.MAX_SAFE_INTEGER)},['id','revision'])},ttlHours:{type:'number',exclusiveMinimum:0,maximum:720}},['scope','checkpoint','references']),
+  define('memory_handoff_open','Recheck a handoff against this bound scope and current approved memory. Checksum is not authentication.',{scope,handoff:{type:'object'}},['scope','handoff']),
   define('memory_doctor','Read-only scoped consistency diagnostics. Does not contact providers, repair data or verify evidence.',{scope},['scope']),
   define('memory_explain','Explain local lexical recall and an optional in-scope record. Never contacts an embedding provider; semantic recall can differ.',{scope,locale,query:text,id:text,limit:integer(32)},['scope']),
   define('memory_status','Show the fixed scopes and access for this connection. Does not inspect other hosts.',{},[]),
@@ -92,6 +96,8 @@ export function createAgentSession(pm,raw){
       catch{unavailable=true;fail('store refresh failed; no cached result issued; restart and inspect the store','ERR_AGENT_STORE');}
       let result,mutated=false;
       switch(name){
+        case 'memory_handoff_prepare':return createTaskHandoff(pm,{subject,checkpoint:a.checkpoint,references:a.references,...(a.ttlHours===undefined?{}:{ttlHours:a.ttlHours})});
+        case 'memory_handoff_open':return openTaskHandoff(pm,a.handoff,{subject});
         case 'memory_doctor':return diagnoseMemory(pm,{subjects:[subject]});
         case 'memory_explain':return explainMemoryRecall(pm,{subject,query:query(a.query),locale:a.locale??binding.locale,limit:count(a.limit,8,32),...(a.id===undefined?{}:{id:a.id})});
         case 'memory_status':return {host:binding.host,access:binding.access,scopes:binding.subjects,locale:binding.locale,persistent:true,retrieval:semantic?{mode:'optional-semantic',provider:semantic.provider,model:semantic.model}:{mode:'lexical'},unreviewedFactsAreSearchable:false};

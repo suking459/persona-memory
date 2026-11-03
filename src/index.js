@@ -8,3 +8,5 @@ export {SQLiteSnapshotStore} from './sqlite.js';
 export {createMemoryBackup,inspectMemoryBackup,previewMemoryRestore,restoreMemoryBackup} from './backup.js';
 export {diagnoseMemory,explainMemoryRecall} from './diagnostics.js';
 export {previewCandidateReview,applyCandidateReview,previewMemoryForget,applyMemoryForget} from './management.js';
+
+export {createTaskHandoff,openTaskHandoff} from './handoff.js';
