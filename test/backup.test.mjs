@@ -35,7 +35,7 @@ test('restoring an old-format snapshot upgrades in memory without rewriting the 
   const canonical=v=>Array.isArray(v)?'['+v.map(canonical).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}':JSON.stringify(v);
   const payload={format:'persona-memory-backup',version:1,createdAt:1000,snapshot:{schemaVersion:1,persona:'default',scope:'',sessions:{}}};
   const backup={...payload,checksum:createHash('sha256').update(canonical(payload)).digest('hex')};
-  const before=JSON.stringify(backup);assert.equal(inspectMemoryBackup(backup).snapshot.schemaVersion,7);assert.equal(JSON.stringify(backup),before);
+  const before=JSON.stringify(backup);assert.equal(inspectMemoryBackup(backup).snapshot.schemaVersion,8);assert.equal(JSON.stringify(backup),before);
 });
 test('wrong persona or namespace cannot silently relabel backup records',async()=>{
   const {backup}=await setup();

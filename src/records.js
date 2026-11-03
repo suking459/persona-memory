@@ -205,7 +205,7 @@ export function isCurrentMemory(record,now,records){
   return record.derivedFrom?!!records&&dependencyStatus(record,records,now).usable:memoryAppliesAt(record,now,now);
 }
 export function memoryAppliesAt(record,at,knownAt){
-  return record.createdAt<=knownAt && record.validFrom<=at &&
+  return record.experience?.retired!==true && record.createdAt<=knownAt && record.validFrom<=at &&
     (record.validUntil===null || record.updatedAt>knownAt || record.validUntil>at) &&
     (record.expiresAt===null || record.expiresAt>knownAt);
 }
@@ -236,12 +236,14 @@ export function normalizeExperienceValue(raw){
   return {task:text(raw.task,'task',2000),context:copyMemoryValue(raw.context),attempt:text(raw.attempt,'attempt',2000),
     result:text(raw.result,'result',4000),conditions:[...new Set(conditions.map(value=>text(value,'condition',256)))]};
 }
-function experienceOf(value,kind,source,evidenceId,payload){
+export function normalizeExperienceMetadata(value,kind,source,evidenceId,payload){
   if(value===undefined)return undefined;
-  fields(value,new Set(['outcome','verified']),'experience metadata');
-  if(kind!=='episode'||source!=='host'||!['success','failure','mixed','unknown'].includes(value.outcome)||typeof value.verified!=='boolean')throw new TypeError('invalid host experience metadata');
+  fields(value,new Set(['outcome','verified','retired','lifecycleReason']),'experience metadata');
+  if(kind!=='episode'||!['host','model'].includes(source)||(source==='model'&&value.verified)||!['success','failure','mixed','unknown'].includes(value.outcome)||typeof value.verified!=='boolean')throw new TypeError('invalid host experience metadata');
   if(value.verified&&(!evidenceId||value.outcome==='unknown'))throw new TypeError('verified experience requires host evidence and a known outcome');
-  normalizeExperienceValue(payload);return {outcome:value.outcome,verified:value.verified};
+  if(value.retired!==undefined&&(typeof value.retired!=='boolean'||source!=='host'||!evidenceId||value.verified))throw new TypeError('experience lifecycle requires unverified host metadata and evidence');
+  if(value.lifecycleReason!==undefined&&(value.retired===undefined||typeof value.lifecycleReason!=='string'||!value.lifecycleReason.trim()||value.lifecycleReason.length>1000))throw new TypeError('invalid experience lifecycle reason');
+  normalizeExperienceValue(payload);return {outcome:value.outcome,verified:value.verified,...(value.retired===undefined?{}:{retired:value.retired}),...(value.lifecycleReason===undefined?{}:{lifecycleReason:value.lifecycleReason})};
 }
 export function normalizeAssertion(value){
   if(value!==undefined&&!['explicit','observed','inferred','external'].includes(value))throw new TypeError('invalid memory assertion');return value;
@@ -254,7 +256,7 @@ export function prepareMemoryWrite(records,input,now,config,createId,{dependency
   const value=copyMemoryValue(input.value),source=input.source===undefined?'manual':input.source;
   if(!SOURCES.has(source))throw new TypeError('invalid memory source');
   const evidenceId=input.evidenceId===undefined?undefined:memoryIdentifier(input.evidenceId,'memory evidenceId');
-  const experience=experienceOf(input.experience,kind,source,evidenceId,value),assertion=normalizeAssertion(input.assertion),origin=normalizeMemoryOrigin(input.origin);
+  const experience=normalizeExperienceMetadata(input.experience,kind,source,evidenceId,value),assertion=normalizeAssertion(input.assertion),origin=normalizeMemoryOrigin(input.origin);
   const replaceId=input.replaceId===undefined?undefined:memoryIdentifier(input.replaceId,'replaceId');
   const existing=own(records,id)?records[id]:null;
   if(existing?.origin&&input.origin===undefined)throw conflict('existing origin must be preserved in a retry');
@@ -320,7 +322,7 @@ export function prepareMemoryWrite(records,input,now,config,createId,{dependency
   }
   return {record,previous:previous?{...previous,status:'superseded',supersededBy:id,updatedAt:now,validUntil:validFrom}:null,removeIds:removable,duplicate:false};
 }
-function normalizeRecord(raw,{legacy=false,allowExperience=true,allowDerived=true,allowOrigin=true}={}){
+function normalizeRecord(raw,{legacy=false,allowExperience=true,allowDerived=true,allowOrigin=true,allowModelExperience=true}={}){
   fields(raw,RECORD_FIELDS,'memory record');
   if(legacy && (own(raw,'validFrom') || own(raw,'validUntil')))throw new TypeError('effective timestamps require schemaVersion=4');
   const id=memoryIdentifier(raw.id),subject=normalizeSubject(raw.subject),kind=kindOf(raw.kind),key=memoryIdentifier(raw.key,'memory key');
@@ -337,7 +339,8 @@ function normalizeRecord(raw,{legacy=false,allowExperience=true,allowDerived=tru
   if(expiresAt!==null && expiresAt<Math.max(createdAt,validFrom))throw new TypeError('invalid memory expiry');
   if(!Number.isSafeInteger(raw.revision) || raw.revision<1)throw new TypeError('invalid memory revision');
   if(!allowExperience&&raw.experience!==undefined)throw new TypeError('experience metadata requires schemaVersion=5');
-  const experience=experienceOf(raw.experience,kind,raw.source,raw.evidenceId,value);
+  if(!allowModelExperience&&raw.experience!==undefined&&(raw.source==='model'||raw.experience.retired!==undefined||raw.experience.lifecycleReason!==undefined))throw new TypeError('new experience metadata requires schemaVersion=8');
+  const experience=normalizeExperienceMetadata(raw.experience,kind,raw.source,raw.evidenceId,value);
   if(!allowDerived&&(raw.derivedFrom!==undefined||raw.assertion!==undefined))throw new TypeError('dependency metadata requires schemaVersion=6');
   if(!allowOrigin&&raw.origin!==undefined)throw new TypeError('origin metadata requires schemaVersion=7');
   const origin=normalizeMemoryOrigin(raw.origin),assertion=normalizeAssertion(raw.assertion);

@@ -21,6 +21,7 @@ export function renderMemoryContext(result,options){
     const body={id:record.id,subject:record.subject,kind:record.kind,key:record.key,value:record.value,
       source:record.source,observedAt:record.observedAt,validFrom:record.validFrom,validUntil:record.validUntil,expiresAt:record.expiresAt,
       ...(record.experience===undefined?{}:{experience:record.experience}),
+      ...(record.origin===undefined?{}:{origin:record.origin}),
       ...(record.derivedFrom===undefined?{}:{derivedFrom:record.derivedFrom}),
       ...(record.assertion===undefined?{}:{assertion:record.assertion}),
       ...(record.evidenceId===undefined?{}:{evidenceId:record.evidenceId})};

@@ -94,14 +94,15 @@ export interface MemorySnapshotBase {
   visitors:Record<string,Omit<Visitor,'userId'>>;seen?:unknown[];uses?:unknown[];history?:unknown[];
 }
 export interface CurrentMemorySnapshot extends MemorySnapshotBase {
-  schemaVersion:7;memories:Record<string,MemoryRecord>;candidates:Record<string,MemoryCandidate>;
+  schemaVersion:8;memories:Record<string,MemoryRecord>;candidates:Record<string,MemoryCandidate>;
 }
 export type MemorySnapshot=CurrentMemorySnapshot | (MemorySnapshotBase & (
   {schemaVersion:1|2;memories?:Record<string,never>} |
   {schemaVersion:3;memories:Record<string,LegacyMemoryRecord>} |
   {schemaVersion:4;memories:Record<string,Omit<MemoryRecord,'experience'|'derivedFrom'|'assertion'|'origin'>>;candidates?:Record<string,never>} |
-  {schemaVersion:6;memories:Record<string,Omit<MemoryRecord,'origin'>>;candidates:Record<string,Omit<MemoryCandidate,'memory'>&{memory:Omit<CandidateMemory,'origin'>}>} |
-  {schemaVersion:5;memories:Record<string,Omit<MemoryRecord,'derivedFrom'|'assertion'|'origin'>>;candidates:Record<string,Omit<MemoryCandidate,'memory'>&{memory:Omit<CandidateMemory,'derivedFrom'|'assertion'>}>}
+  {schemaVersion:7;memories:Record<string,MemoryRecord>;candidates:Record<string,Omit<MemoryCandidate,'memory'>&{memory:Omit<CandidateMemory,'experience'>}>} |
+  {schemaVersion:6;memories:Record<string,Omit<MemoryRecord,'origin'>>;candidates:Record<string,Omit<MemoryCandidate,'memory'>&{memory:Omit<CandidateMemory,'origin'|'experience'>}>} |
+  {schemaVersion:5;memories:Record<string,Omit<MemoryRecord,'derivedFrom'|'assertion'|'origin'>>;candidates:Record<string,Omit<MemoryCandidate,'memory'>&{memory:Omit<CandidateMemory,'derivedFrom'|'assertion'|'origin'|'experience'>}>}
 ));
 export interface TagInput {chatId:string;userId:string;tag:string;advice?:string;source?:Tag['source'];eventId?:string;expiresAt?:number|null;replace?:string[];ts?:number}
 export interface HostEvent {chatId:string;userId:string;eventId?:string;type:string;changes:Record<string,number>;ts?:number}
@@ -132,7 +133,7 @@ export declare class PersonaMemory {
   acceptCandidate(id:string,options:{expectedRevision:number}):CandidateAcceptance;
   acceptCandidates(requests:{id:string;expectedRevision:number}[]):CandidateAcceptance[];
   forgetCandidate(id:string):{removed:number};
-  recordExperience(input:ExperienceInput):ExperienceRecord;
+  recordExperience(input:ExperienceInput):ExperienceRecord&{source:'host'};
   listExperiences(options:{subject:MemorySubject;outcome?:ExperienceOutcome;verifiedOnly?:boolean;limit?:number;includeInactive?:boolean}):ExperienceRecord[];
   putMemory(input:MemoryInput):MemoryRecord;
   getMemory(id:string,options?:ReadMemoryOptions):MemoryRecord|null;
@@ -204,9 +205,9 @@ export declare class JsonFileStore implements SnapshotStore {
 }
 
 export type CandidateStatus='pending'|'accepted'|'rejected';
-export type CandidateMemory=Omit<PortableMemory,'id'|'evidenceId'>&{evidenceId:string;derivedFrom?:StoredMemoryDependency[]};
+export type CandidateMemory=Omit<PortableMemory,'id'|'evidenceId'>&{evidenceId:string;experience?:ExperienceMetadata;derivedFrom?:StoredMemoryDependency[]};
 export interface CandidateInput {
-  id?:string;memory:Omit<MemoryInput,'id'|'replaceId'|'expectedRevision'|'experience'>&{evidenceId:string};
+  id?:string;memory:Omit<MemoryInput,'id'|'replaceId'|'expectedRevision'>&{evidenceId:string};
   reason?:string;confidence?:number;ttlHours?:number;
 }
 export interface MemoryCandidate {
@@ -223,12 +224,29 @@ export interface CandidateAcceptance {candidate:MemoryCandidate;record:MemoryRec
 export interface AutoAcceptPolicy {kinds:MemoryKind[];minConfidence:number;maxPerCall:number}
 export interface CandidateBatchResult {candidates:MemoryCandidate[];accepted:string[];omitted:{id:string;reason:string}[]}
 export type ExperienceOutcome='success'|'failure'|'mixed'|'unknown';
-export interface ExperienceMetadata {outcome:ExperienceOutcome;verified:boolean}
+export interface ExperienceMetadata {outcome:ExperienceOutcome;verified:boolean;retired?:boolean;lifecycleReason?:string}
 export type ExperienceValue={task:string;context:MemoryValue;attempt:string;result:string;conditions:string[]};
 export interface ExperienceInput extends Omit<MemoryInput,'kind'|'value'|'source'|'experience'> {
   task:string;context?:MemoryValue;attempt:string;result:string;conditions?:string[];outcome:ExperienceOutcome;verified?:boolean;
 }
-export type ExperienceRecord=MemoryRecord&{kind:'episode';source:'host';experience:ExperienceMetadata;value:ExperienceValue};
+export type ExperienceRecord=MemoryRecord&{kind:'episode';source:'host'|'model';experience:ExperienceMetadata;value:ExperienceValue};
+export type ExperienceProposal=Omit<ExperienceInput,'id'|'replaceId'|'expectedRevision'>&{source?:'host'|'model';reason?:string;confidence?:number;ttlHours?:number};
+export interface ExperienceFeedbackInput {
+  subject:MemorySubject;id:string;expectedRevision:number;trialId:string;evidenceId:string;
+  outcome:'helped'|'not-helpful'|'failed'|'not-applicable';conditions?:string[];note?:string;
+  verification?:'reported'|'owner-attested';origin?:MemoryOrigin;
+}
+export interface ExperienceLifecycleInput {subject:MemorySubject;id:string;expectedRevision:number;evidenceId:string;reason:string;retired?:boolean;origin?:MemoryOrigin}
+export interface ExperienceReuseItem {
+  experience:ExperienceRecord;status:'eligible'|'needs-review';reasons:string[];missingConditions:string[];
+  feedback:{helped:number;negative:number;reported:number;conflicting:number;invalid:number;evidenceIds:string[]};
+  evidenceVerified:false;taskExecuted:false;
+}
+export interface ExperienceReuseResult {items:ExperienceReuseItem[];conditions:string[];scanCapped:boolean;evidenceVerified:false;taskExecuted:false}
+export declare function proposeExperience(pm:PersonaMemory,input:ExperienceProposal):MemoryCandidate;
+export declare function proposeExperienceFeedback(pm:PersonaMemory,input:ExperienceFeedbackInput):MemoryCandidate;
+export declare function proposeExperienceRetirement(pm:PersonaMemory,input:ExperienceLifecycleInput):MemoryCandidate;
+export declare function reuseExperiences(pm:PersonaMemory,options:{subject:MemorySubject;conditions?:string[];limit?:number;includeNeedsReview?:boolean}):ExperienceReuseResult;
 
 export interface CandidateQuality {
   assertion:MemoryAssertion|'unspecified';evidenceVerified:false;warnings:string[];
@@ -263,7 +281,7 @@ export declare function previewMemoryRestore(pm:PersonaMemory,raw:unknown,option
 export declare function restoreMemoryBackup(pm:PersonaMemory,raw:unknown,preview:unknown,options?:{now?:number}):Promise<{committed:true;persistent:boolean;requiresReload:boolean;counts:BackupCounts}>;
 
 export interface MemoryDoctorReport {
-  ok:true;readOnly:true;schemaVersion:7;persistent:boolean;dirty:boolean;
+  ok:true;readOnly:true;schemaVersion:8;persistent:boolean;dirty:boolean;
   counts:{records:number;currentHeads:number;candidates:number;pending:number;expiredPending:number};
   sourceCheck:{inspected:number;unusable:number;reasons:Record<string,number>;samples:{id:string;reason:string}[];truncated:boolean};
   warnings:string[];evidenceVerified:false;externalServicesContacted:false;repairsApplied:false;limits:string;

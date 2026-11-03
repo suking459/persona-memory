@@ -10,3 +10,4 @@ export {diagnoseMemory,explainMemoryRecall} from './diagnostics.js';
 export {previewCandidateReview,applyCandidateReview,previewMemoryForget,applyMemoryForget} from './management.js';
 
 export {createTaskHandoff,openTaskHandoff} from './handoff.js';
+export {proposeExperience,proposeExperienceFeedback,proposeExperienceRetirement,reuseExperiences} from './experience-reuse.js';

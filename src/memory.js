@@ -85,7 +85,7 @@ export class PersonaMemory {
     if (this._store) this._load();
   }
   _empty() {
-    return { schemaVersion: 7, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
+    return { schemaVersion: 8, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
       sessions: {}, tags: {}, visitors: {}, memories: {}, candidates: {}, seen: [], uses: [], history: [] };
   }
   _now(value = this.clock()) { number(value,'timestamp');if(value>8640000000000000)throw new RangeError('timestamp outside supported calendar');return value; }
@@ -147,9 +147,9 @@ export class PersonaMemory {
   }
   _hydrate(snapshot) {
     const raw=copySnapshotJSON(snapshot,this.config.maxSnapshotBytes);
-    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5,allowDerived:raw.schemaVersion>=6,allowOrigin:raw.schemaVersion>=7});
-    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories,{allowDerived:raw.schemaVersion>=6,allowOrigin:raw.schemaVersion>=7});
-    if (!dictionary(raw) || ![1,2,3,4,5,6,7].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
+    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5,allowDerived:raw.schemaVersion>=6,allowOrigin:raw.schemaVersion>=7,allowModelExperience:raw.schemaVersion>=8});
+    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories,{allowDerived:raw.schemaVersion>=6,allowOrigin:raw.schemaVersion>=7,allowExperience:raw.schemaVersion>=8});
+    if (!dictionary(raw) || ![1,2,3,4,5,6,7,8].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
     if (raw.persona && raw.persona !== this.persona) throw new TypeError('snapshot persona mismatch');
     if ((raw.scope ?? '') !== this.scope) throw new TypeError('snapshot scope mismatch');
     if (raw.schemaVersion >= 2 && raw.tagScope !== this.config.tagScope) throw new TypeError('snapshot tagScope mismatch');
@@ -768,7 +768,7 @@ export class PersonaMemory {
     return {removed};
   }
   diagnostics() {
-    return {schemaVersion:7,candidates:Object.keys(this.state.candidates).length,memories:Object.keys(this.state.memories).length,profiles:Object.values(this.state.sessions).reduce((n,p)=>n+Object.keys(p).length,0),
+    return {schemaVersion:8,candidates:Object.keys(this.state.candidates).length,memories:Object.keys(this.state.memories).length,profiles:Object.values(this.state.sessions).reduce((n,p)=>n+Object.keys(p).length,0),
       visitors:Object.keys(this.state.visitors).length,tags:Object.values(this.state.tags).reduce((n,t)=>n+t.length,0),
       dedupeEntries:this.state.seen.length,confirmedTurns:this.state.uses.length,historyEntries:this.state.history.length};
   }

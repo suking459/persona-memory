@@ -16,7 +16,7 @@ export function ownerEntry({cli,bindingFile,bundle,project,host,locale}) {
     'const target='+JSON.stringify(path.join(project,'.codex','config.toml'))+';',
     'const configDirectory='+JSON.stringify(path.join(project,'.codex'))+';',
     'const help='+JSON.stringify(help)+';',
-    "const allowed=new Set(['doctor','inspect','review','explain','backup','restore-preview','restore-apply','review-preview','review-apply','forget-preview','forget-apply','handoff-export','handoff-open']);",
+    "const allowed=new Set(['doctor','inspect','review','explain','backup','restore-preview','restore-apply','review-preview','review-apply','forget-preview','forget-apply','handoff-export','handoff-open','experience-reuse','experience-propose','experience-feedback','experience-retire']);",
     "const [action,...args]=process.argv.slice(2);",
     'try {',
     "  if(action===undefined||action==='help') { if(args.length) throw new Error('help takes no options'); process.stdout.write(help+'\\n'); }",

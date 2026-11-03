@@ -25,7 +25,7 @@ test('a synthetic 0.3 snapshot with documented text sanitization migrates and re
   let now=fixture.provenance.generatedAt;
   const options={storage,persona:fixture.snapshot.persona,clock:()=>now};
   const migrated=new PersonaMemory(options),state=migrated.export();
-  assert.equal(state.schemaVersion,7);
+  assert.equal(state.schemaVersion,8);
   assert.equal(migrated.diagnostics().profiles,2);
   for(const chatId of ['synthetic-chat-a','synthetic-chat-b']) {
     const old=fixture.snapshot.sessions[chatId]['synthetic-member'];
@@ -45,7 +45,7 @@ test('a synthetic 0.3 snapshot with documented text sanitization migrates and re
   now+=DAY;
   migrated.maintain();
   migrated.flush();
-  assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).schemaVersion,7);
+  assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).schemaVersion,8);
   const reloaded=new PersonaMemory(options);
   assert.deepEqual(reloaded.export(),migrated.export());
   for(const chatId of ['synthetic-chat-a','synthetic-chat-b']) {
