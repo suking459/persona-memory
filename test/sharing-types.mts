@@ -1,0 +1,11 @@
+import {PersonaMemory,MemorySnapshot} from 'persona-memory';
+import {createSharedSpace,grantSharedAgent,revokeSharedAgent,prepareSharedAgentBundle,createAgentSession} from 'persona-memory/adapters/agent';
+const pm=new PersonaMemory();
+const old:MemorySnapshot={...pm.export(),schemaVersion:6,memories:{},candidates:{}};
+pm.import(old);
+const space=createSharedSpace({out:'/tmp/space',subject:{type:'project',id:'p'}});
+const grant=grantSharedAgent({policy:space.policy,host:'codex',contributor:'owner',access:'review'});
+const session=createAgentSession(new PersonaMemory({storage:grant.binding.storage,persona:grant.binding.persona,scope:grant.binding.namespace}),grant.binding);
+void session;
+revokeSharedAgent({policy:space.policy,grantId:grant.grantId});
+prepareSharedAgentBundle({policy:space.policy,host:'dsh',contributor:'agent',out:'/tmp/bundle'});

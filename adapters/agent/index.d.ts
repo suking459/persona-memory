@@ -2,6 +2,7 @@ import type {PersonaMemory,MemorySubject,MemoryCandidate,MemoryRecord,CandidateS
 import type {EmbeddingConfig,NormalizedEmbeddingConfig} from '../semantic/index.js';
 export interface AgentBinding {
   readonly version:1;readonly host:string;readonly storage:string;readonly persona:string;
+  readonly sharing?:Readonly<{policy:string;grantId:string}>;
   readonly namespace:string;readonly access:'read'|'capture'|'review';
   readonly backend?:'json'|'sqlite';readonly locale:string;readonly retrieval?:Readonly<NormalizedEmbeddingConfig>;
   readonly subjects:Readonly<Record<string,Readonly<MemorySubject>>>;
@@ -35,3 +36,10 @@ export declare function openAgentMemory(binding:unknown):PersonaMemory;
 
 export interface AgentDoctorReport {ok:boolean;readOnly:true;runtime:string;platform:string;backend:'json'|'sqlite';checks:{level:'pass'|'warning'|'error';code:string;action?:string}[];hostEndToEnd:false;[field:string]:unknown}
 export declare function doctorAgent(binding:unknown):AgentDoctorReport;
+
+export function createSharedSpace(options:{out:string;subject:MemorySubject}):{policy:string;space:string;subject:MemorySubject};
+export function grantSharedAgent(options:{policy:string;host:string;contributor:string;access?:AgentBinding['access'];expiresAt?:number|null;locale?:string}):{grantId:string;binding:AgentBinding};
+export function revokeSharedAgent(options:{policy:string;grantId:string}):{revoked:true;alreadyRevoked:boolean};
+export function inspectSharedSpace(policy:string):Record<string,unknown>;
+
+export function prepareSharedAgentBundle(options:{policy:string;host:string;contributor:string;out:string;access?:AgentBinding['access'];expiresAt?:number|null;locale?:string}):{directory:string;grantId:string;binding:AgentBinding;serverName:string;configuration:string;hostEndToEnd:false};

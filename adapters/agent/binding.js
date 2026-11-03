@@ -1,11 +1,12 @@
 // Host-owned capabilities. Tool arguments cannot add subjects or raise access.
+import {normalizeSharing} from './shared-policy.js';
 import {normalizeEmbeddingConfig} from '../semantic/http.js';
 import {normalizeLocale} from '../../src/locale.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {copySnapshotJSON} from '../../src/snapshot.js';
 import {normalizeSubject,memoryIdentifier,sameSubject,assertMemoryFields as fields} from '../../src/records.js';
-const names=new Set(['version','host','storage','persona','namespace','access','subjects','locale','retrieval','backend']);
+const names=new Set(['version','host','storage','persona','namespace','access','subjects','locale','retrieval','backend','sharing']);
 export function normalizeBinding(raw){
   const value=copySnapshotJSON(raw,16384);fields(value,names,'agent binding');
   if(value.version!==1)throw new TypeError('unsupported agent binding version');
@@ -24,7 +25,7 @@ export function normalizeBinding(raw){
   }
   if(value.backend!==undefined&&!['json','sqlite'].includes(value.backend))throw new TypeError('backend must be json or sqlite');
   const retrieval=value.retrieval===undefined?undefined:normalizeEmbeddingConfig(value.retrieval);
-  return Object.freeze({version:1,host,...(value.backend===undefined?{}:{backend:value.backend}),...(retrieval===undefined?{}:{retrieval}),locale:normalizeLocale(value.locale)??'en',storage:path.resolve(value.storage),persona,namespace,access:value.access,subjects:Object.freeze(subjects)});
+  return Object.freeze({version:1,host,...(value.sharing===undefined?{}:{sharing:normalizeSharing(value.sharing)}),...(value.backend===undefined?{}:{backend:value.backend}),...(retrieval===undefined?{}:{retrieval}),locale:normalizeLocale(value.locale)??'en',storage:path.resolve(value.storage),persona,namespace,access:value.access,subjects:Object.freeze(subjects)});
 }
 export function readBinding(file){
   if(typeof file!=='string'||!path.isAbsolute(file))throw new TypeError('absolute binding path required');

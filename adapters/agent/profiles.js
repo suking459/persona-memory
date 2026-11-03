@@ -14,15 +14,16 @@ export const HOST_PROFILES=Object.freeze({
   'vscode-copilot':profile('VS Code Copilot Agent','.vscode/mcp.json','vscode','https://code.visualstudio.com/docs/agents/reference/mcp-configuration'),
   cursor:profile('Cursor','.cursor/mcp.json','json-typed','https://cursor.com/docs/mcp'),
 });
-export function hostConfiguration(host,{command,args}){
+export function hostConfiguration(host,{command,args,serverName='persona_memory'}){
   const p=HOST_PROFILES[host];if(!Object.hasOwn(HOST_PROFILES,host))throw new TypeError('unknown host');
+  if(typeof serverName!=='string'||!/^([a-z][a-z0-9_]{0,63})$/.test(serverName))throw new TypeError('invalid MCP service name');
   const server={command,args:[...args]};
-  if(p.format==='toml')return {filename:'config.toml',text:'[mcp_servers.persona_memory]\ncommand = '+JSON.stringify(command)+'\nargs = '+JSON.stringify(args)+'\n'};
+  if(p.format==='toml')return {filename:'config.toml',text:'[mcp_servers.'+serverName+']\ncommand = '+JSON.stringify(command)+'\nargs = '+JSON.stringify(args)+'\n'};
   if(p.format==='cordis'){
     const quoted=JSON.stringify;
-    return {filename:'cordis.patch.yml',text:'- insert:\n    - id: mcp-persona-memory\n      name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: persona_memory\n        transport: stdio\n        command: '+quoted(command)+'\n        args: '+quoted(args)+'\n        toolCallTimeoutMs: 30000\n        failOnStartupError: false\n'};
+    return {filename:'cordis.patch.yml',text:'- insert:\n    - id: '+(serverName==='persona_memory'?'mcp-persona-memory':'mcp-'+serverName)+'\n      name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: '+serverName+'\n        transport: stdio\n        command: '+quoted(command)+'\n        args: '+quoted(args)+'\n        toolCallTimeoutMs: 30000\n        failOnStartupError: false\n'};
   }
   const root=p.format==='vscode'?'servers':'mcpServers';
   if(['vscode','json-typed','workbuddy'].includes(p.format))server.type='stdio';
-  return {filename:p.format==='workbuddy'?'mcp.json':'host-config.json',text:JSON.stringify({[root]:{persona_memory:server}},null,2)+'\n'};
+  return {filename:p.format==='workbuddy'?'mcp.json':'host-config.json',text:JSON.stringify({[root]:{[serverName]:server}},null,2)+'\n'};
 }

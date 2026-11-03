@@ -7,3 +7,6 @@ export {prepareAgentBundle} from './bundle.js';
 export {applyAgentBundle,undoAgentBundle} from './install.js';
 export {inspectAgentCandidates} from './review.js';
 export {doctorAgent} from './doctor.js';
+
+export {createSharedSpace,grantSharedAgent,revokeSharedAgent,inspectSharedSpace} from './sharing.js';
+export {prepareSharedAgentBundle} from './shared-bundle.js';

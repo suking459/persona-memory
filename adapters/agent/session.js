@@ -1,4 +1,5 @@
 // Independently written scoped Agent boundary; no host settings or model calls.
+import {lockSharedBinding,assertSharedStore} from './shared-policy.js';
 import {createTaskHandoff,openTaskHandoff} from '../../src/handoff.js';
 import {createSemanticRetriever,createHttpEmbedder} from '../semantic/index.js';
 import {createHash,randomUUID} from 'node:crypto';
@@ -89,11 +90,13 @@ export function createAgentSession(pm,raw){
     const tool=byName.get(name);if(!tool)fail('tool is not granted');
     const a=copySnapshotJSON(args,65536);fields(a,new Set(Object.keys(tool.inputSchema.properties)),'agent arguments');
     for(const key of tool.inputSchema.required)if(!Object.hasOwn(a,key))throw new TypeError('missing '+key);
-    busy=true;
+    busy=true;let sharedLease;
     try{
+      sharedLease=lockSharedBinding(binding);
       const subject=a.scope===undefined?undefined:subjectOf(a.scope);
       try{await pm.reload({ifChanged:true});}
       catch{unavailable=true;fail('store refresh failed; no cached result issued; restart and inspect the store','ERR_AGENT_STORE');}
+      assertSharedStore(pm,sharedLease);
       let result,mutated=false;
       switch(name){
         case 'memory_handoff_prepare':return createTaskHandoff(pm,{subject,checkpoint:a.checkpoint,references:a.references,...(a.ttlHours===undefined?{}:{ttlHours:a.ttlHours})});
@@ -123,8 +126,8 @@ export function createAgentSession(pm,raw){
         case 'memory_propose':{
           short(a.evidenceId,'evidenceId',256);if(!a.evidenceId.trim())throw new TypeError('evidenceId required');
           short(a.reason,'reason',2000);short(a.key,'key',256);
-          const id='agent-'+createHash('sha256').update(JSON.stringify([subject,a.kind,a.key,a.evidenceId])).digest('hex').slice(0,48);
-          const input={id,memory:{subject,kind:a.kind,key:a.key,value:a.value,assertion:a.assertion===undefined?'inferred':a.assertion,...(a.derivedFrom===undefined?{}:{derivedFrom:a.derivedFrom}),evidenceId:a.evidenceId,source:'model'},reason:a.reason};
+          const id='agent-'+createHash('sha256').update(JSON.stringify([subject,a.kind,a.key,a.evidenceId,...(sharedLease?[sharedLease.origin]:[])])).digest('hex').slice(0,48);
+          const input={id,memory:{subject,kind:a.kind,key:a.key,value:a.value,assertion:a.assertion===undefined?'inferred':a.assertion,...(a.derivedFrom===undefined?{}:{derivedFrom:a.derivedFrom}),evidenceId:a.evidenceId,source:'model',...(sharedLease?{origin:sharedLease.origin}:{})},reason:a.reason};
           if(a.confidence!==undefined)input.confidence=a.confidence;
           const candidate=pm.proposeMemory(input);
           result={candidate,approved:candidate.status==='accepted',quality:pm.inspectCandidate(candidate.id)};mutated=true;break;
@@ -158,7 +161,7 @@ export function createAgentSession(pm,raw){
         catch{unavailable=true;fail('persistence failed; no success receipt issued; restart and inspect the store','ERR_AGENT_STORE');}
       }
       return result;
-    }finally{busy=false;}
+    }finally{try{sharedLease?.release();}finally{busy=false;}}
   }
   return {binding,tools,instructions,call};
 }

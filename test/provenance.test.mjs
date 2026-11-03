@@ -156,7 +156,7 @@ test('portable v1 exports refuse to strip live provenance and full snapshots pre
 test('schema 5 snapshots upgrade without changing their source file, while forged old-schema dependencies are rejected',t=>{
   const dir=directory(t),original=new PersonaMemory({clock:()=>1000});source(original);const old=original.export();old.schemaVersion=5;
   const file=path.join(dir,'default.json');fs.writeFileSync(file,JSON.stringify(old));const before=fs.readFileSync(file),loaded=new PersonaMemory({storage:dir,clock:()=>1000});
-  assert.equal(loaded.export().schemaVersion,6);assert.equal(loaded.getMemory('source').value,'English');assert.ok(before.equals(fs.readFileSync(file)));
+  assert.equal(loaded.export().schemaVersion,7);assert.equal(loaded.getMemory('source').value,'English');assert.ok(before.equals(fs.readFileSync(file)));
   old.memories.source.derivedFrom=[{id:'missing',revision:1,fingerprint:'a'.repeat(64),slotFingerprint:'a'.repeat(64)}];const state=loaded.export();
   assert.throws(()=>loaded.import(old),/schemaVersion=6/);assert.deepEqual(loaded.export(),state);
 });
