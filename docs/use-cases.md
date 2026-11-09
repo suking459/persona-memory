@@ -1,74 +1,47 @@
-# 用途与接入选择
+# Use cases and integration choices
 
-persona-memory 1.0 是可嵌入的记忆组件，按明确主体保存记录，并在应用请求时生成有预算的参考上下文。它可以与不同模型、界面和业务系统组合。
+persona-memory is an embeddable component that stores records under explicit subjects and provides bounded reference context on request. It combines with different models, interfaces and business systems.
 
-## 场景
+| Application | Subjects and records | Workflow |
+| --- | --- | --- |
+| Personal assistant | User preferences, lasting requirements, temporary state | Explicit settings can be written directly; extracted suggestions enter review |
+| Coding/project assistant | Project constraints/decisions; task state/experience | Select standing constraints explicitly, then retrieve for the current question |
+| Support | User preferences; ticket state and next actions | Use the support preset; authoritative systems confirm business state |
+| NPC/interactive character | Relationship state; world and quest facts | Game events confirm outcomes; objective facts remain separate from social scores |
+| Multiple tools/agents | Project/task requirements and results | Explicit subject mapping, local shared grants and conflict handling |
+| Learning/creation | User learning preferences; project settings; task goals | Keep facts, constraints and temporary goals distinct |
 
-| 场景 | 主体与记录 | 工作方式 |
-|---|---|---|
-| 个人助手 | user：偏好、长期要求、临时状态 | 用户明确设置用 putMemory；模型建议先放候选；每次按需检索 |
-| 项目/编程助手 | project：约束/决定；task：状态/经验 | 常驻规则用空 query + kinds:['constraint'] 显式选取，当前问题另做检索 |
-| 客服 | user：偏好；task：工单状态/下一步决定 | 客服预设默认省略社交档位；业务系统通过宿主接口确认状态 |
-| NPC/互动角色 | user：关系资料；project/task：世界/任务状态 | 剧情事件由游戏确认，临时情绪有期限；关系和客观事实分开保存 |
-| 多工具/agent | project/task：共享要求与处理结果 | HTTP/MCP 或共同存储协议接入；明确映射主体并处理版本冲突 |
-| 学习/创作 | user：学习偏好；project：设定；task：本次目标 | 事实、约束与临时目标分别保存，检索时只选当前使用的范围 |
+Experience verification is a caller assertion with an evidence reference, not universal applicability or model self-certification. Keep conditions and allow later correction.
 
-任务经验的 verified 表示接入应用提供了确认和证据编号；它不是对模型推测或普遍有效性的自动认证。经验应附适用条件，并允许后续纠错。
+## A request lifecycle
 
-## 一次请求怎样运行
+1. Authorize the caller and determine scope, subject and stable message/turn IDs.
+2. Write explicit instructions through trusted code; propose externally extracted content for review.
+3. Handle retention explicitly, retrieve within the current subject and inspect omissions/budgets.
+4. Supply the context as data to the real model. Stored text never gains instruction authority.
+5. Confirm actual successful consumption using a turn ID. Failed, cancelled and incomplete streams are not successful use.
+6. Persist changes and explicitly handle conflicts, corruption, capacity and deadline errors.
 
-1. 应用完成身份授权，确定 scope、主体和消息/轮次 ID。
-2. 明确指令直接写入；外部抽取结果先生成候选，按宿主策略审阅。
-3. 维护到期数据；挑选当前主体的约束和相关记忆，检查省略项与总预算。
-4. 把上下文作为资料加入应用真实模型输入，记录内容不获得指令权限。
-5. 成功使用后按 turnId 确认；失败、取消或未消费完成的流不伪造成功。
-6. 保存变化。写入冲突、坏文件、容量或期限错误由宿主显式处理。
+Preview, use and evidence are distinct actions. Reading more often does not make a claim truer or refresh old evidence.
 
-预览、使用和证据是三个不同动作。频繁查看不会令内容更真实，也不会给陈旧事实续期。
+## Entry points
 
-## 接入选择
+| Existing system | Entry point |
+| --- | --- |
+| Node.js / TypeScript | Direct SDK and generic model bridge |
+| Python or another service language | Local HTTP with application-level identity and authorization |
+| MCP-capable host | Scoped stdio Agent service; host organizes when tools run |
+| Human review | Owner CLI and preview/apply management |
+| Discord / OneBot bot | Platform parser, then chosen relationship/typed-memory APIs |
+| LangChain Runnable | Explicit bridge/template composition |
+| Existing LlamaIndex TS integration | Optional compatibility bridge pinned to its tested version |
 
-| 情况 | 入口 |
-|---|---|
-| 现有应用使用 Node.js/TypeScript | 直接使用库和通用模型桥 |
-| Python、桌面程序或其他服务语言 | 调用本地 HTTP；把认证与主体授权放在应用层 |
-| 支持 MCP 的宿主 | 配置 stdio 服务，用工具按需查询；自动记录仍由宿主组织 |
-| 人工检查抽取结果 | 审阅 CLI 或显式启用的 HTTP 管理接口 |
-| Discord/OneBot 机器人 | 用消息适配器接收真实发送者，再选择关系或通用记忆能力 |
-| 使用 LangChain Runnable | 显式组合桥接和模板；其他 SDK 可用通用回调 |
-| 已有历史 LlamaIndex TS 接入 | 使用可选兼容桥；按锁定版本核对，不作为新系统的核心依赖 |
+Run `persona-memory-http` for the local HTTP service. Configure `PM_STORAGE`, `PM_PERSONA`, `PM_SCOPE`, optional `PM_TOKEN` and `PM_PORT`; management writes also require `PM_ALLOW_ADMIN=1`. Loopback Host/Origin and actual port must match. See [API](API.md).
 
-启动 HTTP 示例：
+For Agent installation use the [connection guide](agent-operations.md). Use absolute Node/script/storage paths in real host configurations; relative paths depend on the host's working directory. Keep credentials and original chats out of Git.
 
-```sh
-persona-memory-http
-# 默认 http://127.0.0.1:8791
-```
+## Boundaries
 
-可配置 PM_STORAGE、PM_PERSONA、PM_SCOPE、PM_TOKEN、PM_PORT。管理写入另需 PM_ALLOW_ADMIN=1。Host/Origin 要求匹配回环地址与实际端口；反向代理需配置后端 Host。详见 [API](API.md)。
+The library suits explicit records, explainable selection, correction and bounded history. Full document indexing, arbitrary identity merging, complete event sourcing, cloud hosting and autonomous task execution require separate host capabilities. Optional semantic retrieval is not built-in universal cross-language understanding. Local sharing is not public multi-tenant authentication.
 
-启动 MCP：
-
-```json
-{
-  "mcpServers": {
-    "persona-memory": {
-      "command": "node",
-      "args": ["node_modules/persona-memory/adapters/mcp/server.js"],
-      "env": {
-        "PM_STORAGE": "./data",
-        "PM_PERSONA": "assistant",
-        "PM_SCOPE": "my-app"
-      }
-    }
-  }
-}
-```
-
-该配置假设 node 已在宿主 PATH 中。脚本与数据目录的相对路径以宿主工作目录为准；实际配置应指向该应用中脚本和数据目录的绝对路径。不要把真实凭据或原始聊天提交到仓库。
-
-## 适用范围
-
-它适合需要明确记录、可解释选择、纠错与有限版本的应用。全文文档索引、向量召回、任意跨平台身份合并、完整事件回放、云托管和自动执行任务，需要宿主或独立组件提供。1.0 没有声称这些能力已经包含。
-
-先确定要保存的主体、真值来源、保留期限、权限和一次请求的上下文预算，再决定是否需要可选的关系层或抽取器。运行示例见 README，边界与参数见 [通用记忆](typed-memory.md)、[检索](retrieval.md)、[存储](time-storage.md) 和 [学习](learning.md)。
+Choose the subjects, authoritative evidence, retention, permissions and context budget first, then select optional relationship or extraction layers. See [typed memory](typed-memory.md), [retrieval](retrieval.md), [storage](time-storage.md) and [learning](learning.md).

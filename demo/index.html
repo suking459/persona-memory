@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>persona-memory · 关系观察室</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>persona-memory · Relationship explorer</title>
 <style>
 :root{font:15px/1.65 system-ui,"Microsoft YaHei",sans-serif;color:#19352f;background:#f4f6f2}
 *{box-sizing:border-box}body{margin:0}button,input{font:inherit}button{cursor:pointer}
@@ -22,25 +22,25 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.7 ui-monospace,Conso
 @media(max-width:1050px){main{grid-template-columns:150px 1fr}.stack{grid-column:2}}
 @media(max-width:650px){header{align-items:flex-start}.badge{display:none}main{display:block;padding:16px}nav{display:flex;gap:3px;margin-bottom:15px}nav button{text-align:center;padding:9px 3px}nav small{display:none}.stack{margin-top:16px}.panel{padding:17px}}
 </style></head><body>
-<header><div><h1>persona-memory <span style="font-weight:400;color:#81917d">/ 关系观察室</span></h1><p>观察关系怎样积累，状态怎样过期，以及哪些记忆进入了这一轮上下文。</p></div><span class="badge">本地规则演示 · 无模型调用</span></header>
-<main><nav aria-label="场景"><button data-scene="community" class="active">社群聊天</button><button data-scene="companion">日常陪伴</button><button data-scene="support">客服跟进</button><button data-scene="npc">游戏 NPC</button><small>切换场景，各自保留状态。<br>预览不会增加记忆使用次数。</small></nav>
-<section class="panel"><h2 id="scene-title">社群聊天</h2><div id="chat" aria-live="polite"><div class="bubble">试着说“今天好累”，再推进时间，看看状态发生什么变化。</div></div>
-<div id="comparison">未使用关系记忆的规则回复会显示在这里。</div><form id="form"><input id="input" aria-label="聊天内容" autocomplete="off" placeholder="说点什么，观察右侧的变化…" maxlength="2000"><button class="primary">发送</button></form>
-<div class="actions" id="actions"></div><p class="note" id="explanation">右侧只是关系状态。这里的回复由规则生成，不能用来证明模型回答变好了。</p><div id="error" role="alert"></div></section>
-<aside class="stack"><section class="panel"><h2>当前关系</h2><div class="score" id="score">0</div><div class="muted" id="tier">还没有建立档案</div><div class="row"><span>熟悉程度 / 信任</span><span id="dimensions">未启用</span></div><div class="row"><span>模拟日期</span><span id="date">—</span></div><div id="tags"></div></section>
-<section class="panel"><h2>这一轮的上下文</h2><pre id="context">暂无</pre><div class="muted" id="budget">0 / 700 字符</div><h2 style="margin-top:17px">来源与选择原因</h2><pre id="evidence">暂无</pre></section></aside></main>
+<header><div><h1>persona-memory <span style="font-weight:400;color:#81917d">/ Relationship explorer</span></h1><p>Explore relationship growth, state expiry and the memories selected for this turn.</p></div><span class="badge">Local rule demo · no model calls</span></header>
+<main><nav aria-label="Scenario"><button data-scene="community" class="active">Community chat</button><button data-scene="companion">Companion</button><button data-scene="support">Support follow-up</button><button data-scene="npc">Game NPC</button><small>Switch scenarios; each keeps its own state.<br>Previews do not increase use counts.</small></nav>
+<section class="panel"><h2 id="scene-title">Community chat</h2><div id="chat" aria-live="polite"><div class="bubble">Send a message, then advance time to inspect state changes.</div></div>
+<div id="comparison">The rule response without relationship memory appears here.</div><form id="form"><input id="input" aria-label="Chat message" autocomplete="off" placeholder="Send a message to inspect the state…" maxlength="2000"><button class="primary">Send</button></form>
+<div class="actions" id="actions"></div><p class="note" id="explanation">The sidebar shows relationship state. Rule-generated responses do not measure model quality.</p><div id="error" role="alert"></div></section>
+<aside class="stack"><section class="panel"><h2>Current relationship</h2><div class="score" id="score">0</div><div class="muted" id="tier">No profile yet</div><div class="row"><span>Familiarity / trust</span><span id="dimensions">Disabled</span></div><div class="row"><span>Simulated date</span><span id="date">—</span></div><div id="tags"></div></section>
+<section class="panel"><h2>Context for this turn</h2><pre id="context">None</pre><div class="muted" id="budget">0 / 700 characters</div><h2 style="margin-top:17px">Sources and selection reasons</h2><pre id="evidence">None</pre></section></aside></main>
 <script>
-let scene='community';const names={community:'社群聊天',companion:'日常陪伴',support:'客服跟进',npc:'游戏 NPC'};
+let scene='community';const names={community:'Community chat',companion:'Companion',support:'Support follow-up',npc:'Game NPC'};
 const $=id=>document.getElementById(id);
 async function api(route,body){const r=await fetch('/api/'+route+'?scenario='+scene,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{});const v=await r.json();if(!r.ok)throw Error(v.error);return v}
 function bubble(text,user=false){const e=document.createElement('div');e.className='bubble'+(user?' user':'');e.textContent=text;$('chat').append(e);$('chat').scrollTop=$('chat').scrollHeight}
-function render(s){const p=s.profile;$('score').textContent=p?.affinity.value??0;$('tier').textContent=p?.affinity.tier??'还没有建立档案';$('date').textContent=new Date(s.now).toLocaleDateString('zh-CN');$('context').textContent=s.context.text||'暂无可用关系记忆';$('budget').textContent=s.context.characters+' / '+s.context.budget+' 字符';
-$('dimensions').textContent=p&&Object.keys(p.dimensions).length?Object.entries(p.dimensions).map(([n,d])=>(n==='trust'?'信任':'熟悉')+' '+Math.round(d.value)).join(' / '):'未启用';
-$('tags').replaceChildren();for(const t of p?.tags??[]){const e=document.createElement('span');e.className='pill';e.textContent=t.tag+(t.longTerm?' · 长期':' · 临时');$('tags').append(e)}
-$('evidence').textContent=JSON.stringify({选择:s.context.people.map(p=>({用户:p.userId,原因:p.reason,状态:p.tags.map(t=>({名称:t.tag,来源:t.source,使用次数:t.injections}))})),省略:s.context.omitted},null,2)}
+function render(s){const p=s.profile;$('score').textContent=p?.affinity.value??0;$('tier').textContent=p?.affinity.tier??'No profile yet';$('date').textContent=new Date(s.now).toLocaleDateString('en');$('context').textContent=s.context.text||'No relationship memory available';$('budget').textContent=s.context.characters+' / '+s.context.budget+' characters';
+$('dimensions').textContent=p&&Object.keys(p.dimensions).length?Object.entries(p.dimensions).map(([n,d])=>(n==='trust'?'Trust':'Familiarity')+' '+Math.round(d.value)).join(' / '):'Disabled';
+$('tags').replaceChildren();for(const t of p?.tags??[]){const e=document.createElement('span');e.className='pill';e.textContent=t.tag+(t.longTerm?' · long-term':' · temporary');$('tags').append(e)}
+$('evidence').textContent=JSON.stringify({selection:s.context.people.map(p=>({user:p.userId,reason:p.reason,state:p.tags.map(t=>({name:t.tag,source:t.source,uses:t.injections}))})),omitted:s.context.omitted},null,2)}
 async function refresh(){try{render(await api('state'));$('error').textContent=''}catch(e){$('error').textContent=e.message}}
-function actions(){const list=[['advance-day','推进一天'],['reset','清除当前场景']];if(scene==='support')list.unshift(['unresolved','标记待跟进'],['resolved','标记已解决']);if(scene==='npc')list.unshift(['promise-kept','履行约定：信任 +10'],['promise-broken','违背约定：信任 -10']);$('actions').replaceChildren();for(const [action,title]of list){const b=document.createElement('button');b.textContent=title;b.onclick=async()=>{try{render(await api('action',{action}));bubble('已执行：'+title)}catch(e){$('error').textContent=e.message}};$('actions').append(b)}}
-for(const b of document.querySelectorAll('[data-scene]'))b.onclick=()=>{scene=b.dataset.scene;document.querySelectorAll('[data-scene]').forEach(e=>e.classList.toggle('active',e===b));$('scene-title').textContent=names[scene];$('chat').replaceChildren();bubble('已切换到'+names[scene]+'。');actions();refresh()};
-$('form').onsubmit=async e=>{e.preventDefault();const text=$('input').value.trim();if(!text)return;const button=e.currentTarget.querySelector('button');button.disabled=true;bubble(text,true);$('input').value='';try{const s=await api('chat',{text});render(s);bubble(s.reply);$('comparison').textContent='没有关系记忆的规则回复：'+s.withoutMemory;$('error').textContent=''}catch(e){$('error').textContent=e.message}finally{button.disabled=false}};
+function actions(){const list=[['advance-day','Advance one day'],['reset','Reset current scenario']];if(scene==='support')list.unshift(['unresolved','Mark unresolved'],['resolved','Mark resolved']);if(scene==='npc')list.unshift(['promise-kept','Keep promise: trust +10'],['promise-broken','Break promise: trust -10']);$('actions').replaceChildren();for(const [action,title]of list){const b=document.createElement('button');b.textContent=title;b.onclick=async()=>{try{render(await api('action',{action}));bubble('Completed: '+title)}catch(e){$('error').textContent=e.message}};$('actions').append(b)}}
+for(const b of document.querySelectorAll('[data-scene]'))b.onclick=()=>{scene=b.dataset.scene;document.querySelectorAll('[data-scene]').forEach(e=>e.classList.toggle('active',e===b));$('scene-title').textContent=names[scene];$('chat').replaceChildren();bubble('Switched to '+names[scene]+'.');actions();refresh()};
+$('form').onsubmit=async e=>{e.preventDefault();const text=$('input').value.trim();if(!text)return;const button=e.currentTarget.querySelector('button');button.disabled=true;bubble(text,true);$('input').value='';try{const s=await api('chat',{text});render(s);bubble(s.reply);$('comparison').textContent='Rule response without relationship memory: '+s.withoutMemory;$('error').textContent=''}catch(e){$('error').textContent=e.message}finally{button.disabled=false}};
 actions();refresh();
 </script></body></html>

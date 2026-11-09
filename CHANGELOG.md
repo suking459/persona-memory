@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — English repository presentation
+
+- Public documentation, examples, comments and default relationship/demo presentation use English; added a repository language check and continuing language policy.
+- Preserve stored source-language content, explicit locale resources, linguistic rules and multilingual fixtures. Retained OneBot compatibility placeholders after reproducing an attribution change caused by translating them.
+- Refresh stale overview/version statements while keeping historical evidence and copyright boundaries. No schema migration, release-history rewrite or intermediate publication.
+
 ## 1.5.0 — 2026-11-02
 
 Consolidates 1.1–1.5 work. Owner selected stable 1.5.0 with explicit incompatible-default and source-review disclosures. Pin your dependency and read the migration guide; do not assume unchanged 1.0 default relationship behavior. Published 1.0.0 history and its license rights are preserved.

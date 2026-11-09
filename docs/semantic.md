@@ -1,6 +1,6 @@
 # Optional semantic retrieval — 1.3 local development
 
-中文概览：默认仍为本地词法检索。所有者明确配置嵌入服务后，可按向量相似度补充召回；失败会标明原因并回退本地检索。模型不能改服务地址或扩大范围。当前未发布，真实模型的跨语言效果须按所选服务另测。
+Local lexical retrieval remains the default. An owner-configured embedding service can supplement recall; failures return explicit reasons and lexical fallback. Models cannot change endpoints or widen scope. Cross-language quality requires separate tests of the chosen real service.
 
 ## Configure from the actual Agent flow
 

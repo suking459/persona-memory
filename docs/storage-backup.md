@@ -1,6 +1,6 @@
 # Storage, backups and migration
 
-本地 1.4 功能，尚未公开发布。默认 JSON 与 Node 18 支持保留。SQLite 需 Node 22.13+；迁移先保留逻辑身份，再预览恢复，目标变化即拒绝执行。备份包含完整记忆数据，请自行保密；校验和不证明来源可信，也不验证事实。
+Introduced in local 1.4 and included in published 1.5. Default JSON and Node 18 compatibility remain. SQLite requires Node 22.13+. Migration preserves logical identity and previews restoration; changed targets reject apply. Backups contain complete memory data and require private handling. Checksums authenticate neither origin nor facts.
 
 ## Choose a store
 

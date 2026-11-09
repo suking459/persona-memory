@@ -48,7 +48,7 @@ test('tag evidence version prevents acknowledging removed and recreated tags',()
 test('visitor-only context works, maxPeople and zero budget apply to all rows',()=>{
   const {pm}=memory();
   for(const userId of ['a','b'])for(let i=0;i<2;i++)pm.ingest(message({userId,mentionsSelf:false}));
-  assert.match(pm.buildBlock({chatId:'room',userIds:['a']}),/来过 2 次/);
+  assert.match(pm.buildBlock({chatId:'room',userIds:['a']}),/Visited 2 times/);
   assert.equal(pm.buildContext({chatId:'room',userIds:['a','b'],maxPeople:1}).people.length,1);
   assert.equal(pm.buildBlock({chatId:'room',userIds:['a'],budget:0}),'');
 });

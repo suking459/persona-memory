@@ -1,41 +1,30 @@
-# 路线与范围
+# Roadmap and release boundaries
 
-当前公开版：[1.0 发布说明](releases/1.0.0.md)。本地开发版：1.3.0-dev.0，分支 work/1.1-development。项目保持宿主无关的通用记忆组件；网页仅作附带体验。
+Published stable release: 1.5.0; v1.0.0 remains a historical baseline. Current local checkpoint: 1.8 development on `work/1.6-development`. The library is the product; the web demo is auxiliary.
 
-## 1.0 → 2.0
+## 1.0 to 2.0
 
-用户于 2026-11-01 确认新的节奏：1.1–1.4 本地迭代，1.5 可作中期更新；1.6–1.9 本地迭代，2.0 整体正式发布。中间节点不逐个公开发布，不因编号完成就自动更新 GitHub 主分支、建标签或发 npm。1.5 未达到验收门槛可顺延。
+The owner selected local 1.1–1.4 development, an optional 1.5 midpoint release, local 1.6–1.9 development and a separately validated 2.0 release. Completing an internal milestone does not authorize a push, tag, GitHub Release or npm publication. 1.5.0 was explicitly approved and published. Final 2.0 publication still requires an owner decision.
 
-[完整九点规划与验收设计](1.0-2.0-ROADMAP.md)：
+| Milestone | Focus | State |
+| --- | --- | --- |
+| 1.1 | Host-oriented Agent entry, language support, extraction/review | Completed locally; exact host coverage is recorded separately |
+| 1.2 | Write quality and dependent correction/invalidation | Completed locally |
+| 1.3 | Optional semantic retrieval and bounded context | Completed locally |
+| 1.4 | Optional storage, backup and migration | Completed locally |
+| 1.5 | Inspection, explanation, owner management and independent policy | Published stable midpoint |
+| 1.6 | Bounded task handoff | Completed locally |
+| 1.7 | Owner-controlled local sharing and origins | Completed locally |
+| 1.8 | Conditional experience feedback and retirement | Completed locally; Windows and Linux validation recorded |
+| 1.9 | Measurements, paired comparisons, bounded maintenance | Design prepared; implementation next |
+| 2.0 | Integrated validation, migration/recovery, packaging and documentation | Pending; no automatic publication |
 
-| 节点 | 重点 | 状态 |
-|---|---|---|
-| 1.1 | 实际 Agent 接入、多语言基础、宿主抽取/候选审阅、来源风险处理 | 开发中；首批通道/配置准备完成，真实宿主和来源处理未完成 |
-| 1.2 | 写入质量、纠错及派生内容失效 | 本地实现通过 Windows 410 / Linux 413 项及类型检查 |
-| 1.3 | 召回、可选语义接口与上下文质量 | 本地实现通过 Windows 454 / Linux 457 项及类型检查 |
-| 1.4 | 可选存储、备份恢复与跨机器迁移 | 规划 |
-| 1.5 | 可检查、可解释、可管理；可选中期发布 | 规划 |
-| 1.6 | 任务接续与交接包 | 规划 |
-| 1.7 | 多 Agent 共享、授权与隔离 | 规划 |
-| 1.8 | 经验反馈、适用条件与修订淘汰 | 规划 |
-| 1.9 | 成本可见、效果对照与完整候选验收 | 规划 |
+See the [nine-point design](1.0-2.0-ROADMAP.md), [host acceptance](AGENT-ACCEPTANCE.md), [1.8 validation](1.8-VALIDATION.md) and [1.9 specification](1.9-MEASUREMENT-SPEC.md).
 
-多语言贯穿后续节点，首批新增原文保持、语言选项、分词修复和中英接入入口；合成样例不是所有语言效果认证。详见 [多语言支持](multilingual.md)。
+## Quality and isolation
 
-当前阶段按现有项目的小步修改推进，不等于立即重构成 2.0。更大的分档/风格/生命周期改造草案暂缓。版权删除必须先审计、展示具体差异及依据并经用户明确批准；未核清的来源不宣传为已解决。
+Review the current batch before starting the next. Report library tests, protocol/configuration checks and actual host/model tasks separately. Old cross-platform results do not certify later changes. Keep the core dependency-free and compose optional services explicitly.
 
-## 已有能力与新增能力的边界
+All implementation and artifacts remain inside this project. Do not change QQA or everyday host settings to gather data. Public material excludes original chats, identities, credentials, private snapshots, backups and local diagnostics. Planning is not permission to change another application's configuration or publish a release.
 
-1.0 已有六类有类型记忆、明确主体、词法检索/完整预算、有效时间/有限版本、JSON/内存快照、CAS、选择性导出迁移、候选审阅与基础经验。后续规划要增加实际能力或可靠性，不能把这些换名再算一批新功能。详见 [用途](use-cases.md)、[API](API.md)。
-
-## 验收与隔离
-
-先复核当前批次，再进入下一批。配置生成、协议检查、真实宿主分别报告；不借用旧版本的跨环境或效果结果，不承诺零 bug。核心维持零运行时依赖，外部存储/语义/平台能力按需组合。
-
-实现和开发产物留在本项目；不改 QQA 或其他应用的现有配置与数据。公开资料不含原始聊天、身份、凭据、私人快照、备份及本地诊断。真实宿主的启用与影响性变动按具体授权处理，不能把规划当成配置修改或发布指令。
-
-当前批次：[1.1 计划](1.1-PLAN.md)、[接入说明](agent-integration.md)、[首批复核](1.1-AGENT-BATCH.md)、[多语言复核](1.1-MULTILINGUAL-BATCH.md)、[独立审阅与运行中刷新](1.1-REVIEW-FLOW-BATCH.md)。
-
-当前 1.2：[写入质量、派生来源与升级边界](quality.md)、[本批复核](1.2-QUALITY-BATCH.md)。连续自主推进至 1.5 候选；内部批次完成后继续下一步，不再等待“继续”指令；发布和版权删除仍另行确认。
-
-当前 1.3：[可选语义接入、数据流及评估](semantic.md)、[复核记录](1.3-RETRIEVAL-BATCH.md)。
+Repository-facing documentation, comments, examples and default presentation use English. Preserve source-language memory, linguistic resources and multilingual fixtures. Authorship/notice changes still need evidence and explicit approval; English translation does not remove or expand copyright claims.

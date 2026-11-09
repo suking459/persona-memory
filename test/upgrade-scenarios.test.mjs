@@ -41,7 +41,7 @@ test('a synthetic 0.3 snapshot with documented text sanitization migrates and re
     userId:'synthetic-visitor',...fixture.snapshot.visitors['synthetic-visitor'],
   });
   assert.match(migrated.buildContext({chatId:'synthetic-chat-a',
-    userIds:['synthetic-member','synthetic-visitor']}).text,/来过 2 次/);
+    userIds:['synthetic-member','synthetic-visitor']}).text,/Visited 2 times/);
   now+=DAY;
   migrated.maintain();
   migrated.flush();

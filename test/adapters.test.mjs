@@ -2,13 +2,23 @@ import {withLoadRule} from './fixtures/explicit-tag-rules.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
-import {PersonaMemory} from '../src/index.js';
+import {PersonaMemory,matchTags} from '../src/index.js';
 import {createMemoryServer} from '../adapters/http/server.js';
 import {handleMcp} from '../adapters/mcp/server.js';
 import {parseDiscord} from '../adapters/discord/index.js';
 import {parseOneBot} from '../adapters/onebot/index.js';
 import {createLangChainBridge} from '../adapters/langchain/index.js';
 import {createLlamaIndexBridge} from '../adapters/llamaindex/index.js';
+
+test('OneBot mention placeholders preserve attribution in explicit Chinese rules',()=>{
+  const parsed=parseOneBot({post_type:'message',message_type:'group',group_id:'g',user_id:'u',self_id:'bot',
+    message:[{type:'at',data:{qq:'bot'}},{type:'text',data:{text:'好累'}}]});
+  assert.equal(parsed.mentionsSelf,true);
+  assert.deepEqual(matchTags(parsed.text,{load:{words:['好累'],advice:'Host-defined observation'}}),[]);
+  const direct=parseOneBot({post_type:'message',message_type:'group',group_id:'g',user_id:'u',self_id:'bot',
+    message:[{type:'text',data:{text:'我好累'}}]});
+  assert.equal(matchTags(direct.text,{load:{words:['好累'],advice:'Host-defined observation'}}).length,1);
+});
 
 test('HTTP preserves core flags, previews are pure, admin is opt-in',async()=>{
   const pm=new PersonaMemory(withLoadRule()),server=createMemoryServer({pm,token:'test-only'});

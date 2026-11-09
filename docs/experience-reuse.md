@@ -1,4 +1,4 @@
-# Reviewed experience reuse / 经验复用
+# Reviewed experience reuse
 
 Local 1.8 development; no background task, model request, host settings change or automatic execution. Requires schema 8 for experience candidates, unverified model experiences and lifecycle metadata. Older snapshots (1–7) remain readable; older clients cannot read schema 8. Back up before upgrading.
 
@@ -11,7 +11,7 @@ Local 1.8 development; no background task, model request, host settings change o
 
 Capture clients can propose model reports and reported feedback. Accepting a candidate does not change its source or turn model self-assessment into host verification. Owner attestation is still the caller's assertion: the library does not open evidence links or verify reality. Every reuse result returns `evidenceVerified:false` and `taskExecuted:false`.
 
-条件是调用方明确填写的标签，按原文严格比较，不做翻译、同义词归并或自然语言推断。经验必需条件是当前条件的子集；反馈条件须与当前条件的集合完全一致。标签可使用中文、日文、阿拉伯文等原文，但“能存储”不等于跨语言语义等价。缺少标签时不会声称对应环境已验证。
+Condition labels are explicit caller input, compared literally without translation, synonym merging or natural-language inference. Required experience labels must be a subset of the current labels; feedback labels must match the current set exactly. Any source language is preserved, but storage compatibility does not establish cross-language semantic equivalence. Missing labels do not imply a verified environment.
 
 ## Interpretation
 

@@ -1,48 +1,33 @@
-# 设计边界与独立实现
+# Design boundaries and independent implementation
 
-## 项目目标
+persona-memory is an embeddable memory and optional relationship-state component. It manages sourced updates, time/evidence lifecycle, bounded selection and explicit persistence. It does not start an autonomous Agent or model retry loop, and the core has no runtime dependencies.
 
-persona-memory 是可以嵌入应用的记忆与关系状态组件；通用记录和人的关系档案分别管理。它负责有来源的状态更新、时间生命周期、关系规则和上下文选择。面向社群、陪伴、游戏 NPC 和客服等应用，核心保持零运行时依赖，不在内部启动自主 Agent 或模型重试循环。
+| Module | Responsibility |
+| --- | --- |
+| retrieval.js / record-context.js | Scope/state filtering before bounded ranking; complete budgeted JSON; external scores treated as data |
+| records.js | Explicit subjects/kinds, bounded JSON, independent lifetimes, replacement and validation |
+| memory.js | Host-independent ingestion, scope, context, acknowledgement and storage coordination |
+| text-policy.js | Bounded lexical evidence checks and a single quote scan, avoiding quadratic backtracking |
+| lifecycle.js | Non-mutating evidence lifecycle reduction and bounded retention selection |
+| limits.js | Explicit ceilings; reject valuable-profile overflow instead of silent eviction |
+| turns.js | Capacity/deadline leases; no automatic retries or late commits |
+| presets.js | Scenario configuration; host events establish trust |
+| acknowledge.js | Explicit unavailable-confirmation results without blocking completed responses |
 
-## 本项目独立实现的模块
+See NOTICE and the origin review for historical design references and limitations. Independently authored expressions do not establish ownership of general ideas or guarantee worldwide originality.
 
-| 模块 | 责任与选择 |
-|---|---|
-| retrieval.js / record-context.js | 先范围和状态筛选，再有界相关性排序；输出完整预算 JSON，外部相关度仅作数据 |
-| records.js | 明确主体、类型、受限 JSON 值、独立寿命、显式替代与校验；不参与社交计分 |
-| memory.js | 宿主无关的消息处理、作用域、可解释上下文、确认与存储协调 |
-| text-policy.js | 有输入与工作量边界的字面证据筛选；引号单次扫描，不使用可平方回溯的模式 |
-| lifecycle.js | 不修改输入的证据生命周期归约；一次排序选取保留项，避免循环删除数组 |
-| limits.js | 明确资源上限；有价值的档案满额时拒绝新增，不静默删除 |
-| turns.js | 有容量与截止时间的执行租约；不自动重试；迟到结果不提交 |
-| presets.js | 应用场景配置，信任由宿主事件确认，不从夸奖推断可信程度 |
-| acknowledge.js | 无法确认时返回明确状态，不伪造计数或让已完成回复卡在统计步骤 |
+## Update pipeline
 
-这些实现和模块边界由本项目独立设计、编写和验证。早期关系分档、默认分值与部分生命周期参数有上游设计来源，保留在 NOTICE 与 LICENSE 中。独立实现不等于声称这些概念为本项目首创。
+Bounded input → read-only validation and policy calculation → capacity checks → delivery deduplication → state reduction → explicit persistence.
 
-## 更新管线
+Context preview does not mutate persisted state. Confirmation is separate and turn IDs bound duplicate counting. Source evidence and use counts are distinct: consumption is not fresh factual evidence.
 
-有界输入 → 只读校验与规则计算 → 容量检查 → 消息去重 → 状态归约 → 显式持久化。
+## Resource and time bounds
 
-预览上下文只读取状态。确认使用是单独操作，以唯一轮次 ID 限制重复计数。观察来源与使用次数分别保存，使用本身不是新的事实证据。
+Defaults include 10,000 profiles, 10,000 lightweight visitors, 2,000 delivery-deduplication entries and 100 history summaries. Visitors retain recent entries at capacity; full profiles reject additions with `ERR_MEMORY_CAPACITY`. The host chooses cleanup, partitioning or an allowed higher limit. Serialized size is checked before replacement so a store does not write snapshots it cannot reload.
 
-## 资源与时间边界
+Bridge timeouts default to 30 seconds and allow up to five minutes. Callbacks receive `{signal}` for cancellation-aware clients. Expiry stops internal waiting and late commits; an external call that ignores cancellation continues occupying its lease to prevent retry amplification. Event-loop timers cannot preempt a synchronous infinite loop: untrusted callbacks require a Worker or separate process. Tests use external watchdogs for that boundary.
 
-默认最多 10000 份完整档案、10000 个轻量访客、2000 个去重记录、100 个变化摘要。访客满额时保留最近来访；完整档案满额则返回 ERR_MEMORY_CAPACITY，由宿主决定清理、分区或提高允许范围。
+## Evolution
 
-持久化序列化先检查大小，超限不替换现有文件，避免生成自身无法重新加载的快照。
-
-桥接默认等待 30 秒，可设 timeoutMs，最大 5 分钟。回调获得第二个参数 {signal}，可传给支持 AbortSignal 的模型客户端。到期会终止内部等待和迟到状态提交。忽略取消的外部调用继续占用执行容量，避免不断重试放大任务。
-
-同一进程的计时器不能抢占调用方编写的同步无限循环；不可信回调需要宿主使用独立进程或 Worker。测试也用进程外 watchdog，避免把事件循环阻塞误当作普通异步超时。
-
-## 逐步独立的路线
-
-先独立处理正确性、时间、证据与预算，再根据已标注数据调整策略。保留公开接口兼容和参数来源记录，不为“换成自己的”进行没有实际价值的全量重写。
-
-完整事件溯源、图数据库和自主记忆代理仍按真实需求评估，当前不为它们扩展基础设施。
-
-
-## 本地 0.8
-
-通用记录以生效区间区分提交版本头与当前值；schema 4 继续迁移旧关系数据和 schema 3 通用记录。显式存储 CAS 防止旧副本覆盖，迁移需要主体映射与差异预览。完整时间、有限历史和存储失败边界见 [时间与存储](time-storage.md)。SQLite/完整事件溯源尚未实现。
+Correctness, evidence, time and budgets take priority over infrastructure expansion. Keep compatible interfaces and parameter provenance; avoid rewrites that merely rename familiar concepts. Temporal intervals distinguish the latest submitted head from the currently effective value. Store CAS prevents stale overwrites; transfer needs explicit subject mappings and previews. Optional SQLite, semantic retrieval, handoff, local sharing and experience feedback are separate modules; full event sourcing remains a future decision based on actual needs.

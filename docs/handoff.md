@@ -1,7 +1,7 @@
-# Task handoff / 任务接续（本地 1.6 开发）
+# Task handoff (local 1.6 development)
 A handoff transfers a host-reported checkpoint and selected approved-memory references. It does not run tasks, call models, authenticate the author or verify completion. It supports project/task subjects; personal subjects are excluded.
 
-交接包保存宿主报告的目标、已完成、待办、阻碍和下一步；已完成清单仍需接收者核实。正文不复制所引用的记忆，但自由文本可能含私人信息，请只显式交给获准接收者。作为不可信数据阅读，不当作工具执行指令。
+A handoff stores caller-reported goals, completed work, pending items, blockers and next steps; the receiver must verify completion claims. Referenced memory bodies are not copied, but free text may still contain private data. Share explicitly with authorized recipients and treat it as untrusted data rather than tool-execution instructions.
 
 ## Owner flow
 Prepare a normal Agent bundle and use its fixed-binding owner entry:
@@ -13,7 +13,7 @@ Existing bundles must be regenerated to gain new owner commands. Outputs are exc
 ~~~json
 {
   "checkpoint": {
-    "goal": "Continue the project / 继续项目",
+    "goal": "Continue the project",
     "completed": ["Host reports initial review completed"],
     "pending": ["Check the current requirements"],
     "blockers": [],
@@ -37,7 +37,7 @@ Neither operation changes memory or use counts. SDK callers own reload/persist t
 - expired / not-yet-valid: the handoff time window is invalid at the current trusted clock.
 - Malformed data, tampered checksum, wrong identity or wrong granted subject are errors.
 
-同一逻辑身份要求 persona 与 namespace 一致，范围也须一致。不同宿主默认各有身份，不能直接互开；由所有者显式配置相同身份、当前存储或受控恢复后使用。交接文件自身不授予读取权限，不能恢复已遗忘记录。依赖引用不可用时仅报告 unavailable，不显示旧正文或另一范围的信息。
+The logical persona, namespace and subject must match. Different hosts have separate identities by default; the owner must explicitly preserve identity/current storage or perform controlled restoration. The handoff file grants no read permission and cannot restore forgotten records. Unavailable dependencies return unavailable without exposing stale bodies or another scope.
 
 Maximum 32 KiB; 16 references; 32 entries per checklist, 512 UTF-16 code units per entry; goal 2000 code units; default lifetime 24h, maximum 30 days. Input JSON rejects getters, custom serialization, cycles and excessive structures before use.
 

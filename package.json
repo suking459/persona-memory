@@ -127,7 +127,8 @@
     "example:management": "node examples/owner-management.js",
     "test:handoff": "node --test test/handoff.test.mjs test/handoff-transports.test.mjs",
     "test:sharing": "node --test test/origin.test.mjs test/sharing.test.mjs test/sharing-transports.test.mjs",
-    "test:experience": "node --test test/experience.test.mjs test/experience-reuse.test.mjs test/experience-transports.test.mjs"
+    "test:experience": "node --test test/experience.test.mjs test/experience-reuse.test.mjs test/experience-transports.test.mjs",
+    "check:language": "node tools/check-language.mjs"
   },
   "publishConfig": {
     "access": "public"

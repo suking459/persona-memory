@@ -1,25 +1,19 @@
-# 评估与可选影子观察
+# Evaluation and optional read-only shadow analysis
 
-## 合成评估
+## Synthetic evaluation
 
-npm run evaluate 运行公开合成标签样例，并处理 2000 条合成消息、100 个合成用户，记录精确率/召回率、p50/p95 单条处理耗时和堆内存变化。结果写入本项目 .artifacts/evaluation.json。
+`npm run evaluate` runs public synthetic tag cases and a 2000-message / 100-user workload, reporting the defined precision/recall, p50/p95 processing time and heap change to project-local `.artifacts/evaluation.json`. These cover bounded rule behavior, not real chat quality or model benefit. GC affects heap deltas; they are not complete peak-memory measurements. No live chat/model data is used.
 
-这些样例只覆盖有限的规则边界，不代表真实群聊质量；内存变化受 GC 影响，不是完整峰值内存。未使用线上聊天，也未进行真实模型效果评测。
+## Optional one-shot analysis
 
-## 可选只读影子分析
+`npm run shadow -- --source <file>` is a manual external analyzer, not a QQA plugin, resident service or message sender. It does not modify QQA files/configuration/state.
 
-npm run shadow -- --source <文件路径>
+Input: normalized JSON array or NDJSON with chatId/userId/text/millisecond ts, optional eventId/mentionsSelf/replyToSelf/directedToBot. Maximum 16 MiB / 10000 rows. Unknown native QQA formats require verified read-only conversion first; they are not automatically supported.
 
-这是手动执行一次的外部分析器，不是 QQA 插件，不启动常驻进程，不发送消息，不改 QQA 的任何文件、配置或状态。
+Prefer authorized read-only snapshots/bounded exports. Only the selected input is read. Identities are temporarily hashed in memory and output contains counts/diagnostic aggregates, fixed at project-local `.shadow/summary.json`. Original text, identities and private output never enter release packages. Shadow previews do not count as production model use or alter the original bot's records, so they cannot prove that the real bot consumed context or improved its replies.
 
-输入支持规范化 JSON 数组或 NDJSON，每条至少包含 chatId、userId、text、毫秒 ts，可选 eventId、mentionsSelf、replyToSelf、directedToBot。最多 16 MiB / 10000 条；未知的 QQA 原生会话格式不能直接当作已支持，需要先确认结构并编写只读转换。
+Historical observation: no running QQA connection or chat-reading task was started. A project-owned snapshot had 508 profiles and nine tags; five single-hit tags were under three days old, insufficient to claim promotion was stuck. Private aggregate evidence: `.artifacts/snapshot-audit.json`, without identities/text. Any later real-data analysis needs a concrete question and authorized input; do not install QQA collection plugins speculatively.
 
-优先使用已授权的只读快照或有界导出。分析器只读给定输入，内存中将身份做临时哈希，输出只有计数与诊断汇总。输出固定留在本项目 .shadow/summary.json，原文、身份与输出目录都不进入发布包。
+## Actual outcome measurement
 
-影子预览不会被确认成生产模型使用，不改变原机器人的关系记录。因此它只能评估离线候选规则的表现，不能证明真实机器人使用了该上下文或回复变好。
-
-本轮没有连接正在运行的 QQA，也没有读取其聊天原文或启动观察任务。只读核对了本项目已有的快照：508 份档案、9 个标签；其中 5 个单次命中标签都未满 3 天，不能据此证明它们被晋升规则卡住。聚合结果保存在本地 .artifacts/snapshot-audit.json，不包含身份或原文。需要真实数据回答具体问题时，再使用经过确认的输入来源；不为采集数据擅自启用 QQA 插件。
-
-## 真实效果验证
-
-应先确定问题：例如否定误判、状态过期是否及时或上下文预算是否合适。使用匿名标注，分开报告规则准确性、运行可靠性与模型回复体验。没有标注或对照时，不写“提升百分之多少”。
+Define the question first: negation errors, timely expiry or context budget, for example. Use anonymized labels and report rule quality, reliability and model experience separately. Without labels or a controlled comparison, do not invent an improvement percentage.

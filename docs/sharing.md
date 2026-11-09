@@ -1,4 +1,4 @@
-# Explicit local sharing / 显式本地共享
+# Explicit local sharing
 Local 1.7 development; not available in published 1.5.0. Shared spaces use a dedicated JSON store for one project/task subject. No personal memory is copied automatically.
 
 ## Create, grant and connect
@@ -11,7 +11,7 @@ persona-memory-connect share-grant --policy ./shared-space/policy.json --host co
 ~~~
 The generated configuration uses a distinct persona_shared_* service name. Add this service alongside the existing private persona_memory service using the host's documented configuration flow. Preparation does not enable or modify the host. Retain each generated WORKFLOW.md, and use the shared scope alias for this service. Generated configurations and protocol tests do not certify a real host/model; consult the host acceptance matrix for the existing verified scope.
 
-每个贡献者使用自己的绑定。所有者身份须单独授予 review，不能让 capture Agent 通过 owner 命令提升权限。WorkBuddy 包包含连接器元数据、图标与共享工作流技能材料；仍须在目标宿主实际启用核对，不把生成成功算实测完成。
+Each contributor uses a separate binding. Owner review is a separate explicit grant; capture cannot elevate through owner commands. WorkBuddy bundles contain connector metadata, an icon and shared-workflow skill materials. Actual target-host enablement still needs validation; generation is not host acceptance.
 
 ## Roles and owner workflow
 - read: read approved memory, candidate previews and handoff data; no proposals or approvals.
@@ -51,4 +51,4 @@ This is local owner-controlled configuration, not remote OAuth or an operating-s
 
 Normal errors release their own operation lock. After abrupt process death, policy.json.operation-lock may remain: inspect the recorded process and preserve the lock until explicit owner recovery. No stale-lock stealing or unbounded polling is performed. Keep raw damaged files for diagnosis instead of overwriting them with an empty store.
 
-相关协议边界：[MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)。本实现不声称提供 HTTP 远程授权。
+Protocol boundary: [MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization). This implementation does not provide remote HTTP authorization.

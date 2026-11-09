@@ -346,7 +346,7 @@ export class PersonaMemory {
     const a=p.affinity, dayKey=this._dayKey(ts);
     if (a.dayKey!==dayKey) { a.dayKey=dayKey; a.dayGain=0; a.talkCount=0; }
     if (score.reasons.includes('direct')) {
-      if (a.talkCount>=this.config.talkDailyCap) score={delta:0,reasons:['普通互动日额度已满']};
+      if (a.talkCount>=this.config.talkDailyCap) score={delta:0,reasons:['Daily interaction allowance reached']};
       else a.talkCount++;
     }
     const before=a.value;
@@ -626,26 +626,26 @@ export class PersonaMemory {
       else omitted.push({userId,reason:'no-eligible-memory'});
     }
     candidates.sort((a,b)=>b.priority-a.priority || b.lastAt-a.lastAt || (b.p?.affinity.value??0)-(a.p?.affinity.value??0) || a.userId.localeCompare(b.userId));
-    const header='【交往记忆】', lines=[],people=[],refs=[];
+    const header='[Relationship memory]', lines=[],people=[],refs=[];
     for (const c of candidates) {
       if (people.length>=maxPeople) { omitted.push({userId:c.userId,reason:'people-limit'}); continue; }
       let body,selectedTags=[];
       const tags=c.p ? (entry(this.state.tags,c.pk,[])).filter((t)=>t.longTerm || t.expiresAt===null || t.expiresAt>now)
         .sort((a,b)=>(['manual','host'].includes(b.source)?1:0)-(['manual','host'].includes(a.source)?1:0) || b.lastHitAt-a.lastHitAt) : [];
-      if (c.kind==='visitor') body='来过 '+c.v.count+' 次，没怎么聊过';
+      if (c.kind==='visitor') body='Visited '+c.v.count+' times; limited interaction';
       else {
         const parts=[],t=tierOf(c.p.affinity.value),style=summarizeStyle(c.p.style);
         if (this.config.affinityContext) {
-          parts.push(t.tier+'（'+Math.round(c.p.affinity.value)+' 分）');
+          parts.push(t.tier+' ('+Math.round(c.p.affinity.value)+' points)');
           // Current state guidance takes priority over a generic relationship tone.
           if (t.hint && !tags.some(tag=>tag.advice?.trim())) parts.push(t.hint);
         }
-        if (style.catchphrases.length) parts.push('常带 '+JSON.stringify(clean(style.catchphrases[0])));
+        if (style.catchphrases.length) parts.push('Common phrase: '+JSON.stringify(clean(style.catchphrases[0])));
         const dims=Object.entries(c.p.dimensions);
-        if (dims.length) parts.push('关系维度：'+dims.map(([n,d])=>clean(n)+'='+Math.round(d.value*10)/10).join('、'));
-        body=parts.length ? parts.join('，') : '互动记录';
+        if (dims.length) parts.push('Dimensions: '+dims.map(([n,d])=>clean(n)+'='+Math.round(d.value*10)/10).join(', '));
+        body=parts.length ? parts.join('; ') : 'Interaction record';
       }
-      let line='- '+JSON.stringify(clean(c.userId))+'：'+body;
+      let line='- '+JSON.stringify(clean(c.userId))+': '+body;
       const fits=(next)=>{const text=header+'\n'+[...lines,next].join('\n');return chars(text).length<=budget && (tokenBudget===undefined || tokenCount(text)<=tokenBudget);};
       if (!fits(line)) {
         omitted.push({userId:c.userId,reason:'character-budget'}); continue;
@@ -653,8 +653,8 @@ export class PersonaMemory {
       if (c.p) {
         for (const t of tags) {
           // Keep a label and its guidance together: neither may be silently truncated.
-          const label=JSON.stringify(inline(t.tag))+(t.advice?.trim() ? '（建议：'+JSON.stringify(inline(t.advice))+'）' : '');
-          const next=line+(selectedTags.length?'、':'，状态：')+label;
+          const label=JSON.stringify(inline(t.tag))+(t.advice?.trim() ? ' (advice: '+JSON.stringify(inline(t.advice))+')' : '');
+          const next=line+(selectedTags.length?', ':'; state: ')+label;
           if (selectedTags.length>=3 || !fits(next)) { omitted.push({userId:c.userId,tag:t.tag,reason:'tag-budget'}); continue; }
           line=next; selectedTags.push(clone(t));
           refs.push({personKey:c.pk,tag:t.tag,addedAt:t.addedAt,lastEvidenceAt:t.lastEvidenceAt ?? t.lastHitAt,revision:t.revision??0});

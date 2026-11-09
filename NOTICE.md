@@ -1,21 +1,21 @@
-# 1.5 来源与版本边界
+# Source and version boundaries
 
-本文件与 LICENSE 配套，仅描述本版分发范围和历史参考，不重写已发布版本。
+This notice accompanies LICENSE. It describes the distributed implementation and historical references; it does not rewrite published releases.
 
-## 当前实现
+## Current implementation
 
-本项目维护者为 suking459。通用记录、范围检索、候选审阅、更正/遗忘、存储与宿主通道有本项目的实现与演进记录。独立策略批次按先行规格替换了默认词表、标签建议、亲疏口吻及标签生命周期，保留兼容接口、原数据和自定义规则；不把通用概念、接口或短惯用表达主张为排他原创。
+The maintainer is suking459. Typed records, scoped retrieval, candidate review, correction/forgetting, storage and host channels have implementation and evolution records in this project. The independent-policy batch replaced default word lists, tag advice, relationship wording and tag lifecycle according to a prior specification, while retaining compatible interfaces, stored data and custom rules. No exclusive authorship is claimed over general concepts, interfaces or short conventional expressions.
 
-来源证据和局限见 [1.5 复核报告](docs/1.5-ORIGIN-REVIEW.md)、[逐文件矩阵](docs/1.5-ORIGIN-MATRIX.md) 与 [迁移说明](docs/1.5-POLICY-MIGRATION.md)。本次比较未确认仍保留独特的第三方代码表达，但它不是全网原创或全部权利归属的保证。
+See the [1.5 origin review](docs/1.5-ORIGIN-REVIEW.md), [file matrix](docs/1.5-ORIGIN-MATRIX.md) and [migration guide](docs/1.5-POLICY-MIGRATION.md). The bounded comparison did not confirm retained distinctive third-party code expression. It does not guarantee worldwide originality or ownership of all rights.
 
-## 旧版本与历史参考
+## Earlier versions and historical references
 
-早期关系状态设计参考过本机 QQ-Agent 环境的 memory-tree。该本机插件的原始下载、作者及独立许可至今没有闭合；不能直接把它归为 QQ-Agent 上游作者公开 MIT 发布。QQ-Agent 曾使用 K0nd1us/QQ-agent 路径，取得的公开 Fork 保留 Kondius 的 MIT 声明；这不等于确认未知插件的权利人。相关身份/版本证据见上述复核报告。
+The early relationship-state design referenced memory-tree in a local QQ-Agent environment. That plugin's original download, author and independent license remain unresolved; it must not simply be attributed to the QQ-Agent upstream author's public MIT release. QQ-Agent previously used the K0nd1us/QQ-agent path; the retrieved public fork retains Kondius's MIT notice. This does not identify the unknown plugin's rights holder. Identity and version evidence is recorded in the review above.
 
-五段数值、部分兼容参数和字段形状保留历史设计关系；公开思想并不主张首创。v1.0.0 及其他历史发布的声明、标签和许可权利保持原样，本版不回溯取消或改写它们。
+Five numeric bands, some compatibility parameters and field shapes retain a historical design relationship. Public ideas are not claimed as original inventions. Notices, tags and license rights granted by v1.0.0 and other historical releases remain unchanged; this version does not retroactively revoke or rewrite them.
 
-## 第三方组件与输入数据
+## Third-party components and input data
 
-核心源码包不捆绑运行时依赖；为框架编写兼容接口不取得框架代码的版权。可选框架、开发依赖、宿主和另行安装的组件仍各自适用原许可；若未来实际再分发第三方源码或实质性部分，必须保留相应声明或取得适当许可。
+The core source package bundles no runtime dependencies. Compatibility adapters do not confer copyright in their target frameworks. Optional frameworks, development dependencies, hosts and separately installed components retain their respective licenses. Future redistribution of third-party source or substantial portions must retain required notices or obtain appropriate permission.
 
-旧用户存储、外部证据和备份可能含第三方原文，本版不自动删除它们，也不把它们纳入本项目的原创声明。另行分发数据或组件时须独立核查。Git 作者名及 AI 辅助记录本身不能完成著作权确权。
+Existing stores, external evidence and backups may contain third-party text. This version neither automatically deletes it nor includes it in the project's authorship claim. Separately distributed data and components require their own review. Git author names and AI-assistance records alone do not establish copyright ownership.
