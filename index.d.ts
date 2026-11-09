@@ -293,7 +293,7 @@ export declare function explainMemoryRecall(pm:PersonaMemory,options:{subject:Me
   explanation:Record<string,unknown>;limits:string;
 };
 export interface ManagementPreview {
-  format:'persona-memory-management-plan';version:1;kind:'review'|'forget';subject:MemorySubject;
+  format:'persona-memory-management-plan';version:1;kind:'review'|'forget'|'maintenance';subject:MemorySubject;
   createdAt:number;expiresAt:number;persona:string;scope:string;expectedRevision:string|null;
   targetDigest:string;configDigest:string;checksum:string;allowed:boolean;
 }
@@ -313,6 +313,37 @@ export declare function previewCandidateReview(pm:PersonaMemory,options:{subject
 export declare function applyCandidateReview(pm:PersonaMemory,preview:unknown):Promise<ManagedCommitResult&{decision:'accept'|'reject';reviewed:number;results:{candidateId:string;recordId?:string;status:'accepted'|'rejected'}[]}>;
 export declare function previewMemoryForget(pm:PersonaMemory,options:{subject:MemorySubject;id:string;expectedRevision:number}):Promise<MemoryForgetPreview>;
 export declare function applyMemoryForget(pm:PersonaMemory,preview:unknown):Promise<ManagedCommitResult&{removed:number}>;
+
+export interface MemoryMaintenancePreview extends ManagementPreview {
+  kind:'maintenance';limit:number;targets:{type:'memory'|'candidate';id:string;revision:number}[];
+  impact:{memories:number;candidates:number;recordIds:string[];candidateIds:string[];truncated:boolean};
+  skipped:{type:'memory'|'candidate';id:string;reason:string}[];remaining:number;considered:number;scan:{records:number;candidates:number};
+}
+export declare function previewMemoryMaintenance(pm:PersonaMemory,options:{subject:MemorySubject;limit?:number}):Promise<MemoryMaintenancePreview>;
+export declare function applyMemoryMaintenance(pm:PersonaMemory,preview:unknown):Promise<(ManagedCommitResult|{committed:false;reason:'no-eligible-targets';requiresReload:false})&{removed:{memories:number;candidates:number}}>;
+
+export type MemoryOperation='recall'|'context'|'proposal'|'review'|'persist'|'maintenance'|'task';
+export declare const MEMORY_OPERATIONS:readonly MemoryOperation[];
+export interface MemoryMeasurement {operation:MemoryOperation;durationMs:number;success:boolean;inputTokens?:number;outputTokens?:number;bytes?:number}
+export interface OperationMetrics {
+  samples:number;succeeded:number;failed:number;durationMs:{mean:number|null;p50:number|null;p95:number|null};
+  inputTokens:number|null;outputTokens:number|null;bytes:number|null;known:{inputTokens:number;outputTokens:number;bytes:number};
+}
+export interface MemoryMetricsSummary {
+  capacity:number;retained:number;total:number;dropped:number;measurementSource:'caller-reported';evidenceVerified:false;operations:Record<MemoryOperation,OperationMetrics>;
+}
+export interface MemoryMetrics {
+  record(sample:MemoryMeasurement):{retained:number;dropped:number};summary():MemoryMetricsSummary;samples():MemoryMeasurement[];clear():void;
+}
+export declare function createMemoryMetrics(options?:{capacity?:number}):MemoryMetrics;
+export type MemoryTrial=Omit<MemoryMeasurement,'operation'>&{caseIndex:number;mode:'enabled'|'disabled'};
+export interface MemoryTrialComparison {
+  measurementSource:'caller-reported';evidenceVerified:false;
+  pairs:{caseIndex:number;enabled:Omit<MemoryMeasurement,'operation'>;disabled:Omit<MemoryMeasurement,'operation'>;delta:{durationMs:number;inputTokens:number|null;outputTokens:number|null;bytes:number|null}}[];
+  unpaired:{caseIndex:number;missing:'enabled'|'disabled'}[];
+  summary:{paired:number;enabledSuccess:number;disabledSuccess:number;meanDurationDeltaMs:number|null};limits:string;
+}
+export declare function compareMemoryTrials(trials:MemoryTrial[]):MemoryTrialComparison;
 
 export interface TaskCheckpoint {goal:string;completed:string[];pending:string[];blockers:string[];nextSteps:string[]}
 export interface TaskHandoff {

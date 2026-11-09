@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased — English repository presentation
+## Unreleased — local 1.9 development
+
+- Bounded caller-reported scalar metrics and paired comparisons, explicit scoped maintenance preview/apply, and common owner-output protection for plans/backups/handoffs. No automatic telemetry, cleanup or publication. See [usage](docs/measurement-maintenance.md).
+
+### English repository presentation
 
 - Public documentation, examples, comments and default relationship/demo presentation use English; added a repository language check and continuing language policy.
 - Preserve stored source-language content, explicit locale resources, linguistic rules and multilingual fixtures. Retained OneBot compatibility placeholders after reproducing an attribution change caused by translating them.

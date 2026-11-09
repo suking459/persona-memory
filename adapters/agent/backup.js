@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createMemoryBackup,inspectMemoryBackup,previewMemoryRestore,restoreMemoryBackup} from '../../src/index.js';
 import {normalizeBinding} from './binding.js';
+import {assertOwnerOutput} from './output.js';
 import {openAgentMemory} from './store.js';
 const LIMIT=67125248;
 export function readBackupJSON(file,maxBytes=LIMIT){
@@ -20,10 +21,10 @@ export function readBackupJSON(file,maxBytes=LIMIT){
     return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,size)));
   }finally{fs.closeSync(fd);}
 }
-function writeJSON(file,value){
+function writeJSON(file,value,storage){
   const text=JSON.stringify(value)+'\n';if(Buffer.byteLength(text)>LIMIT)throw new RangeError('Backup exceeds byte limit');
   // Never overwrite a snapshot, prior backup, or existing plan.
-  const fd=fs.openSync(path.resolve(file),'wx',0o600);
+  const fd=fs.openSync(assertOwnerOutput(file,storage),'wx',0o600);
   try{fs.writeFileSync(fd,text);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}
 }
 const bindingDigest=b=>createHash('sha256').update(JSON.stringify(b)).digest('hex');
@@ -38,7 +39,7 @@ export async function agentBackupCommand(action,raw,options){
     if(!options.out)throw new TypeError('--out required');
     const {persona,namespace,subjects,locale}=binding;
     const backup=await createMemoryBackup(pm,{identity:{persona,namespace,subjects,locale}});
-    writeJSON(options.out,backup);
+    writeJSON(options.out,backup,binding.storage);
     return {backedUp:true,file:path.resolve(options.out),checksum:backup.checksum,counts:inspectMemoryBackup(backup).counts};
   }
   if(!options.backup)throw new TypeError('--backup required');
@@ -47,7 +48,7 @@ export async function agentBackupCommand(action,raw,options){
   if(action==='restore-preview'){
     if(!options.out)throw new TypeError('--out required');
     const preview=await previewMemoryRestore(pm,backup);
-    writeJSON(options.out,{format:'persona-memory-agent-restore-plan',version:1,bindingDigest:bindingDigest(binding),preview});
+    writeJSON(options.out,{format:'persona-memory-agent-restore-plan',version:1,bindingDigest:bindingDigest(binding),preview},binding.storage);
     return {previewOnly:true,file:path.resolve(options.out),...preview};
   }
   const plan=readBackupJSON(options.plan,32768);

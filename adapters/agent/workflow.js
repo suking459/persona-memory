@@ -11,6 +11,7 @@ const english=[
  '6. Owner review must inspect memory_forget_preview, obtain the owner decision, then use that same connection previewId with memory_forget. Impact includes history, derived fields and related candidates. Batch review likewise previews before applying; previews do not constitute human approval.',
  '7. Restart reloads persistent storage. Conflicts/write failures require inspection and reload, never unbounded retries.','',
  'Reply in the user’s current language. Host-native memory and permissions remain authoritative. No automatic every-turn hook is installed.',
+ 'For procedures, use memory_experience_reuse with explicit conditions and report actual feedback for the exact version. Submit memory_measure only from completed host instrumentation; omit unknown token/byte counts. Metrics are caller-reported, scoped to this connection and not persisted. Maintenance requires owner preview and a separate explicit decision.',
  'The server constrains MCP calls, not an agent with unrestricted operating-system access.','',
 ];
 const chinese=[

@@ -20,7 +20,7 @@ See [use cases](docs/use-cases.md) and the [API](docs/API.md).
 
 **1.5.0 is the published stable release.** It adds scoped Agent capture and separate owner review, provenance invalidation, optional semantic retrieval, optional native SQLite, full backup/restore and owner diagnostics/previews.
 
-The current checkout contains **unpublished 1.8 development**: validated task handoffs, owner-controlled local sharing and reviewed experience feedback/reuse. Local snapshots use **schema 8** and read schemas 1–7. Published 1.5 uses schema 6. Back up before upgrading; old clients cannot read new schemas. Internal 1.6–1.9 milestones are not separate public releases; 2.0 requires its own validation and owner release decision.
+The current checkout contains **unpublished 1.9 development**: validated task handoffs, owner-controlled local sharing, reviewed experience feedback/reuse, and validated local measurement and bounded owner maintenance. Local snapshots use **schema 8** and read schemas 1–7. Published 1.5 uses schema 6. Back up before upgrading; old clients cannot read new schemas. Internal 1.6–1.9 milestones are not separate public releases; 2.0 requires its own validation and owner release decision.
 
 **1.5 changes default behavior:** built-in emotion/health word lists and relationship wording were replaced with host-provided judgments and neutral numeric bands. Custom rules and existing data remain supported. Read the [policy migration guide](docs/1.5-POLICY-MIGRATION.md). Implementation is maintainer-directed and AI-assisted; the [origin review](docs/1.5-ORIGIN-REVIEW.md) has explicit limits and makes no worldwide originality guarantee.
 
@@ -33,7 +33,7 @@ The current checkout contains **unpublished 1.8 development**: validated task ha
 - **Storage and recovery:** JSON files, memory snapshots, custom asynchronous stores and optional SQLite. File locking, content revisions, selective transfer previews and full snapshot recovery.
 - **Optional relationship state:** real interactions, configurable dimensions, correctable tags, expiry/decay and local style statistics; community, companion, support and NPC presets.
 - **Use confirmation:** previewing does not increase use counts. Confirm successful consumption with a turn ID; retries are bounded and overlapping contexts can be confirmed atomically.
-- **Local 1.6–1.8 additions:** [handoff](docs/handoff.md), [sharing](docs/sharing.md) and [experience reuse](docs/experience-reuse.md). These are local development features, not capabilities promised by npm 1.5.0.
+- **Local 1.6–1.8 additions:** [handoff](docs/handoff.md), [sharing](docs/sharing.md) and [experience reuse](docs/experience-reuse.md). Local 1.9 adds [scalar measurement and owner maintenance](docs/measurement-maintenance.md). These are local development features, not capabilities promised by npm 1.5.0.
 
 ## Installation
 

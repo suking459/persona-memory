@@ -1,6 +1,6 @@
 {
   "name": "persona-memory",
-  "version": "1.8.0-dev.0",
+  "version": "1.9.0-dev.0",
   "description": "Host-independent agent memory: typed records, scoped retrieval, temporal versions, reviewed learning, optional relationship state. Zero runtime dependencies.",
   "type": "module",
   "main": "src/index.js",
@@ -111,7 +111,7 @@
     "evaluate": "node tools/evaluate.mjs",
     "evaluate:retrieval": "node tools/evaluate-retrieval.mjs",
     "shadow": "node tools/shadow.mjs",
-    "test:core": "node --test test/core.test.mjs test/independent-policy.test.mjs test/milestone.test.mjs test/boundaries.test.mjs test/context-regressions.test.mjs test/state-regressions.test.mjs test/text-evidence.test.mjs test/upgrade-scenarios.test.mjs test/typed-memory.test.mjs test/typed-memory-audit.test.mjs test/retrieval.test.mjs test/retrieval-audit.test.mjs test/retrieval-lifecycle.test.mjs test/retrieval-transports.test.mjs test/extra.test.mjs test/demo.test.mjs test/risk.test.mjs test/time-versions.test.mjs test/storage.test.mjs test/transfer.test.mjs test/time-storage-audit.test.mjs test/time-storage-lifecycle.test.mjs test/time-storage-transports.test.mjs test/candidates.test.mjs test/learning.test.mjs test/experience.test.mjs test/learning-audit.test.mjs test/learning-transports.test.mjs test/learning-lifecycle.test.mjs test/platform-boundaries.test.mjs test/transport-boundaries.test.mjs test/prototype-identities.test.mjs test/agent-integration.test.mjs test/agent-operations.test.mjs test/multilingual.test.mjs test/agent-review-flow.test.mjs test/provenance.test.mjs test/candidate-quality.test.mjs test/semantic.test.mjs test/semantic-http.test.mjs test/semantic-evaluation.test.mjs test/sqlite.test.mjs test/backup.test.mjs test/management.test.mjs test/doctor.test.mjs test/bin-entry.test.mjs test/handoff.test.mjs test/handoff-transports.test.mjs test/origin.test.mjs test/sharing.test.mjs test/sharing-transports.test.mjs test/experience-reuse.test.mjs test/experience-transports.test.mjs",
+    "test:core": "node --test test/core.test.mjs test/independent-policy.test.mjs test/milestone.test.mjs test/boundaries.test.mjs test/context-regressions.test.mjs test/state-regressions.test.mjs test/text-evidence.test.mjs test/upgrade-scenarios.test.mjs test/typed-memory.test.mjs test/typed-memory-audit.test.mjs test/retrieval.test.mjs test/retrieval-audit.test.mjs test/retrieval-lifecycle.test.mjs test/retrieval-transports.test.mjs test/extra.test.mjs test/demo.test.mjs test/risk.test.mjs test/time-versions.test.mjs test/storage.test.mjs test/transfer.test.mjs test/time-storage-audit.test.mjs test/time-storage-lifecycle.test.mjs test/time-storage-transports.test.mjs test/candidates.test.mjs test/learning.test.mjs test/experience.test.mjs test/learning-audit.test.mjs test/learning-transports.test.mjs test/learning-lifecycle.test.mjs test/platform-boundaries.test.mjs test/transport-boundaries.test.mjs test/prototype-identities.test.mjs test/agent-integration.test.mjs test/agent-operations.test.mjs test/multilingual.test.mjs test/agent-review-flow.test.mjs test/provenance.test.mjs test/candidate-quality.test.mjs test/semantic.test.mjs test/semantic-http.test.mjs test/semantic-evaluation.test.mjs test/sqlite.test.mjs test/backup.test.mjs test/management.test.mjs test/doctor.test.mjs test/bin-entry.test.mjs test/handoff.test.mjs test/handoff-transports.test.mjs test/origin.test.mjs test/sharing.test.mjs test/sharing-transports.test.mjs test/experience-reuse.test.mjs test/experience-transports.test.mjs test/metrics.test.mjs test/maintenance.test.mjs test/measurement-transports.test.mjs",
     "test:risk": "node --test test/risk.test.mjs",
     "example:time-storage": "node examples/time-storage.js",
     "review": "node tools/review.mjs",
@@ -128,7 +128,9 @@
     "test:handoff": "node --test test/handoff.test.mjs test/handoff-transports.test.mjs",
     "test:sharing": "node --test test/origin.test.mjs test/sharing.test.mjs test/sharing-transports.test.mjs",
     "test:experience": "node --test test/experience.test.mjs test/experience-reuse.test.mjs test/experience-transports.test.mjs",
-    "check:language": "node tools/check-language.mjs"
+    "check:language": "node tools/check-language.mjs",
+    "test:measurement": "node --test test/metrics.test.mjs test/maintenance.test.mjs test/measurement-transports.test.mjs",
+    "example:measurement": "node examples/measurement.js"
   },
   "publishConfig": {
     "access": "public"

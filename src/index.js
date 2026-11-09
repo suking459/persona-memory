@@ -11,3 +11,5 @@ export {previewCandidateReview,applyCandidateReview,previewMemoryForget,applyMem
 
 export {createTaskHandoff,openTaskHandoff} from './handoff.js';
 export {proposeExperience,proposeExperienceFeedback,proposeExperienceRetirement,reuseExperiences} from './experience-reuse.js';
+export {MEMORY_OPERATIONS,createMemoryMetrics,compareMemoryTrials} from './metrics.js';
+export {previewMemoryMaintenance,applyMemoryMaintenance} from './management.js';

@@ -1,11 +1,12 @@
 // Independently written scoped Agent boundary; no host settings or model calls.
 import {lockSharedBinding,assertSharedStore} from './shared-policy.js';
 import {createTaskHandoff,openTaskHandoff} from '../../src/handoff.js';
+import {createMemoryMetrics,MEMORY_OPERATIONS} from '../../src/metrics.js';
 import {proposeExperience,proposeExperienceFeedback,proposeExperienceRetirement,reuseExperiences} from '../../src/experience-reuse.js';
 import {createSemanticRetriever,createHttpEmbedder} from '../semantic/index.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {diagnoseMemory,explainMemoryRecall} from '../../src/diagnostics.js';
-import {previewCandidateReview,applyCandidateReview,previewMemoryForget,applyMemoryForget} from '../../src/management.js';
+import {previewCandidateReview,applyCandidateReview,previewMemoryForget,applyMemoryForget,previewMemoryMaintenance,applyMemoryMaintenance} from '../../src/management.js';
 import {matchesAgentStore} from './store.js';
 import {normalizeBinding} from './binding.js';
 import {copySnapshotJSON} from '../../src/snapshot.js';
@@ -20,6 +21,7 @@ const define=(name,description,properties,required,readOnly=true,destructive=fal
 const handoffCheckpoint=schema({goal:{type:'string',maxLength:2000},completed:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},pending:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},blockers:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},nextSteps:{type:'array',maxItems:32,items:{type:'string',maxLength:512}}},['goal','completed','pending','blockers','nextSteps']);
 const experienceConditions={type:'array',maxItems:16,items:{type:'string',maxLength:256}};
 const READ=[
+  define('memory_metrics','Inspect this connection/scope scalar measurements. Caller-reported, ephemeral and not proof of task quality.',{scope},['scope']),
   define('memory_experience_reuse','Inspect reviewed experiences under explicit condition labels. Eligibility is not evidence verification or permission to execute.',{scope,conditions:experienceConditions,limit:integer(32),includeNeedsReview:{type:'boolean'}},['scope','conditions']),
   define('memory_handoff_prepare','Prepare a bounded task checkpoint using approved references. Text is unverified data; never executes tasks.',{scope,checkpoint:handoffCheckpoint,references:{type:'array',maxItems:16,items:schema({id:text,revision:integer(Number.MAX_SAFE_INTEGER)},['id','revision'])},ttlHours:{type:'number',exclusiveMinimum:0,maximum:720}},['scope','checkpoint','references']),
   define('memory_handoff_open','Recheck a handoff against this bound scope and current approved memory. Checksum is not authentication.',{scope,handoff:{type:'object'}},['scope','handoff']),
@@ -31,6 +33,7 @@ const READ=[
   define('memory_candidates','List proposed memories in one bound scope; these are not approved facts.',{scope,status:{enum:['pending','accepted','rejected']},limit:integer(32)},['scope']),
 ];
 const CAPTURE=[
+  define('memory_measure','Record actual host-measured scalars for this connection/scope. Never guess tokens, success or elapsed time. No text or telemetry is accepted.',{scope,operation:{enum:MEMORY_OPERATIONS},durationMs:{type:'number',minimum:0,maximum:86400000},success:{type:'boolean'},inputTokens:{type:'integer',minimum:0,maximum:1000000000},outputTokens:{type:'integer',minimum:0,maximum:1000000000},bytes:{type:'integer',minimum:0,maximum:1000000000}},['scope','operation','durationMs','success'],false),
   define('memory_experience_propose','Propose an experience for review. verified=true requires owner review access and evidence; ordinary approval does not verify model reports.',{scope,key:text,task:text,context:{},attempt:text,result:text,conditions:experienceConditions,outcome:{enum:['success','failure','mixed','unknown']},verified:{type:'boolean'},evidenceId:text,reason:text},['scope','key','task','attempt','result','conditions','outcome','evidenceId','reason'],false),
   define('memory_experience_feedback','Propose task feedback with evidence and an exact experience revision. attest=true requires owner review access; no feedback is automatically approved.',{scope,id:text,expectedRevision:integer(Number.MAX_SAFE_INTEGER),trialId:text,outcome:{enum:['helped','not-helpful','failed','not-applicable']},conditions:experienceConditions,note:text,evidenceId:text,attest:{type:'boolean'}},['scope','id','expectedRevision','trialId','outcome','conditions','evidenceId'],false),
   define('memory_propose','Propose a fact or a correction to a field. Requires evidence; never writes approved memory directly.',{
@@ -39,6 +42,8 @@ const CAPTURE=[
   define('memory_confirm','Confirm a context was actually used in one completed response; do not call for previews or failures.',{contextId:text,turnId:text},['contextId','turnId'],false),
 ];
 const REVIEW=[
+  define('memory_maintenance_preview','Owner only: preview bounded expired-state cleanup. Does not remove data or grant approval.',{scope,limit:integer(32)},['scope']),
+  define('memory_maintenance_apply','Owner only: apply this connection’s inspected maintenance preview after explicit owner approval. Changed targets or currently usable descendants reject deletion.',{scope,previewId:text},['scope','previewId'],false,true),
   define('memory_experience_retire','Owner only: propose retirement or reinstatement of the current experience revision. Requires a separate candidate review; reinstatement does not restore verification.',{scope,id:text,expectedRevision:integer(Number.MAX_SAFE_INTEGER),evidenceId:text,reason:text,retired:{type:'boolean'}},['scope','id','expectedRevision','evidenceId','reason'],false),
   define('memory_review_preview','Owner only: preview 1..32 same-scope candidate decisions as one atomic batch. Evidence still needs owner verification.',{scope,decision:{enum:['accept','reject']},requests:{type:'array',minItems:1,maxItems:32,items:schema({id:text,expectedRevision:integer(Number.MAX_SAFE_INTEGER)},['id','expectedRevision'])},reason:text},['scope','decision','requests']),
   define('memory_review_batch','Owner only: apply a current batch preview created by this connection. Any changed target rejects the whole batch.',{scope,previewId:text},['scope','previewId'],false,true),
@@ -70,7 +75,8 @@ export function createAgentSession(pm,raw){
     return retrievers.get(alias);
   };
   let unavailable=false,busy=false;
-  const contexts=new Set(),previews=new Map();
+  const contexts=new Set(),previews=new Map(),metrics=new Map();
+  function metricsFor(alias){if(!metrics.has(alias))metrics.set(alias,createMemoryMetrics());return metrics.get(alias);}
   function keepPreview(plan){
     const {checksum,targetDigest,configDigest,expectedRevision,...visible}=plan;
     const previewId=randomUUID(),result=copySnapshotJSON({previewId,...visible},390000);
@@ -105,6 +111,10 @@ export function createAgentSession(pm,raw){
       assertSharedStore(pm,sharedLease);
       let result,mutated=false;
       switch(name){
+        case 'memory_metrics':return metricsFor(a.scope).summary();
+        case 'memory_measure':{const {scope:alias,...sample}=a;return metricsFor(alias).record(sample);}
+        case 'memory_maintenance_preview':return keepPreview(await previewMemoryMaintenance(pm,{subject,...(a.limit===undefined?{}:{limit:a.limit})}));
+        case 'memory_maintenance_apply':return await managedApply(applyMemoryMaintenance,takePreview(a.previewId,'maintenance',subject));
         case 'memory_experience_reuse':return reuseExperiences(pm,{subject,conditions:a.conditions,limit:count(a.limit,8,32),...(a.includeNeedsReview===undefined?{}:{includeNeedsReview:a.includeNeedsReview})});
         case 'memory_experience_propose':{
           if(a.verified!==undefined&&typeof a.verified!=='boolean')throw new TypeError('verified must be boolean');
