@@ -23,7 +23,7 @@ LlamaIndex Python and TS APIs are separate. createLlamaIndexBridge composes TS M
 
 ## Runtime evidence
 
-Core uses Node built-ins and targets Node 18+ syntax; optional development SDKs require newer runtimes. Deploy on a maintained runtime rather than equating engines minimum with a security-maintenance promise. Historical [1.0 hardening](1.0-HARDENING.md) has six Windows/five Ubuntu combinations; later source has its own matrix in [1.8 validation](1.8-VALIDATION.md). Historical [CI](https://github.com/suking459/persona-memory/actions/workflows/ci.yml) does not replace current-source checks. [Agent acceptance](AGENT-ACCEPTANCE.md) separately records real host/model versions.
+Core uses Node built-ins and targets Node 18+ syntax; optional development SDKs require newer runtimes. Deploy on a maintained runtime rather than equating engines minimum with a security-maintenance promise. Historical [1.0 hardening](1.0-HARDENING.md) has six Windows/five Ubuntu combinations; later source has its own matrices in [1.9 validation](1.9-VALIDATION.md) and [2.0 candidate validation](2.0-VALIDATION.md). Historical [CI](https://github.com/suking459/persona-memory/actions/workflows/ci.yml) does not replace current-source checks. [Agent acceptance](AGENT-ACCEPTANCE.md) separately records real host/model versions.
 
 ## Failure and retry boundaries
 

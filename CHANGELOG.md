@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased — local 1.9 development
+## Unreleased — local 2.0 integration candidate
+
+- Integrated sharing/review/correction/handoff/experience/maintenance and private isolation/revocation tests across restarts.
+- Synthetic upgrade/recovery fixtures generated with the actual published 1.0 and 1.5 packages; old readers refuse schema 8 without changing bytes.
+- Refreshed eleven official configuration references and corrected the DSH custom service-name bound; live vendor acceptance remains separately scoped.
+- English repository convention in local instructions, public guide and CI check. See docs/2.0-VALIDATION.md and docs/2.0-MIGRATION.md. No automatic release.
+
+### Internal 1.9 checkpoint
 
 - Bounded caller-reported scalar metrics and paired comparisons, explicit scoped maintenance preview/apply, and common owner-output protection for plans/backups/handoffs. No automatic telemetry, cleanup or publication. See [usage](docs/measurement-maintenance.md).
 

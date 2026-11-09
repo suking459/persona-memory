@@ -23,6 +23,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
       - run: npm run typecheck
+      - run: npm run check:language
       - run: npm run evaluate
       - run: npm run evaluate:retrieval
       - run: npm run evaluate:learning
@@ -35,3 +36,4 @@ jobs:
           node-version: 18
       - run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
       - run: npm run test:core
+      - run: npm run check:language

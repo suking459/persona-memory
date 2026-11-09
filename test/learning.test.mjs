@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PersonaMemory,MemorySnapshotStore} from '../src/index.js';
 import {createMemoryLearner} from '../adapters/learning/index.js';
+import {testTimeout} from '../tools/test-limits.mjs';
 const subject={type:'user',id:'u'},other={type:'user',id:'other'};
 const item=(extra={})=>({subject,kind:'preference',key:'format',value:'short',confidence:0.9,...extra});
 const setup=options=>{const pm=new PersonaMemory({clock:()=>1000});return {pm,learner:createMemoryLearner(pm,{subject,...options})};};
@@ -33,7 +34,8 @@ test('cross-scope output, unauthorized kinds and authority fields are rejected b
   }
 });
 test('extractor timeout requests cancellation and late results cannot write candidates',async()=>{
-  const {pm,learner}=setup({timeoutMs:10});let finish,signal;
+  // Leave time for callback entry under emulation; production deadlines are unchanged.
+  const {pm,learner}=setup({timeoutMs:testTimeout(100)});let finish,signal;
   const pending=learner.extract({text:'request',eventId:'slow'},(_,options)=>{signal=options.signal;return new Promise(resolve=>{finish=resolve;});});
   await assert.rejects(pending,{code:'ERR_TURN_TIMEOUT'});assert.equal(signal.aborted,true);
   finish([item()]);await new Promise(resolve=>setImmediate(resolve));assert.equal(pm.diagnostics().candidates,0);assert.equal(pm.diagnostics().memories,0);

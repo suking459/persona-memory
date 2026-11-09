@@ -1,6 +1,6 @@
 # Agent host acceptance
 
-Historical test date: 2026-11-01, local 1.5 candidate. Exact entry/version/layer matters; generated configuration and protocol success are not real-model sessions. Later 1.6–1.8 features have no new host/model certification from these results.
+Historical test date: 2026-11-01, local 1.5 candidate. Exact entry/version/layer matters; generated configuration and protocol success are not real-model sessions. Later 1.6–2.0 features have no new host/model certification from these results.
 
 | Host | Tested entry | Native client | Real model | Unverified |
 | --- | --- | --- | --- | --- |

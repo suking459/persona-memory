@@ -1,0 +1,235 @@
+{
+  "provenance": {
+    "synthetic": true,
+    "generatedBy": "Published npm package 1.0.0",
+    "packageUrl": "https://registry.npmjs.org/persona-memory/-/persona-memory-1.0.0.tgz",
+    "packageSha256": "5b3283af15bcc73ec6c754680a51f4985c02f28778cfd23c905a58cf6bc01398",
+    "generatedAt": 1767225600000,
+    "sourceSchema": 5
+  },
+  "snapshot": {
+    "schemaVersion": 5,
+    "persona": "upgrade",
+    "scope": "synthetic",
+    "tagScope": "user",
+    "sessions": {},
+    "tags": {},
+    "visitors": {},
+    "memories": {
+      "old": {
+        "id": "old",
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "kind": "preference",
+        "key": "language",
+        "value": "Japanese",
+        "source": "manual",
+        "observedAt": 1767225600000,
+        "expiresAt": null,
+        "validFrom": 1767225600000,
+        "evidenceId": "initial",
+        "createdAt": 1767225600000,
+        "updatedAt": 1767225600000,
+        "revision": 1,
+        "status": "superseded",
+        "validUntil": 1767225600000,
+        "supersededBy": "current"
+      },
+      "current": {
+        "id": "current",
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "kind": "preference",
+        "key": "language",
+        "value": "日本語 🌍",
+        "source": "manual",
+        "observedAt": 1767225600000,
+        "expiresAt": null,
+        "validFrom": 1767225600000,
+        "evidenceId": "correction",
+        "createdAt": 1767225600000,
+        "updatedAt": 1767225600000,
+        "revision": 2,
+        "status": "current",
+        "validUntil": null,
+        "supersedes": "old"
+      },
+      "private": {
+        "id": "private",
+        "subject": {
+          "type": "user",
+          "id": "synthetic-private"
+        },
+        "kind": "fact",
+        "key": "private",
+        "value": "Private fixture",
+        "source": "manual",
+        "observedAt": 1767225600000,
+        "expiresAt": null,
+        "validFrom": 1767225600000,
+        "createdAt": 1767225600000,
+        "updatedAt": 1767225600000,
+        "revision": 1,
+        "status": "current",
+        "validUntil": null
+      },
+      "expired": {
+        "id": "expired",
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "kind": "state",
+        "key": "status",
+        "value": "Old state",
+        "source": "manual",
+        "observedAt": 1767225600000,
+        "expiresAt": 1767225600000,
+        "validFrom": 1767225600000,
+        "createdAt": 1767225600000,
+        "updatedAt": 1767225600000,
+        "revision": 1,
+        "status": "current",
+        "validUntil": null
+      },
+      "experience": {
+        "id": "experience",
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "kind": "episode",
+        "key": "method",
+        "value": {
+          "attempt": "Run isolated checks",
+          "conditions": [
+            "Linux"
+          ],
+          "context": null,
+          "result": "Reported result",
+          "task": "Synthetic task"
+        },
+        "source": "host",
+        "observedAt": 1767225600000,
+        "expiresAt": 1775001600000,
+        "validFrom": 1767225600000,
+        "evidenceId": "trial",
+        "experience": {
+          "outcome": "success",
+          "verified": false
+        },
+        "createdAt": 1767225600000,
+        "updatedAt": 1767225600000,
+        "revision": 1,
+        "status": "current",
+        "validUntil": null
+      }
+    },
+    "candidates": {
+      "pending": {
+        "id": "pending",
+        "memory": {
+          "subject": {
+            "type": "project",
+            "id": "synthetic-upgrade"
+          },
+          "kind": "fact",
+          "key": "pending",
+          "value": "Not approved",
+          "source": "model",
+          "evidenceId": "proposal",
+          "observedAt": 1767225600000,
+          "validFrom": 1767225600000,
+          "expiresAt": null
+        },
+        "reason": "",
+        "base": {
+          "id": null,
+          "revision": 0,
+          "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "createdAt": 1767225600000,
+        "updatedAt": 1767225600000,
+        "expiresAt": 1767484800000,
+        "revision": 1,
+        "status": "pending"
+      }
+    },
+    "seen": [],
+    "uses": [],
+    "history": [
+      {
+        "type": "memory-put",
+        "at": 1767225600000,
+        "recordId": "old",
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "kind": "preference",
+        "key": "language"
+      },
+      {
+        "type": "memory-put",
+        "at": 1767225600000,
+        "recordId": "current",
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "kind": "preference",
+        "key": "language",
+        "replacedId": "old"
+      },
+      {
+        "type": "memory-put",
+        "userId": "synthetic-private",
+        "at": 1767225600000,
+        "recordId": "private",
+        "subject": {
+          "type": "user",
+          "id": "synthetic-private"
+        },
+        "kind": "fact",
+        "key": "private"
+      },
+      {
+        "type": "memory-put",
+        "at": 1767225600000,
+        "recordId": "expired",
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "kind": "state",
+        "key": "status"
+      },
+      {
+        "type": "candidate-proposed",
+        "at": 1767225600000,
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "candidateId": "pending",
+        "kind": "fact",
+        "key": "pending"
+      },
+      {
+        "type": "memory-put",
+        "at": 1767225600000,
+        "recordId": "experience",
+        "subject": {
+          "type": "project",
+          "id": "synthetic-upgrade"
+        },
+        "kind": "episode",
+        "key": "method"
+      }
+    ]
+  }
+}

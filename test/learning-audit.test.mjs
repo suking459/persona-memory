@@ -59,6 +59,14 @@ test('a synchronous slow extractor cannot finish successfully after its deadline
   }),{code:'ERR_TURN_TIMEOUT'});
   assert.equal(pm.diagnostics().candidates,0);
 });
+
+test('a deadline reached before callback entry never starts extraction or writes candidates',async()=>{
+  const pm=new PersonaMemory({clock:()=>1000}),learner=createMemoryLearner(pm,{subject,timeoutMs:10});let calls=0;
+  const pending=learner.extract({eventId:'expired-before-entry',text:'data'},()=>{calls++;return [];});
+  const until=performance.now()+35;while(performance.now()<until){};
+  await assert.rejects(pending,{code:'ERR_TURN_TIMEOUT'});
+  assert.equal(calls,0);assert.equal(pm.diagnostics().candidates,0);
+});
 test('a synchronous slow model callback cannot acknowledge success just by blocking the timer',async()=>{
   const pm=new PersonaMemory({clock:()=>1000});pm.putMemory({subject,kind:'fact',key:'a',value:'current'});
   const bridge=createMemoryBridge(pm,{subject,budget:3000,timeoutMs:10});
