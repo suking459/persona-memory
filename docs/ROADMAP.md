@@ -17,9 +17,11 @@ The owner selected local 1.1–1.4 development, an optional 1.5 midpoint release
 | 1.7 | Owner-controlled local sharing and origins | Completed locally |
 | 1.8 | Conditional experience feedback and retirement | Completed locally; Windows and Linux validation recorded |
 | 1.9 | Measurements, paired comparisons, bounded maintenance | Completed locally; current Windows/Linux and offline package checks passed |
-| 2.0 | Integrated validation, migration/recovery, packaging and documentation | Local source candidate validated; final package evidence and owner publication decision remain separate |
+| 2.0 | Integrated validation, migration/recovery, packaging and documentation | 2026-11-09 candidate validated; 2026-11-13 research/evaluation follow-up, with functional adoption batches still pending; no automatic publication |
 
 See the [nine-point design](1.0-2.0-ROADMAP.md), [host acceptance](AGENT-ACCEPTANCE.md), [1.8 validation](1.8-VALIDATION.md) and [1.9 specification](1.9-MEASUREMENT-SPEC.md).
+
+The [research adoption plan](2.0-RESEARCH-ADOPTION.md) now distinguishes implemented evaluation (R0) from task-aware context selection, reviewed consolidation, native-memory coexistence and controlled model-quality trials (R1–R4). Earlier candidate tests do not mark these follow-ups complete.
 
 ## Quality and isolation
 

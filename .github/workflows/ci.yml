@@ -27,6 +27,7 @@ jobs:
       - run: npm run evaluate
       - run: npm run evaluate:retrieval
       - run: npm run evaluate:learning
+      - run: npm run evaluate:long-term
   core-node18:
     runs-on: ubuntu-latest
     steps:

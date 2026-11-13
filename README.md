@@ -4,6 +4,8 @@
 
 Applications own model calls, identity, authorization and task execution. The library stores, selects, updates, expires and confirms the use of memory. Core operations require no model key; optional extractors and embedding services run only when explicitly invoked by the host.
 
+Use the SDK inside an application, or connect an Agent to the separate local MCP process. Owner commands handle review and recovery. A skill can guide that workflow; persistence and permissions are implemented by the library/service. Host-native memory remains separate. See the [long-term memory research](docs/2.0-MEMORY-RESEARCH.md) and [2.0 adoption plan](docs/2.0-RESEARCH-ADOPTION.md).
+
 ## Where it fits
 
 | Application | Memory | Host responsibilities |
@@ -34,6 +36,7 @@ The current checkout contains an **unpublished 2.0 integration candidate**: task
 - **Optional relationship state:** real interactions, configurable dimensions, correctable tags, expiry/decay and local style statistics; community, companion, support and NPC presets.
 - **Use confirmation:** previewing does not increase use counts. Confirm successful consumption with a turn ID; retries are bounded and overlapping contexts can be confirmed atomically.
 - **Local 1.6–1.8 additions:** [handoff](docs/handoff.md), [sharing](docs/sharing.md) and [experience reuse](docs/experience-reuse.md). Local 1.9 adds [scalar measurement and owner maintenance](docs/measurement-maintenance.md). These are local development features, not capabilities promised by npm 1.5.0.
+- **Research-based evaluation:** [independent synthetic long-term traces](docs/long-term-evaluation.md) separate complete retrieved/rendered evidence, correction, expiry, abstention and scope from semantic/standing-context challenges. No external benchmark or model-quality score is claimed.
 
 ## Installation
 

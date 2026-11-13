@@ -2,6 +2,9 @@
 
 ## Unreleased — local 2.0 integration candidate
 
+- Review ten memory papers and eight host memory contracts; record native-memory coexistence and staged adoption rather than automatically importing another memory framework.
+- Add independently authored long-term lifecycle/evidence-set evaluation, explicit unsolved challenges, payload/budget checks and negative controls. No new runtime memory behavior, model calls, third-party implementation or benchmark score.
+
 - Integrated sharing/review/correction/handoff/experience/maintenance and private isolation/revocation tests across restarts.
 - Synthetic upgrade/recovery fixtures generated with the actual published 1.0 and 1.5 packages; old readers refuse schema 8 without changing bytes.
 - Refreshed eleven official configuration references and corrected the DSH custom service-name bound; live vendor acceptance remains separately scoped.
