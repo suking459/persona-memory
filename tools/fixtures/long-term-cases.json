@@ -67,7 +67,7 @@
       {"op":"put","record":{"id":"standing","subject":{"type":"project","id":"alpha"},"kind":"constraint","key":"documentation-language","value":"Repository prose uses English"}},
       {"op":"check","name":"literal preference lookup works","category":"literal","options":{"subject":{"type":"project","id":"alpha"},"query":"coffee"},"expected":["coffee"]},
       {"op":"check","name":"paraphrase without lexical overlap is not assumed solved","category":"paraphrase","tier":"challenge","options":{"subject":{"type":"project","id":"alpha"},"query":"morning refreshment"},"expected":["coffee"]},
-      {"op":"check","name":"standing constraint needs an explicit context policy","category":"standing-constraint","tier":"challenge","options":{"subject":{"type":"project","id":"alpha"},"query":"implement pagination widget"},"expected":["standing"]}
+      {"op":"check","name":"standing constraint needs an explicit context policy","category":"standing-constraint","tier":"challenge","task":{"includeStanding":true},"options":{"subject":{"type":"project","id":"alpha"},"query":"implement pagination widget"},"expected":["standing"]}
     ]}
   ]
 }

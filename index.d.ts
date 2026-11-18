@@ -66,6 +66,20 @@ export interface RecordMemoryContext {
   omittedCount:number;budget:number;characters:number;tokens?:number;tokenBudget?:number;createdAt:number;
   search:Omit<MemorySearchResult,'matches'>;
 }
+export type BuildTaskMemoryContextOptions=Omit<BuildMemoryContextOptions,'subject'|'subjects'|'relevance'>&{
+  subject:MemorySubject&{type:'project'|'task'};
+  /** Up to four total queries, including query when present. */
+  facets?:string[];
+  /** Include current scoped constraints independently of query overlap. Defaults to false. */
+  includeStanding?:boolean;
+};
+export interface TaskMemoryContext extends RecordMemoryContext {
+  taskSelection:{
+    candidateIds:string[];standingIds:string[];duplicates:number;unionOmitted:number;
+    facets:Omit<MemorySearchResult,'matches'>[];
+    standing:Omit<MemorySearchResult,'matches'>|null;
+  };
+}
 export interface ContextConfirmation {confirmed:boolean;duplicate?:boolean;tagCount:number;memoryCount:number}
 export interface PersonaMemoryConfig {
   dailyGainCap?:number;talkDailyCap?:number;decayPerDay?:number;perMessageCap?:number;
@@ -119,6 +133,7 @@ export declare class PersonaMemory {
   confirmContexts(contexts:(string|MemoryContext|RecordMemoryContext)[],options:{turnId:string}):ContextConfirmation;
   searchMemories(options:SearchMemoryOptions):MemorySearchResult;
   buildMemoryContext(options:BuildMemoryContextOptions):RecordMemoryContext;
+  buildTaskMemoryContext(options:BuildTaskMemoryContextOptions):TaskMemoryContext;
   getMemoryAt(options:MemoryAtOptions):MemoryRecord|null;
   exportMemories(options:ExportMemoriesOptions):MemoryBundle;
   previewMemoryImport(bundle:MemoryBundle,options:{mappings:SubjectMapping[]}):MemoryImportPreview;

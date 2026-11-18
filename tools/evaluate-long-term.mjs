@@ -34,12 +34,14 @@ function renderedIds(text,locale){
     return JSON.parse(line.slice(2)).id;
   }),'rendered ids');
 }
-function retrieve({pm,options,budget}){
-  const search=pm.searchMemories(options),{limit,...contextOptions}=options;
-  const context=pm.buildMemoryContext({...contextOptions,budget,maxRecords:limit??8});
+function retrieve({pm,options,budget,task}){
+  const {limit,...contextOptions}=options;
+  const settings={...contextOptions,budget,maxRecords:limit??8};
+  const context=task?pm.buildTaskMemoryContext({...settings,...task}):pm.buildMemoryContext(settings);
   const fromText=renderedIds(context.text,options.locale),references=context.records.map(hit=>hit.record.id);
   if(JSON.stringify(fromText)!==JSON.stringify(references))throw new Error('rendered evidence differs from context references');
-  return {searchIds:search.matches.map(hit=>hit.record.id),text:context.text};
+  const searchIds=task?context.taskSelection.candidateIds:pm.searchMemories(options).matches.map(hit=>hit.record.id);
+  return {searchIds,text:context.text};
 }
 function aggregate(rows,key){
   const values=rows.map(row=>row[key]),sum=k=>values.reduce((n,v)=>n+v[k],0),positive=values.filter(v=>v.complete!==null),empty=values.filter(v=>v.recall===null);
@@ -50,7 +52,7 @@ function aggregate(rows,key){
     emptyGoldQuestions:empty.length,correctAbstentions:empty.filter(v=>v.abstained).length,
     forbiddenHits:values.reduce((n,v)=>n+v.forbiddenHits.length,0)};
 }
-export async function evaluateLongTermMemory({fixture=JSON.parse(fs.readFileSync(fixtureURL,'utf8')),reader=retrieve}={}){
+export async function evaluateLongTermMemory({fixture=JSON.parse(fs.readFileSync(fixtureURL,'utf8')),reader=retrieve,taskAware=false}={}){
   if(typeof reader!=='function'||!Array.isArray(fixture.scenarios)||fixture.scenarios.length>32)throw new TypeError('invalid evaluation fixture');
   const results=[],names=new Set();let totalSteps=0;
   for(const scenario of fixture.scenarios){
@@ -84,7 +86,9 @@ export async function evaluateLongTermMemory({fixture=JSON.parse(fs.readFileSync
         const expected=ids(step.expected.map(resolve),'expected ids'),forbidden=ids((step.forbidden??[]).map(resolve),'forbidden ids'),budget=step.budget??4000;
         if(!Number.isSafeInteger(budget)||budget<0||budget>16000)throw new RangeError('invalid context budget');
         // The reader receives query options and live memory, never answer labels.
-        const before=JSON.stringify(pm.export()),answer=await reader({pm,options:clone(step.options),budget});
+        const before=JSON.stringify(pm.export());
+        const task=taskAware&&step.task?clone(step.task):undefined;
+        const answer=await reader({pm,options:clone(step.options),budget,...(task?{task}:{})});
         const actual=ids(answer.searchIds,'search ids'),shown=renderedIds(answer.text,step.options.locale),search=scoreEvidence(expected,actual,forbidden),context=scoreEvidence(expected,shown,forbidden);
         const characters=Array.from(answer.text).length,withinBudget=characters<=budget,readOnly=before===JSON.stringify(pm.export());
         const passed=search.exact&&context.exact&&!search.forbiddenHits.length&&!context.forbiddenHits.length&&withinBudget&&readOnly;
@@ -94,7 +98,7 @@ export async function evaluateLongTermMemory({fixture=JSON.parse(fs.readFileSync
   }
   const required=results.filter(r=>r.tier==='required'),challenges=results.filter(r=>r.tier!=='required');
   return {dataset:fixture.name,fixtureDigest:createHash('sha256').update(JSON.stringify(fixture)).digest('hex'),fixtureDigestFormat:'SHA-256 of JSON.stringify(parsed fixture)',packageVersion:VERSION,
-    synthetic:true,scenarios:fixture.scenarios.length,questions:results.length,passed:results.filter(r=>r.passed).length,
+    mode:taskAware?'opt-in-task-context':'lexical-baseline',synthetic:true,scenarios:fixture.scenarios.length,questions:results.length,passed:results.filter(r=>r.passed).length,
     required:{questions:required.length,passed:required.filter(r=>r.passed).length,failures:required.filter(r=>!r.passed).map(r=>r.name)},
     challenges:{questions:challenges.length,passed:challenges.filter(r=>r.passed).length,failures:challenges.filter(r=>!r.passed).map(r=>r.name)},
     search:aggregate(results,'search'),context:aggregate(results,'context'),results,environment:{node:process.version,platform:process.platform},
@@ -102,10 +106,12 @@ export async function evaluateLongTermMemory({fixture=JSON.parse(fs.readFileSync
     limits:'Original synthetic API-level sessions and lexical retrieval only. Scripted capture is not measured natural-language extraction. Complete evidence sets and rendered payloads are scored; answers, reasoning, real-host behavior, semantic quality and prompt-injection resistance are not evaluated. Required and challenge results are both retained; no LongMemEval/LoCoMo or production-accuracy score is claimed.'};
 }
 export async function longTermEvaluationCommand(args){
-  if(args.length!==0&&(args.length!==2||args[0]!=='--out'||!args[1]))throw new TypeError('usage: evaluate-long-term.mjs [--out NEW_REPORT.json]');
-  const file=args.length?path.resolve(args[1]):null;
+  const taskAware=args[0]==='--task-aware';
+  const output=taskAware?args.slice(1):args;
+  if(output.length!==0&&(output.length!==2||output[0]!=='--out'||!output[1]))throw new TypeError('usage: evaluate-long-term.mjs [--task-aware] [--out NEW_REPORT.json]');
+  const file=output.length?path.resolve(output[1]):null;
   if(file&&fs.existsSync(file))throw Object.assign(new Error('report exists'),{code:'EEXIST'});
-  const report=await evaluateLongTermMemory();
+  const report=await evaluateLongTermMemory({taskAware});
   if(file){const fd=fs.openSync(file,'wx',0o600);try{fs.writeFileSync(fd,JSON.stringify(report,null,2)+'\n');fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
   return report;
 }

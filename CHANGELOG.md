@@ -2,6 +2,8 @@
 
 ## Unreleased — local 2.0 integration candidate
 
+- Add opt-in task context to the SDK and Agent MCP. Combine bounded lexical query facets and current scoped constraints in one budgeted response, with separate omission diagnostics and explicit confirmation of use.
+
 - Review ten memory papers and eight host memory contracts; record native-memory coexistence and staged adoption rather than automatically importing another memory framework.
 - Add independently authored long-term lifecycle/evidence-set evaluation, explicit unsolved challenges, payload/budget checks and negative controls. No new runtime memory behavior, model calls, third-party implementation or benchmark score.
 

@@ -43,3 +43,7 @@ The 2026-11-13 frozen runtime/test/package manifest has digest `c79103a9dfb51f6c
 Project-only Linux x64 / Node 26.13.0 / kernel 6.8.0-147 under emulation passed the six new evaluator regression tests and ran all 22 questions, with the same 17 required passes and five diagnostic failures. Source hashes matched before/after. This is focused Linux verification of an evaluation/documentation change, not a rerun or re-certification of the earlier full Linux suite. Runtime memory behavior, schemas, providers and host configuration are unchanged by this follow-up.
 
 Concrete package evidence is recorded separately against its tarball hash and installed entry points, including the packaged fixture. Host/model acceptance and controlled on/off trials remain open adoption gates.
+
+## Opt-in task context comparison
+
+Run `node tools/evaluate-long-term.mjs --task-aware` to enable the task policy on the standing-constraint case. The policy requests current scoped constraints without naming an expected record, and the scorer still parses the real rendered result. Both modes retain all 22 questions and pass all 17 required cases. Task mode passes one of the five challenges and raises complete rendered evidence from 12/17 to 13/17 positive questions, with zero forbidden IDs in this fixture. The original command continues to measure the lexical baseline. The fixture now includes the opt-in policy metadata, so its digest differs from the original November 13 run.

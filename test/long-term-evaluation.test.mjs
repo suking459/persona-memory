@@ -19,6 +19,9 @@ test('the baseline retains required and unsolved challenge results without claim
   assert.equal(r.passed,r.required.passed+r.challenges.passed);assert.ok(r.passed<r.questions);
   assert.equal(r.search.emptyGoldQuestions,5);assert.equal(r.search.correctAbstentions,5);assert.equal(r.context.forbiddenHits,0);
   assert.ok(r.context.evidenceSetRate<1);assert.ok(r.context.evidenceSetQuestions<r.questions);assert.equal(r.modelCalls,0);assert.equal(r.answerQualityMeasured,false);assert.equal(r.externalBenchmark,false);
+  const task=await evaluateLongTermMemory({taskAware:true});
+  assert.equal(task.required.passed,17);assert.equal(task.challenges.passed,1);
+  assert.equal(task.context.forbiddenHits,0);assert.equal(task.context.evidenceSetComplete,r.context.evidenceSetComplete+1);
   const subject={type:'project',id:'zh'},localized=await evaluateLongTermMemory({fixture:{name:'localized',scenarios:[{now:0,steps:[
     {op:'put',record:{id:'a',subject,kind:'fact',key:'region',value:'北京'}},
     {op:'check',name:'zh',category:'locale',options:{subject,query:'北京',locale:'zh-CN'},expected:['a']}

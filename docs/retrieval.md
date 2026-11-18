@@ -58,6 +58,26 @@ A confirmation batch allows at most 16 contexts, 64 distinct typed records and 3
 
 There are at most 128 ephemeral context credentials, valid ten minutes and lost on restart. Deduplication follows `dedupeLimit`/`dedupeDays` and deletion; it is not an infinite ledger. Subject deletion also removes empty-result usage and pending acknowledgements.
 
+## Task context
+
+Use `buildTaskMemoryContext` when one project or task requires evidence for several parts of the request. `facets` are short lexical queries supplied by the caller. `includeStanding` adds current constraints that may be useful even without matching the query.
+
+```js
+const context=pm.buildTaskMemoryContext({
+  subject:project,
+  query:'release status',
+  facets:['test environment','migration owner'],
+  includeStanding:true,
+  budget:4000,
+});
+```
+
+The Agent MCP equivalent is `memory_context` with `scope`, `query`, `budget`, and `task: {facets: ['test environment', 'migration owner'], includeStanding: true}`. The server obtains the subject from the binding and refreshes the store before selecting. Task mode uses local lexical search. The ordinary context operation can still use its existing optional semantic configuration.
+
+Use one to four queries in total. The method considers at most 1,000 candidates per pass, retains up to 16 matches per query and eight standing constraints, and interleaves the passes by rank. It deduplicates record IDs and keeps up to 64 candidates before applying a single character, record and optional SDK token budget. Standing constraints follow the same caller filters and appear as data. Their presence does not grant permission or change project instructions.
+
+`taskSelection.facets` and `taskSelection.standing` show per-pass counts and omissions. `taskSelection.candidateIds` reflects the bounded union before rendering. The top-level `search` describes the first query. The returned `records`, `omitted`, and `text` show the actual packing result. A tight budget can exclude some or all candidates. Use `confirmContext` or the separate Agent confirmation call after actual use.
+
 ## Vendor-independent model bridge
 
 ```js

@@ -4,7 +4,7 @@ import {experienceInput,selectExperiences} from './experience.js';
 import {stageCandidateProposals,stageCandidateAcceptance,reviseCandidate as reviseProposal,rejectCandidate as rejectProposal,selectCandidates,hydrateCandidates,candidateConflict} from './candidates.js';
 import {validateResourceLimits,capacityError} from './limits.js';
 import {validateTagRules} from './text-policy.js';
-import {normalizeMemorySearch,normalizeMemoryContext,retrieveMemories} from './retrieval.js';
+import {normalizeMemorySearch,normalizeMemoryContext,retrieveMemories,normalizeTaskMemoryContext,retrieveTaskMemories} from './retrieval.js';
 import {renderMemoryContext} from './record-context.js';
 import {prepareMemoryWrite,hydrateMemories,dependencyStatus,memoryForgetImpact,normalizeSubject,sameSubject,memoryIdentifier,memorySlot,memorySlotForId,isCurrentMemory,selectMemories,memoryAt,assertMemoryFields} from './records.js';
 import {exportMemoryBundle,prepareMemoryImport,stageMemoryImport} from './transfer.js';
@@ -506,6 +506,15 @@ export class PersonaMemory {
     const settings=normalizeMemoryContext(options,this.config.maxChars),now=this._now(settings.search.now);
     const epoch=this._recordEpoch;
     const result=retrieveMemories(this.state.memories,settings.search,now);
+    return this._renderRecordContext(result,settings,now,epoch);
+  }
+  buildTaskMemoryContext(options) {
+    const settings=normalizeTaskMemoryContext(options,this.config.maxChars);
+    const now=this._now(settings.search.now),epoch=this._recordEpoch;
+    const {result,selection}=retrieveTaskMemories(this.state.memories,settings,now);
+    return {...this._renderRecordContext(result,settings,now,epoch),taskSelection:selection};
+  }
+  _renderRecordContext(result,settings,now,epoch) {
     const rendered=renderMemoryContext(result,settings);
     if(epoch!==this._recordEpoch)throw new Error('memory changed while building context; build a new context');
     const contextId=randomUUID(),context={contextId,kind:'records',...rendered,createdAt:now};

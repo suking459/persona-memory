@@ -14,6 +14,9 @@ const memory=pm.putMemory({id:'explicit',subject:{type:'project',id:'work'},kind
 pm.getMemory(memory.id,{includeInactive:true});
 pm.searchMemories({subject:{type:'project',id:'work'},query:'release',sources:['user']});
 const recordContext=pm.buildMemoryContext({subjects:[{type:'project',id:'work'}],query:'release',budget:2000});
+const taskContext=pm.buildTaskMemoryContext({subject:{type:'project',id:'work'},facets:['release'],includeStanding:true,budget:2000});
+const candidateIds:string[]=taskContext.taskSelection.candidateIds;
+pm.confirmContext(taskContext,{turnId:'task-context'});
 pm.confirmContexts([pm.buildContext({chatId:'room',userIds:['u']}),recordContext],{turnId:'both'});
 createMemoryBridge(pm,{subject:{type:'project',id:'work'}}).invoke({text:'release',turnId:'model'},input=>input.memory);
 pm.listMemories({subject:{type:'project',id:'work'},kind:'constraint'});

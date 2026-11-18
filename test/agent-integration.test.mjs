@@ -22,6 +22,22 @@ function setup(t,access='review'){
   return {dir,binding,pm,session:createAgentSession(pm,binding)};
 }
 const proposal=(value='Chinese',evidenceId='message-1',scope='project')=>({scope,kind:'preference',key:'language',value,evidenceId,reason:'Explicit request in the referenced message'});
+test('Agent task context uses the bound scope and confirms only after an explicit capture call',async t=>{
+  const {pm,binding,session}=setup(t,'capture');
+  const put=(id,subject,kind,key)=>pm.putMemory({id,subject,kind,key,value:'Synthetic project data'});
+  put('rule',binding.subjects.project,'constraint','release-policy');
+  put('fact',binding.subjects.project,'fact','pagination');
+  put('private',binding.subjects.personal,'constraint','private-policy');
+  pm.flush();
+  const args={scope:'project',query:'pagination',budget:4000};
+  assert.deepEqual((await session.call('memory_context',args)).records.map(x=>x.record.id),['fact']);
+  const context=await session.call('memory_context',{...args,task:{includeStanding:true}});
+  assert.deepEqual(context.records.map(x=>x.record.id),['rule','fact']);
+  assert.equal(pm.export().uses.length,0);
+  assert.equal((await session.call('memory_confirm',{contextId:context.contextId,turnId:'task-answer'})).memoryCount,2);
+  await assert.rejects(session.call('memory_context',{...args,task:{subject:binding.subjects.personal}}),/field/);
+  await assert.rejects(session.call('memory_context',{...args,scope:'personal',task:{includeStanding:true}}),/project or task/);
+});
 async function remember(session,value='Chinese',evidenceId='message-1'){
   const result=await session.call('memory_propose',proposal(value,evidenceId));
   return session.call('memory_review',{scope:'project',candidateId:result.candidate.id,expectedRevision:result.candidate.revision,decision:'accept'});
@@ -218,7 +234,11 @@ test('actual MCP subprocess persists reviewed data, reloads after exit, and retu
   assert.equal(accepted.result.isError,undefined);await first.close();
   const second=await client(t,file);
   const result=await second.request('tools/call',{name:'memory_recall',arguments:{scope:'project',query:'language'}});
-  assert.equal(result.result.structuredContent.matches[0].record.value,'Chinese');await second.close();
+  assert.equal(result.result.structuredContent.matches[0].record.value,'Chinese');
+  const task=await second.request('tools/call',{name:'memory_context',arguments:{scope:'project',query:'documentation',task:{facets:['language']}}});
+  assert.equal(task.result.structuredContent.records[0].record.value,'Chinese');
+  assert.equal(task.result.structuredContent.taskSelection.facets.length,2);
+  await second.close();
 });
 
 test('retrying a proposal already accepted reports its existing review state accurately',async t=>{
