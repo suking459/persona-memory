@@ -35,7 +35,7 @@ test('buildBlock respects budget', () => {
   pm.ingest({ chatId: 'g', userId: 'u', text: '你好呀', mentionsSelf: true });
   const b = pm.buildBlock({ chatId: 'g', userIds: ['u'], budget: 50 });
   assert.ok(b.length <= 50);
-  assert.ok(b.includes('交往记忆'));
+  assert.ok(b.includes('Relationship memory'));
 });
 
 test('tag sweep: promote long term', () => {
@@ -117,7 +117,7 @@ test('v3: visitor hint appears in block', () => {
   pm.ingest({ chatId: 'g', userId: 'v', text: '777', ts: now + 1 });
   pm.ingest({ chatId: 'g', userId: 'u', text: '你好厉害', ts: now + 2, mentionsSelf: true });
   const b = pm.buildBlock({ chatId: 'g', userIds: ['u', 'v'] });
-  assert.ok(b.includes('来过 2 次'), b);
+  assert.ok(b.includes('Visited 2 times'), b);
 });
 
 test('v3: visitorHint=false suppresses hint', () => {
@@ -127,7 +127,7 @@ test('v3: visitorHint=false suppresses hint', () => {
   pm.ingest({ chatId: 'g', userId: 'v', text: '777', ts: now + 1 });
   pm.ingest({ chatId: 'g', userId: 'u', text: '你好厉害', ts: now + 2, mentionsSelf: true });
   const b = pm.buildBlock({ chatId: 'g', userIds: ['u', 'v'] });
-  assert.ok(!b.includes('来过'), b);
+  assert.ok(!b.includes('Visited '), b);
 });
 
 test('v3: tag promotes without repeated hits', () => {

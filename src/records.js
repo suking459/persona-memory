@@ -1,3 +1,4 @@
+import {normalizeMemoryOrigin} from './origin.js';
 import {createHash} from 'node:crypto';
 // Typed memory records are separate from social profiles and scoring.
 import {capacityError} from './limits.js';
@@ -8,8 +9,8 @@ const SOURCES=new Set(['manual','user','host','rule','model','import']);
 const MAX_TIME=8640000000000000,HOUR=3600000,DAY=86400000;
 const VALUE_LIMITS=Object.freeze({bytes:16384,nodes:1024,depth:8,entries:128,stringChars:8192});
 const FORBIDDEN=new Set(['__proto__','constructor','prototype']);
-const INPUT_FIELDS=new Set(['id','subject','kind','key','value','source','evidenceId','observedAt','expiresAt','validFrom','replaceId','expectedRevision','experience','derivedFrom','assertion']);
-const RECORD_FIELDS=new Set(['id','subject','kind','key','value','source','evidenceId','observedAt','expiresAt','createdAt','updatedAt','revision','status','supersedes','supersededBy','validFrom','validUntil','experience','derivedFrom','assertion']);
+const INPUT_FIELDS=new Set(['id','subject','kind','key','value','source','evidenceId','observedAt','expiresAt','validFrom','replaceId','expectedRevision','experience','derivedFrom','assertion','origin']);
+const RECORD_FIELDS=new Set(['id','subject','kind','key','value','source','evidenceId','observedAt','expiresAt','createdAt','updatedAt','revision','status','supersedes','supersededBy','validFrom','validUntil','experience','derivedFrom','assertion','origin']);
 const own=(object,key)=>Object.hasOwn(object,key);
 function plain(value,label){
   if(!value || typeof value!=='object' || Array.isArray(value) ||
@@ -90,9 +91,11 @@ export function copyMemoryValue(value){
 }
 // Content identity excludes mutable version links, preserving valid historical intervals.
 export function memoryFingerprint(record){
-  return createHash('sha256').update(JSON.stringify([record.id,record.subject,record.kind,record.key,record.value,record.source,
+  const content=[record.id,record.subject,record.kind,record.key,record.value,record.source,
     record.evidenceId??null,record.observedAt,record.createdAt,record.revision,record.validFrom,record.expiresAt,
-    record.experience??null,record.assertion??null,record.derivedFrom??null])).digest('hex');
+    record.experience??null,record.assertion??null,record.derivedFrom??null];
+  if(record.origin!==undefined)content.push(record.origin); // Legacy fingerprints remain byte-for-byte stable.
+  return createHash('sha256').update(JSON.stringify(content)).digest('hex');
 }
 export function normalizeDependencies(raw,{records={},subject,now,slot,saved=false}){
   if(raw===undefined)return undefined;
@@ -202,7 +205,7 @@ export function isCurrentMemory(record,now,records){
   return record.derivedFrom?!!records&&dependencyStatus(record,records,now).usable:memoryAppliesAt(record,now,now);
 }
 export function memoryAppliesAt(record,at,knownAt){
-  return record.createdAt<=knownAt && record.validFrom<=at &&
+  return record.experience?.retired!==true && record.createdAt<=knownAt && record.validFrom<=at &&
     (record.validUntil===null || record.updatedAt>knownAt || record.validUntil>at) &&
     (record.expiresAt===null || record.expiresAt>knownAt);
 }
@@ -233,12 +236,14 @@ export function normalizeExperienceValue(raw){
   return {task:text(raw.task,'task',2000),context:copyMemoryValue(raw.context),attempt:text(raw.attempt,'attempt',2000),
     result:text(raw.result,'result',4000),conditions:[...new Set(conditions.map(value=>text(value,'condition',256)))]};
 }
-function experienceOf(value,kind,source,evidenceId,payload){
+export function normalizeExperienceMetadata(value,kind,source,evidenceId,payload){
   if(value===undefined)return undefined;
-  fields(value,new Set(['outcome','verified']),'experience metadata');
-  if(kind!=='episode'||source!=='host'||!['success','failure','mixed','unknown'].includes(value.outcome)||typeof value.verified!=='boolean')throw new TypeError('invalid host experience metadata');
+  fields(value,new Set(['outcome','verified','retired','lifecycleReason']),'experience metadata');
+  if(kind!=='episode'||!['host','model'].includes(source)||(source==='model'&&value.verified)||!['success','failure','mixed','unknown'].includes(value.outcome)||typeof value.verified!=='boolean')throw new TypeError('invalid host experience metadata');
   if(value.verified&&(!evidenceId||value.outcome==='unknown'))throw new TypeError('verified experience requires host evidence and a known outcome');
-  normalizeExperienceValue(payload);return {outcome:value.outcome,verified:value.verified};
+  if(value.retired!==undefined&&(typeof value.retired!=='boolean'||source!=='host'||!evidenceId||value.verified))throw new TypeError('experience lifecycle requires unverified host metadata and evidence');
+  if(value.lifecycleReason!==undefined&&(value.retired===undefined||typeof value.lifecycleReason!=='string'||!value.lifecycleReason.trim()||value.lifecycleReason.length>1000))throw new TypeError('invalid experience lifecycle reason');
+  normalizeExperienceValue(payload);return {outcome:value.outcome,verified:value.verified,...(value.retired===undefined?{}:{retired:value.retired}),...(value.lifecycleReason===undefined?{}:{lifecycleReason:value.lifecycleReason})};
 }
 export function normalizeAssertion(value){
   if(value!==undefined&&!['explicit','observed','inferred','external'].includes(value))throw new TypeError('invalid memory assertion');return value;
@@ -251,9 +256,10 @@ export function prepareMemoryWrite(records,input,now,config,createId,{dependency
   const value=copyMemoryValue(input.value),source=input.source===undefined?'manual':input.source;
   if(!SOURCES.has(source))throw new TypeError('invalid memory source');
   const evidenceId=input.evidenceId===undefined?undefined:memoryIdentifier(input.evidenceId,'memory evidenceId');
-  const experience=experienceOf(input.experience,kind,source,evidenceId,value),assertion=normalizeAssertion(input.assertion);
+  const experience=normalizeExperienceMetadata(input.experience,kind,source,evidenceId,value),assertion=normalizeAssertion(input.assertion),origin=normalizeMemoryOrigin(input.origin);
   const replaceId=input.replaceId===undefined?undefined:memoryIdentifier(input.replaceId,'replaceId');
   const existing=own(records,id)?records[id]:null;
+  if(existing?.origin&&input.origin===undefined)throw conflict('existing origin must be preserved in a retry');
   if(existing?.derivedFrom&&input.derivedFrom===undefined)throw conflict('existing dependency metadata must be preserved in a retry');
   const derivedFrom=normalizeDependencies(input.derivedFrom,{records:dependencyRecords,subject,now,slot:memorySlot({subject,kind,key}),saved:savedDependencies});
   if(!existing && memorySlotForId(records,id)!==null)throw conflict('memory id is still referenced by retained versions; use a fresh id or forget the old memory');
@@ -274,7 +280,7 @@ export function prepareMemoryWrite(records,input,now,config,createId,{dependency
     timestamp(expiresAt,'memory expiresAt');
     if(expiresAt<Math.max(existing?.createdAt??now,validFrom))throw new RangeError('memory expiry precedes creation');
   }
-  const candidate={id,subject,kind,key,value,source,observedAt,expiresAt,validFrom,...(evidenceId===undefined?{}:{evidenceId}),...(experience===undefined?{}:{experience}),...(derivedFrom===undefined?{}:{derivedFrom}),...(assertion===undefined?{}:{assertion})};
+  const candidate={id,subject,kind,key,value,source,observedAt,expiresAt,validFrom,...(evidenceId===undefined?{}:{evidenceId}),...(experience===undefined?{}:{experience}),...(derivedFrom===undefined?{}:{derivedFrom}),...(assertion===undefined?{}:{assertion}),...(origin===undefined?{}:{origin})};
   if(existing){
     if(existing.experience!==undefined&&experience===undefined)throw conflict('existing experience metadata must be preserved in a retry');
     const previous={};
@@ -316,7 +322,7 @@ export function prepareMemoryWrite(records,input,now,config,createId,{dependency
   }
   return {record,previous:previous?{...previous,status:'superseded',supersededBy:id,updatedAt:now,validUntil:validFrom}:null,removeIds:removable,duplicate:false};
 }
-function normalizeRecord(raw,{legacy=false,allowExperience=true,allowDerived=true}={}){
+function normalizeRecord(raw,{legacy=false,allowExperience=true,allowDerived=true,allowOrigin=true,allowModelExperience=true}={}){
   fields(raw,RECORD_FIELDS,'memory record');
   if(legacy && (own(raw,'validFrom') || own(raw,'validUntil')))throw new TypeError('effective timestamps require schemaVersion=4');
   const id=memoryIdentifier(raw.id),subject=normalizeSubject(raw.subject),kind=kindOf(raw.kind),key=memoryIdentifier(raw.key,'memory key');
@@ -333,12 +339,14 @@ function normalizeRecord(raw,{legacy=false,allowExperience=true,allowDerived=tru
   if(expiresAt!==null && expiresAt<Math.max(createdAt,validFrom))throw new TypeError('invalid memory expiry');
   if(!Number.isSafeInteger(raw.revision) || raw.revision<1)throw new TypeError('invalid memory revision');
   if(!allowExperience&&raw.experience!==undefined)throw new TypeError('experience metadata requires schemaVersion=5');
-  const experience=experienceOf(raw.experience,kind,raw.source,raw.evidenceId,value);
+  if(!allowModelExperience&&raw.experience!==undefined&&(raw.source==='model'||raw.experience.retired!==undefined||raw.experience.lifecycleReason!==undefined))throw new TypeError('new experience metadata requires schemaVersion=8');
+  const experience=normalizeExperienceMetadata(raw.experience,kind,raw.source,raw.evidenceId,value);
   if(!allowDerived&&(raw.derivedFrom!==undefined||raw.assertion!==undefined))throw new TypeError('dependency metadata requires schemaVersion=6');
-  const assertion=normalizeAssertion(raw.assertion);
+  if(!allowOrigin&&raw.origin!==undefined)throw new TypeError('origin metadata requires schemaVersion=7');
+  const origin=normalizeMemoryOrigin(raw.origin),assertion=normalizeAssertion(raw.assertion);
   const derivedFrom=normalizeDependencies(raw.derivedFrom,{subject,slot:memorySlot({subject,kind,key}),saved:true});
   const record={id,subject,kind,key,value,source:raw.source,observedAt,expiresAt,createdAt,updatedAt,
-    revision:raw.revision,status:raw.status,validFrom,validUntil,...(experience===undefined?{}:{experience}),...(derivedFrom===undefined?{}:{derivedFrom}),...(assertion===undefined?{}:{assertion})};
+    revision:raw.revision,status:raw.status,validFrom,validUntil,...(experience===undefined?{}:{experience}),...(derivedFrom===undefined?{}:{derivedFrom}),...(assertion===undefined?{}:{assertion}),...(origin===undefined?{}:{origin})};
   for(const field of ['evidenceId','supersedes','supersededBy'])if(raw[field]!==undefined)record[field]=memoryIdentifier(raw[field],'memory '+field);
   if(record.supersedes===id || record.supersededBy===id ||
     (record.status==='current' && record.supersededBy!==undefined) ||

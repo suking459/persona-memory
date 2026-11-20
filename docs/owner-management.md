@@ -1,6 +1,6 @@
 # Owner management and diagnostics
 
-1.5.0 管理能力。doctor 只检查，不修复、不调用模型；召回解释展示本地检索过程。批量审阅与删除先预览影响，目标变化、预览过期或来源失效会拒绝执行。MCP 预览编号只属于产生它的连接，不构成用户已经批准。
+Management capabilities introduced in 1.5.0. Doctor inspects without repairs/model calls; explanations describe local retrieval. Batch review/deletion requires impact previews; changed targets, expired plans or invalid sources reject application. An MCP preview ID belongs to its originating connection and is not human approval.
 
 ## Diagnose first
 
@@ -86,9 +86,9 @@ SDK plans bind logical identity, snapshot state/revision and configuration. They
 
 ## Recovery and scope
 
-For backups, cross-machine identity preservation and JSON–SQLite migration, see [Storage and backup](storage-backup.md). For default capture, owner inspection and host setup see [English integration](agent-integration.en.md) / [中文接入](agent-integration.md).
+For backups, cross-machine identity preservation and JSON–SQLite migration, see [Storage and backup](storage-backup.md). For default capture, owner inspection and host setup see [Agent integration](agent-integration.md).
 
 These operations have local SDK/CLI/protocol coverage. Follow-up acceptance passed five real-model lifecycle cases each for the specified Windows Codex CLI and DSH headless versions. Desktop UI and the other nine host targets remain unverified; see the [acceptance matrix](AGENT-ACCEPTANCE.md). The tests do not enable this service in everyday applications or merge their native memory.
 
 
-Generated bundles now provide node owner.mjs with this binding already selected. See [daily operations](agent-operations.en.md) / [中文](agent-operations.md). This owner entry must be run separately from the capture Agent; convenience does not grant OS-level isolation.
+Generated bundles now provide node owner.mjs with this binding already selected. See [daily operations](agent-operations.md). This owner entry must be run separately from the capture Agent; convenience does not grant OS-level isolation.

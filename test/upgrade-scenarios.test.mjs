@@ -25,7 +25,7 @@ test('a synthetic 0.3 snapshot with documented text sanitization migrates and re
   let now=fixture.provenance.generatedAt;
   const options={storage,persona:fixture.snapshot.persona,clock:()=>now};
   const migrated=new PersonaMemory(options),state=migrated.export();
-  assert.equal(state.schemaVersion,6);
+  assert.equal(state.schemaVersion,8);
   assert.equal(migrated.diagnostics().profiles,2);
   for(const chatId of ['synthetic-chat-a','synthetic-chat-b']) {
     const old=fixture.snapshot.sessions[chatId]['synthetic-member'];
@@ -41,11 +41,11 @@ test('a synthetic 0.3 snapshot with documented text sanitization migrates and re
     userId:'synthetic-visitor',...fixture.snapshot.visitors['synthetic-visitor'],
   });
   assert.match(migrated.buildContext({chatId:'synthetic-chat-a',
-    userIds:['synthetic-member','synthetic-visitor']}).text,/来过 2 次/);
+    userIds:['synthetic-member','synthetic-visitor']}).text,/Visited 2 times/);
   now+=DAY;
   migrated.maintain();
   migrated.flush();
-  assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).schemaVersion,6);
+  assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).schemaVersion,8);
   const reloaded=new PersonaMemory(options);
   assert.deepEqual(reloaded.export(),migrated.export());
   for(const chatId of ['synthetic-chat-a','synthetic-chat-b']) {

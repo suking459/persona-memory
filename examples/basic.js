@@ -1,4 +1,4 @@
-// 最小可运行示例：看一次好感度和标签怎么变
+// Minimal runnable example: observe relationship scores and tags.
 //
 //   node examples/basic.js
 
@@ -9,38 +9,38 @@ const pm = new PersonaMemory({ storage: null, persona: 'demo' });
 const now = Date.now();
 const chatId = 'group-1001';
 
-// 模拟一段群聊：u1 跟 bot 熟，u2 只是路过，u3 骂了人
+// Synthetic group chat with direct interactions and passing messages.
 const script = [
-  { userId: 'u1', text: '在吗', mentionsSelf: true },
-  { userId: 'u1', text: '你今天好可爱啊', mentionsSelf: true },
-  { userId: 'u1', text: '确实确实，我也这么觉得' },
-  { userId: 'u1', text: '拍拍' },
-  { userId: 'u2', text: '路过看看' },
-  { userId: 'u3', text: '傻逼机器人', mentionsSelf: true },
-  { userId: 'u2', text: '今天好累啊' },
+  { userId: 'u1', text: 'Are you there?', mentionsSelf: true },
+  { userId: 'u1', text: 'You are helpful today.', mentionsSelf: true },
+  { userId: 'u1', text: 'Indeed, I agree.' },
+  { userId: 'u1', text: 'Thanks.' },
+  { userId: 'u2', text: 'Just passing by.' },
+  { userId: 'u3', text: 'This bot is annoying.', mentionsSelf: true },
+  { userId: 'u2', text: 'I feel tired today.' },
 ];
 
 script.forEach((m, i) => {
   const r = pm.ingest({ chatId, userId: m.userId, text: m.text, ts: now + i * 1000, mentionsSelf: m.mentionsSelf });
   console.log(
-    `[${String(i + 1).padStart(2)}] ${m.userId}  "${m.text}"  →  ${r.matched ? `${r.delta > 0 ? '+' : ''}${r.delta}` : '不计分'}`
+    `[${String(i + 1).padStart(2)}] ${m.userId}  "${m.text}"  →  ${r.matched ? `${r.delta > 0 ? '+' : ''}${r.delta}` : 'not scored'}`
   );
 });
 
-console.log('\n──────── 档案 ────────');
+console.log('\n──────── Profiles ────────');
 for (const id of ['u1', 'u2', 'u3']) {
   const p = pm.getProfile(chatId, id);
   if (!p) continue;
   console.log(
-    `${id}: ${p.affinity.tier} (${p.affinity.value} 分)  风格: ${p.style.avgChars} 字/句, 问句 ${p.style.questionRate}%`
+    `${id}: ${p.affinity.tier} (${p.affinity.value} points)  style: ${p.style.avgChars} chars/sentence, questions ${p.style.questionRate}%`
   );
 }
 
-console.log('\n──────── 注入给模型的段落 ────────');
+console.log('\n──────── Reference context for the model ────────');
 const block = pm.buildBlock({ chatId, userIds: ['u1', 'u2', 'u3'], budget: 700 });
-console.log(block || '(空)');
+console.log(block || '(empty)');
 
-console.log('\n──────── 一天后：衰减 ────────');
+console.log('\n──────── Decay after one day ────────');
 const r = pm.maintain(now + 86400000);
-console.log('衰减:', r.decayed, '人');
-console.log('u1 现在:', pm.getProfile(chatId, 'u1').affinity.value, '分');
+console.log('Decayed:', r.decayed, 'profiles');
+console.log('u1 now:', pm.getProfile(chatId, 'u1').affinity.value, 'points');

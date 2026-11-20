@@ -71,7 +71,9 @@ export async function previewMemoryForget(pm,raw){
 }
 async function validatePlan(pm,raw,kind){
   const plan=copySnapshotJSON(raw,LIMIT),common=['format','version','kind','subject','createdAt','expiresAt','persona','scope','expectedRevision','targetDigest','configDigest','allowed','checksum'];
-  fields(plan,new Set([...common,...(kind==='forget'?['id','expectedMemoryRevision','impact']:['decision','requests','reason','rows','evidenceVerified','denial'])]),'management plan');
+  const extra=kind==='maintenance'?['limit','targets','impact','skipped','remaining','considered','scan']:
+    kind==='forget'?['id','expectedMemoryRevision','impact']:['decision','requests','reason','rows','evidenceVerified','denial'];
+  fields(plan,new Set([...common,...extra]),'management plan');
   const {checksum,...body}=plan;
   if(plan.format!=='persona-memory-management-plan'||plan.version!==1||plan.kind!==kind||digest(body)!==checksum)throw new TypeError('invalid management preview');
   await ready(pm);const now=clock(pm);
@@ -96,4 +98,59 @@ export async function applyMemoryForget(pm,rawPlan){
   const {plan,now}=await validatePlan(pm,rawPlan,'forget');currentFor(pm,plan.subject,plan.id,plan.expectedMemoryRevision);
   const draft=draftOf(pm,now),removed=draft.forgetMemory(plan.id).removed;
   return {...await commit(pm,draft,plan,now),removed};
+}
+
+function maintenanceSelection(pm,subject,now,limit){
+  if(!Number.isSafeInteger(limit)||limit<1||limit>32)throw new RangeError('maintenance limit must be 1..32');
+  const snapshot=pm.export(),records=Object.values(snapshot.memories),candidates=Object.values(snapshot.candidates);
+  if(records.length>5000||candidates.length>5000)throw new RangeError('maintenance scan supports at most 5000 records and 5000 candidates; partition or manage explicitly');
+  const queue=[...records.filter(r=>sameSubject(r.subject,subject)&&r.status==='current'&&r.validFrom<=now&&r.expiresAt!==null&&r.expiresAt<=now)
+    .map(r=>({type:'memory',id:r.id,revision:r.revision,expiresAt:r.expiresAt})),
+    ...candidates.filter(c=>sameSubject(c.memory.subject,subject)&&c.expiresAt<=now)
+      .map(c=>({type:'candidate',id:c.id,revision:c.revision,expiresAt:c.expiresAt}))]
+    .sort((a,b)=>a.expiresAt-b.expiresAt||(a.id<b.id?-1:a.id>b.id?1:0));
+  const recordIds=new Set(),candidateIds=new Set(),targets=[],skipped=[];
+  const considered=Math.min(queue.length,limit);
+  for(const item of queue.slice(0,considered)){
+    if(item.type==='candidate'){
+      if(!candidateIds.has(item.id)&&recordIds.size+candidateIds.size>=512){skipped.push({type:item.type,id:item.id,reason:'impact-limit'});continue;}
+      if(!candidateIds.has(item.id)){candidateIds.add(item.id);targets.push({type:item.type,id:item.id,revision:item.revision});}continue;
+    }
+    if(recordIds.has(item.id))continue;
+    const impact=pm.previewForgetMemory(item.id);let reason;
+    if(impact.recordIds.some(id=>!sameSubject(snapshot.memories[id].subject,subject))||impact.candidateIds.some(id=>!sameSubject(snapshot.candidates[id].memory.subject,subject)))reason='foreign-impact';
+    else if(impact.recordIds.length+impact.candidateIds.length>512||new Set([...recordIds,...impact.recordIds]).size+new Set([...candidateIds,...impact.candidateIds]).size>512)reason='impact-limit';
+    else if(impact.recordIds.some(id=>pm.memoryStatus(id,{now}).usable))reason='usable-dependent';
+    if(reason){skipped.push({type:item.type,id:item.id,reason});continue;}
+    targets.push({type:item.type,id:item.id,revision:item.revision});
+    for(const id of impact.recordIds)recordIds.add(id);for(const id of impact.candidateIds)candidateIds.add(id);
+  }
+  const ids=[...recordIds].sort(),candidateList=[...candidateIds].sort();
+  return {limit,targets,impact:{memories:ids.length,candidates:candidateList.length,recordIds:ids.slice(0,16),candidateIds:candidateList.slice(0,16),truncated:ids.length>16||candidateList.length>16},
+    skipped,remaining:queue.length-considered,considered,scan:{records:records.length,candidates:candidates.length}};
+}
+export async function previewMemoryMaintenance(pm,raw){
+  const options=copySnapshotJSON(raw,4096);fields(options,new Set(['subject','limit']),'maintenance preview');
+  const subject=normalizeSubject(options.subject);await ready(pm);const now=clock(pm);
+  return seal({...base(pm,'maintenance',subject,now),allowed:true,...maintenanceSelection(pm,subject,now,options.limit??16)});
+}
+export async function applyMemoryMaintenance(pm,rawPlan){
+  const {plan,now}=await validatePlan(pm,rawPlan,'maintenance');
+  const selected=maintenanceSelection(pm,plan.subject,plan.createdAt,plan.limit);
+  for(const key of Object.keys(selected))if(digest(selected[key])!==digest(plan[key]))throw conflict();
+  if(!selected.targets.length)return {committed:false,reason:'no-eligible-targets',removed:{memories:0,candidates:0},requiresReload:false};
+  const draft=draftOf(pm,now),before=draft.diagnostics();
+  for(const target of selected.targets){
+    if(target.type==='memory'){
+      const record=draft.getMemory(target.id,{includeInactive:true});
+      if(record){if(record.status!=='current'||record.revision!==target.revision||record.expiresAt===null||record.expiresAt>now||record.validFrom>now)throw conflict();
+        // Recheck current-time effects, not just the preview-time eligibility.
+        if(draft.previewForgetMemory(target.id).recordIds.some(id=>draft.memoryStatus(id,{now}).usable))throw conflict();
+        draft.forgetMemory(target.id);}
+    }else{
+      const candidate=draft.getCandidate(target.id,{includeExpired:true});
+      if(candidate){if(candidate.revision!==target.revision||candidate.expiresAt>now)throw conflict();draft.forgetCandidate(target.id);}
+    }
+  }
+  const after=draft.diagnostics();return {...await commit(pm,draft,plan,now),removed:{memories:before.memories-after.memories,candidates:before.candidates-after.candidates}};
 }

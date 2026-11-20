@@ -4,7 +4,7 @@ import {experienceInput,selectExperiences} from './experience.js';
 import {stageCandidateProposals,stageCandidateAcceptance,reviseCandidate as reviseProposal,rejectCandidate as rejectProposal,selectCandidates,hydrateCandidates,candidateConflict} from './candidates.js';
 import {validateResourceLimits,capacityError} from './limits.js';
 import {validateTagRules} from './text-policy.js';
-import {normalizeMemorySearch,normalizeMemoryContext,retrieveMemories} from './retrieval.js';
+import {normalizeMemorySearch,normalizeMemoryContext,retrieveMemories,normalizeTaskMemoryContext,retrieveTaskMemories} from './retrieval.js';
 import {renderMemoryContext} from './record-context.js';
 import {prepareMemoryWrite,hydrateMemories,dependencyStatus,memoryForgetImpact,normalizeSubject,sameSubject,memoryIdentifier,memorySlot,memorySlotForId,isCurrentMemory,selectMemories,memoryAt,assertMemoryFields} from './records.js';
 import {exportMemoryBundle,prepareMemoryImport,stageMemoryImport} from './transfer.js';
@@ -85,7 +85,7 @@ export class PersonaMemory {
     if (this._store) this._load();
   }
   _empty() {
-    return { schemaVersion: 6, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
+    return { schemaVersion: 8, persona: this.persona, scope: this.scope, tagScope: this.config.tagScope,
       sessions: {}, tags: {}, visitors: {}, memories: {}, candidates: {}, seen: [], uses: [], history: [] };
   }
   _now(value = this.clock()) { number(value,'timestamp');if(value>8640000000000000)throw new RangeError('timestamp outside supported calendar');return value; }
@@ -147,9 +147,9 @@ export class PersonaMemory {
   }
   _hydrate(snapshot) {
     const raw=copySnapshotJSON(snapshot,this.config.maxSnapshotBytes);
-    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5,allowDerived:raw.schemaVersion>=6});
-    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories,{allowDerived:raw.schemaVersion>=6});
-    if (!dictionary(raw) || ![1,2,3,4,5,6].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
+    const memories=hydrateMemories(raw.memories===undefined?{}:raw.memories,this.config,{legacy:(raw.schemaVersion??1)<4,allowExperience:raw.schemaVersion>=5,allowDerived:raw.schemaVersion>=6,allowOrigin:raw.schemaVersion>=7,allowModelExperience:raw.schemaVersion>=8});
+    const candidates=hydrateCandidates(raw.candidates===undefined?{}:raw.candidates,this.config,memories,{allowDerived:raw.schemaVersion>=6,allowOrigin:raw.schemaVersion>=7,allowExperience:raw.schemaVersion>=8});
+    if (!dictionary(raw) || ![1,2,3,4,5,6,7,8].includes(raw.schemaVersion ?? 1) || !dictionary(raw.sessions)) throw new TypeError('invalid snapshot');
     if (raw.persona && raw.persona !== this.persona) throw new TypeError('snapshot persona mismatch');
     if ((raw.scope ?? '') !== this.scope) throw new TypeError('snapshot scope mismatch');
     if (raw.schemaVersion >= 2 && raw.tagScope !== this.config.tagScope) throw new TypeError('snapshot tagScope mismatch');
@@ -346,7 +346,7 @@ export class PersonaMemory {
     const a=p.affinity, dayKey=this._dayKey(ts);
     if (a.dayKey!==dayKey) { a.dayKey=dayKey; a.dayGain=0; a.talkCount=0; }
     if (score.reasons.includes('direct')) {
-      if (a.talkCount>=this.config.talkDailyCap) score={delta:0,reasons:['普通互动日额度已满']};
+      if (a.talkCount>=this.config.talkDailyCap) score={delta:0,reasons:['Daily interaction allowance reached']};
       else a.talkCount++;
     }
     const before=a.value;
@@ -506,6 +506,15 @@ export class PersonaMemory {
     const settings=normalizeMemoryContext(options,this.config.maxChars),now=this._now(settings.search.now);
     const epoch=this._recordEpoch;
     const result=retrieveMemories(this.state.memories,settings.search,now);
+    return this._renderRecordContext(result,settings,now,epoch);
+  }
+  buildTaskMemoryContext(options) {
+    const settings=normalizeTaskMemoryContext(options,this.config.maxChars);
+    const now=this._now(settings.search.now),epoch=this._recordEpoch;
+    const {result,selection}=retrieveTaskMemories(this.state.memories,settings,now);
+    return {...this._renderRecordContext(result,settings,now,epoch),taskSelection:selection};
+  }
+  _renderRecordContext(result,settings,now,epoch) {
     const rendered=renderMemoryContext(result,settings);
     if(epoch!==this._recordEpoch)throw new Error('memory changed while building context; build a new context');
     const contextId=randomUUID(),context={contextId,kind:'records',...rendered,createdAt:now};
@@ -626,26 +635,26 @@ export class PersonaMemory {
       else omitted.push({userId,reason:'no-eligible-memory'});
     }
     candidates.sort((a,b)=>b.priority-a.priority || b.lastAt-a.lastAt || (b.p?.affinity.value??0)-(a.p?.affinity.value??0) || a.userId.localeCompare(b.userId));
-    const header='【交往记忆】', lines=[],people=[],refs=[];
+    const header='[Relationship memory]', lines=[],people=[],refs=[];
     for (const c of candidates) {
       if (people.length>=maxPeople) { omitted.push({userId:c.userId,reason:'people-limit'}); continue; }
       let body,selectedTags=[];
       const tags=c.p ? (entry(this.state.tags,c.pk,[])).filter((t)=>t.longTerm || t.expiresAt===null || t.expiresAt>now)
         .sort((a,b)=>(['manual','host'].includes(b.source)?1:0)-(['manual','host'].includes(a.source)?1:0) || b.lastHitAt-a.lastHitAt) : [];
-      if (c.kind==='visitor') body='来过 '+c.v.count+' 次，没怎么聊过';
+      if (c.kind==='visitor') body='Visited '+c.v.count+' times; limited interaction';
       else {
         const parts=[],t=tierOf(c.p.affinity.value),style=summarizeStyle(c.p.style);
         if (this.config.affinityContext) {
-          parts.push(t.tier+'（'+Math.round(c.p.affinity.value)+' 分）');
+          parts.push(t.tier+' ('+Math.round(c.p.affinity.value)+' points)');
           // Current state guidance takes priority over a generic relationship tone.
           if (t.hint && !tags.some(tag=>tag.advice?.trim())) parts.push(t.hint);
         }
-        if (style.catchphrases.length) parts.push('常带 '+JSON.stringify(clean(style.catchphrases[0])));
+        if (style.catchphrases.length) parts.push('Common phrase: '+JSON.stringify(clean(style.catchphrases[0])));
         const dims=Object.entries(c.p.dimensions);
-        if (dims.length) parts.push('关系维度：'+dims.map(([n,d])=>clean(n)+'='+Math.round(d.value*10)/10).join('、'));
-        body=parts.length ? parts.join('，') : '互动记录';
+        if (dims.length) parts.push('Dimensions: '+dims.map(([n,d])=>clean(n)+'='+Math.round(d.value*10)/10).join(', '));
+        body=parts.length ? parts.join('; ') : 'Interaction record';
       }
-      let line='- '+JSON.stringify(clean(c.userId))+'：'+body;
+      let line='- '+JSON.stringify(clean(c.userId))+': '+body;
       const fits=(next)=>{const text=header+'\n'+[...lines,next].join('\n');return chars(text).length<=budget && (tokenBudget===undefined || tokenCount(text)<=tokenBudget);};
       if (!fits(line)) {
         omitted.push({userId:c.userId,reason:'character-budget'}); continue;
@@ -653,8 +662,8 @@ export class PersonaMemory {
       if (c.p) {
         for (const t of tags) {
           // Keep a label and its guidance together: neither may be silently truncated.
-          const label=JSON.stringify(inline(t.tag))+(t.advice?.trim() ? '（建议：'+JSON.stringify(inline(t.advice))+'）' : '');
-          const next=line+(selectedTags.length?'、':'，状态：')+label;
+          const label=JSON.stringify(inline(t.tag))+(t.advice?.trim() ? ' (advice: '+JSON.stringify(inline(t.advice))+')' : '');
+          const next=line+(selectedTags.length?', ':'; state: ')+label;
           if (selectedTags.length>=3 || !fits(next)) { omitted.push({userId:c.userId,tag:t.tag,reason:'tag-budget'}); continue; }
           line=next; selectedTags.push(clone(t));
           refs.push({personKey:c.pk,tag:t.tag,addedAt:t.addedAt,lastEvidenceAt:t.lastEvidenceAt ?? t.lastHitAt,revision:t.revision??0});
@@ -768,7 +777,7 @@ export class PersonaMemory {
     return {removed};
   }
   diagnostics() {
-    return {schemaVersion:6,candidates:Object.keys(this.state.candidates).length,memories:Object.keys(this.state.memories).length,profiles:Object.values(this.state.sessions).reduce((n,p)=>n+Object.keys(p).length,0),
+    return {schemaVersion:8,candidates:Object.keys(this.state.candidates).length,memories:Object.keys(this.state.memories).length,profiles:Object.values(this.state.sessions).reduce((n,p)=>n+Object.keys(p).length,0),
       visitors:Object.keys(this.state.visitors).length,tags:Object.values(this.state.tags).reduce((n,t)=>n+t.length,0),
       dedupeEntries:this.state.seen.length,confirmedTurns:this.state.uses.length,historyEntries:this.state.history.length};
   }

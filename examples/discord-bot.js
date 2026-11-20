@@ -15,7 +15,7 @@ client.on(Events.MessageCreate,async message=>{
     const context=pm.buildContext({chatId:normalized.chatId,userIds:[normalized.userId]});
     // Rule demonstration: replace this reply builder with your model call.
     // Suppress a new @ notification; user-derived content stays data.
-    await message.reply({content:context.text||'暂时没有关系记录。',allowedMentions:{parse:[],repliedUser:false}});
+    await message.reply({content:context.text||'No relationship records yet.',allowedMentions:{parse:[],repliedUser:false}});
     // Counts as display, not LLM usage: intentionally do not call confirmContext here.
   }catch(e){console.error('Memory step failed:',e.message);}
 });

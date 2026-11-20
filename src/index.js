@@ -8,3 +8,10 @@ export {SQLiteSnapshotStore} from './sqlite.js';
 export {createMemoryBackup,inspectMemoryBackup,previewMemoryRestore,restoreMemoryBackup} from './backup.js';
 export {diagnoseMemory,explainMemoryRecall} from './diagnostics.js';
 export {previewCandidateReview,applyCandidateReview,previewMemoryForget,applyMemoryForget} from './management.js';
+
+export {createTaskHandoff,openTaskHandoff} from './handoff.js';
+export {proposeExperience,proposeExperienceFeedback,proposeExperienceRetirement,reuseExperiences} from './experience-reuse.js';
+export {MEMORY_OPERATIONS,createMemoryMetrics,compareMemoryTrials} from './metrics.js';
+export {previewMemoryMaintenance,applyMemoryMaintenance} from './management.js';
+export {readConsolidationSources,createMemoryConsolidator,proposeMemoryConsolidation} from './consolidation.js';
+export {openCharacterProfile,createCharacterTurnRouter} from './character.js';

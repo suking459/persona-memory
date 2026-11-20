@@ -1,31 +1,23 @@
-# 接入与日常管理
+# Connection and daily operations
 
-适用于 1.5.0。已有的 Codex CLI、DSH headless 实测范围见 [验收矩阵](AGENT-ACCEPTANCE.md)；本页介绍本批新增的包内管理入口，不把它等同于桌面 UI 已验收。[English](agent-operations.en.md)。
+1.5.0 release. See [host acceptance](AGENT-ACCEPTANCE.md) for exact tested CLI versions; desktop UI is unverified.
 
-## 准备
+Use published 1.5.0 for stable connection commands, or this checkout for unpublished additions. Choose an existing project and a new output directory:
 
-使用当前本地源码或经核对的本地安装包。先选目标项目和独立接入包目录；prepare 不启用宿主，不保存模型凭据，不写记忆。示例路径须换成自己的真实目录，输出目录不能已存在。
-
-~~~powershell
-node tools/connect.mjs prepare --host codex --project D:/my-project --out D:/memory-codex --locale zh-CN
-node tools/connect.mjs prepare --host dsh --project D:/my-project --out D:/memory-dsh --locale zh-CN
+~~~sh
+node tools/connect.mjs prepare --host codex --project /absolute/project --out /absolute/new-codex-bundle --locale en
+node tools/connect.mjs prepare --host dsh --project /absolute/project --out /absolute/new-dsh-bundle --locale en
 ~~~
 
-安装包使用 persona-memory-connect prepare，同样的参数。公开 npm 1.0.0 没有这批命令，不要用它代替本地候选。跨电脑移动须重新准备并按 [备份恢复](storage-backup.md) 保留逻辑身份，不能直接复制旧绝对路径配置。
+An installed candidate uses persona-memory-connect prepare with the same options. Preparation changes no host settings and creates no memory store. New bundles include owner.mjs and OPERATIONS.md with local paths and host-specific instructions.
 
-接入包新含 README.md、OPERATIONS.md、owner.mjs，以及原有 binding.json、WORKFLOW.md、宿主配置和 manifest.json。OPERATIONS.md 根据宿主、当前操作系统和 locale 生成具体步骤；中英文说明已提供，其他 locale 回落英文，记忆原文不翻译。
+Open a separate owner terminal in the bundle directory. Run node owner.mjs help and node owner.mjs doctor. doctor checks local data, not host connectivity; malformed storage is reported as failure without repair.
 
-## 启用
+For Codex, node owner.mjs enable explicitly appends the service to the chosen project's .codex/config.toml, preserving original bytes privately for undo. It edits no global configuration, AGENTS.md or automatic hooks. Close other configuration editors, enable, reopen in the trusted project, inspect /mcp and call memory_status. Provide WORKFLOW.md to the host; generated instructions do not prove model compliance.
 
-在接入包目录打开独立终端，先运行 node owner.mjs help 和 node owner.mjs doctor。后者只检查本地库，不能证明宿主已经连接；损坏时以失败退出并保留原文件。
+For DSH, follow the generated headless one-invocation overlay command in OPERATIONS.md from the target project directory. The example includes a read-only status task and uses existing host authentication; running it makes a model request. Never put the provider key in this bundle. Shell quoting targets PowerShell on Windows or the local Unix shell, not Windows cmd. Desktop import remains unverified. Automatic enable/disable is deliberately unavailable for this entry.
 
-Codex 包的 node owner.mjs enable 是显式写入操作：固定目标为所选项目的 .codex/config.toml，只追加本服务，保留原字节恢复记录；不修改全局配置或 AGENTS.md，不自动安装每轮钩子。已有同名声明会拒绝。关闭配置编辑者后执行，重新在受信任项目中打开宿主，查看 /mcp 并实际调用 memory_status。把 WORKFLOW.md 的流程交给宿主遵循；模型是否正确调用仍需检查实际结果。
-
-DSH 包不提供自动 enable/disable。OPERATIONS.md 生成 dsh --profile headless --patch 的本次启动命令，并包含明确的只读状态任务。从目标项目目录运行，使用已经安装的 dsh 和宿主既有模型认证。此步骤会执行一次模型任务；Key 留在宿主设置中，不填入接入包。命令行使用的引号适用于 Windows PowerShell 或当前类 Unix shell，勿直接粘贴到 Windows cmd。桌面 profile 导入尚未验收，不提供推测的点击步骤。
-
-## 候选、纠错、遗忘
-
-在接入包目录运行：
+Owner operations omit --binding because the generated entry fixes it to this bundle:
 
 ~~~sh
 node owner.mjs inspect --scope project --limit 20
@@ -33,18 +25,12 @@ node owner.mjs inspect --scope project --candidate ACTUAL_ID
 node owner.mjs review --scope project --candidate ACTUAL_ID --revision 1 --decision accept
 ~~~
 
-用当前真实 ID/revision 替换占位值，核对候选原文及证据来源后再接受；拒绝将 accept 改为 reject。若获准范围没有 project，改为 binding.json 中的实际别名。所有者入口省去了 --binding，不接受其他绑定重定向；这是减少误操作，不是同一用户下的系统权限隔离。不要让 capture Agent 用终端调用它绕过独立审阅。
+Use actual IDs and revisions; review source evidence yourself. Use reject to decline. A correction is a new host proposal for the same scope/kind/key, followed by separate owner approval. New reads see approved corrections. Other binding scope aliases may replace project. This convenience is not same-user OS isolation; a capture Agent must not run owner commands through shell tools.
 
-更正由宿主提出同一 scope/kind/key 的新候选，再独立审阅。读取正式记忆会看到新值，不要求为了正常审阅重启服务。
+For deletion, explain identifies the current record, forget-preview shows cascading impact, and forget-apply executes the inspected plan. Backup, restore and batch-review options match the [owner CLI](owner-management.md), except for fixed --binding. OPERATIONS.md includes examples. Plans are not human approval; changes/expiry require a fresh preview. Forgetting does not retract old chat contexts or copies in backups.
 
-遗忘先 explain 取得当前正式记录 ID/revision，再 forget-preview 核对连带历史、派生字段和候选，最后 forget-apply。备份、恢复和批量审阅沿用 [管理命令](owner-management.md)，只省去 --binding。OPERATIONS.md 已包含完整示例。预览不是批准；目标变化或预览过期时重新检查，不强制循环重试。遗忘不会撤回旧聊天上下文或外部备份中的副本。
+For Codex, close the session, run node owner.mjs disable and reopen. Later configuration edits cause undo to refuse instead of overwriting them; inspect and merge manually. An undone bundle requires a newly prepared connection preserving the original storage and logical identity.
 
-## 停用与恢复
+For DSH, stop that headless process and omit the overlay next time. This does not undo a separately imported desktop profile.
 
-Codex 关闭当前会话后执行 node owner.mjs disable，再重开宿主。配置后来被编辑过就拒绝整份恢复，保留新编辑，人工核对恢复记录后合并。撤销包不能直接重复 enable；需要新的接入包显式复用原存储和逻辑身份。
-
-DSH 停止本次 headless 进程，下次启动省去该 --patch。没有另行导入持久 profile 时不需要删除日常设置；若自行另行导入，须在宿主撤下对应条目，不能把上述步骤当作已经撤销。
-
-停用不删除本项目记忆。重连同一绑定/存储可恢复正式记录；完整恢复会替换数据，必须先保留当前备份，再审查恢复预览。保持接入包、安装库和 Node 的原位置；路径改变时重新生成。不要通过删除数据文件修复错误。宿主原生记忆与权限始终独立。
-
-主流产品配置参考：[Codex MCP 官方说明](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)、[DSH MCP client](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/mcp/mcp-client/README.md)。具体已测版本以验收矩阵为准。
+Disabling retains data. Reconnect with the same binding/storage for recovery. Full restore replaces data: back up the current store separately, then inspect its preview. Keep Node/library/bundle paths stable, or regenerate using the [backup and identity migration instructions](storage-backup.md). Host-native memory and permissions remain separate.

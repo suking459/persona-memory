@@ -25,7 +25,7 @@ export function diagnoseMemory(pm,raw={}){
   if(expired)warnings.push('expired-pending-candidates');
   if(unusable)warnings.push('unusable-current-records');
   if(current.length>sample.length)warnings.push('record-inspection-limited');
-  return {ok:true,readOnly:true,schemaVersion:6,persistent:Boolean(pm._store),dirty:pm._dirty,
+  return {ok:true,readOnly:true,schemaVersion:8,persistent:Boolean(pm._store),dirty:pm._dirty,
     counts:{records:records.length,currentHeads:current.length,candidates:candidates.length,pending:pending.length,expiredPending:expired},
     sourceCheck:{inspected:sample.length,unusable,reasons,samples:issues,truncated:current.length>sample.length},
     warnings,evidenceVerified:false,externalServicesContacted:false,repairsApplied:false,

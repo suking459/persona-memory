@@ -1,0 +1,73 @@
+{
+  "name": "independent-synthetic-long-term-v1",
+  "provenance": "Written for persona-memory. Capability categories informed by cited papers; no paper prompts, benchmark conversations, answers or code copied.",
+  "scenarios": [
+    {"now":1000,"steps":[
+      {"op":"propose","proposal":{"id":"candidate-language","memory":{"subject":{"type":"project","id":"alpha"},"kind":"preference","key":"documentation-language","value":"English","evidenceId":"session-1"}}},
+      {"op":"check","name":"pending capture stays invisible","category":"capture-review","options":{"subject":{"type":"project","id":"alpha"},"query":"documentation"},"expected":[],"forbidden":["candidate-language"]},
+      {"op":"accept","id":"candidate-language","as":"language"},
+      {"op":"check","name":"reviewed capture is available","category":"capture-review","options":{"subject":{"type":"project","id":"alpha"},"query":"documentation"},"expected":["@language"]},
+      {"op":"restart"},
+      {"op":"check","name":"review survives a session restart","category":"persistence","options":{"subject":{"type":"project","id":"alpha"},"query":"documentation"},"expected":["@language"]},
+      {"op":"put","record":{"id":"summary","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"derived-summary","value":"The documentation language is English.","derivedFrom":[{"id":"@language","revision":1}]}},
+      {"op":"time","now":2000},
+      {"op":"put","record":{"id":"language-corrected","subject":{"type":"project","id":"alpha"},"kind":"preference","key":"documentation-language","value":"Spanish","replaceId":"@language"}},
+      {"op":"check","name":"correction removes stale original and derivative","category":"knowledge-update","options":{"subject":{"type":"project","id":"alpha"},"query":"documentation"},"expected":["language-corrected"],"forbidden":["@language","summary"]},
+      {"op":"restart"},
+      {"op":"check","name":"invalidated summary stays unavailable after reload","category":"knowledge-update","options":{"subject":{"type":"project","id":"alpha"},"query":"derived-summary"},"expected":[],"forbidden":["summary"]}
+    ]},
+    {"now":1000,"steps":[
+      {"op":"put","record":{"id":"owner","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"release-owner","value":"Maya"}},
+      {"op":"restart"},
+      {"op":"put","record":{"id":"date","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"release-date","value":"2026-12-15"}},
+      {"op":"put","record":{"id":"foreign","subject":{"type":"project","id":"beta"},"kind":"fact","key":"release-owner","value":"Unrelated owner"}},
+      {"op":"check","name":"all evidence from multiple sessions is selected","category":"multi-session-evidence","options":{"subject":{"type":"project","id":"alpha"},"query":"release"},"expected":["owner","date"],"forbidden":["foreign"]},
+      {"op":"check","name":"one retrieved item is insufficient for a two-fact question","category":"evidence-completeness","tier":"challenge","options":{"subject":{"type":"project","id":"alpha"},"query":"release","limit":1},"expected":["owner","date"],"forbidden":["foreign"]},
+      {"op":"check","name":"a starved context budget cannot contain the evidence set","category":"context-budget","tier":"challenge","budget":100,"options":{"subject":{"type":"project","id":"alpha"},"query":"release"},"expected":["owner","date"],"forbidden":["foreign"]},
+      {"op":"check","name":"unanswerable question returns no reference","category":"abstention","options":{"subject":{"type":"project","id":"alpha"},"query":"unicorn flight schedule"},"expected":[]}
+    ]},
+    {"now":1000,"steps":[
+      {"op":"put","record":{"id":"preview","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"channel","value":"preview"}},
+      {"op":"time","now":1100},
+      {"op":"put","record":{"id":"stable","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"channel","value":"stable","validFrom":2000,"replaceId":"preview"}},
+      {"op":"check","name":"scheduled change is not active early","category":"temporal","options":{"subject":{"type":"project","id":"alpha"},"query":"channel"},"expected":["preview"],"forbidden":["stable"]},
+      {"op":"restart"},
+      {"op":"time","now":2000},
+      {"op":"check","name":"scheduled change activates at its boundary","category":"temporal","options":{"subject":{"type":"project","id":"alpha"},"query":"channel"},"expected":["stable"],"forbidden":["preview"]},
+      {"op":"put","record":{"id":"ticket","subject":{"type":"project","id":"alpha"},"kind":"state","key":"ticket","value":"waiting","expiresAt":3000}},
+      {"op":"check","name":"temporary state is usable before expiry","category":"temporal","options":{"subject":{"type":"project","id":"alpha"},"query":"ticket"},"expected":["ticket"]},
+      {"op":"time","now":3000},
+      {"op":"restart"},
+      {"op":"check","name":"expired state stays unavailable after restart","category":"temporal","options":{"subject":{"type":"project","id":"alpha"},"query":"ticket"},"expected":[],"forbidden":["ticket"]}
+    ]},
+    {"now":1000,"steps":[
+      {"op":"put","record":{"id":"project-fact","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"shipping","value":"Use tracked shipping"}},
+      {"op":"put","record":{"id":"private-fact","subject":{"type":"user","id":"owner"},"kind":"preference","key":"shipping","value":"Private synthetic preference"}},
+      {"op":"check","name":"private preference cannot leak into project retrieval","category":"scope","options":{"subject":{"type":"project","id":"alpha"},"query":"shipping"},"expected":["project-fact"],"forbidden":["private-fact"]},
+      {"op":"check","name":"private subject does not borrow project facts","category":"scope","options":{"subject":{"type":"user","id":"owner"},"query":"shipping"},"expected":["private-fact"],"forbidden":["project-fact"]}
+    ]},
+    {"now":1000,"steps":[
+      {"op":"put","record":{"id":"source","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"recovery-key","value":"Synthetic recovery instruction"}},
+      {"op":"put","record":{"id":"derived","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"recovery-summary","value":"Derived recovery note","derivedFrom":[{"id":"source","revision":1}]}},
+      {"op":"forget","id":"source"},
+      {"op":"restart"},
+      {"op":"check","name":"forgotten sources and derivatives do not reappear","category":"forgetting","options":{"subject":{"type":"project","id":"alpha"},"query":"recovery"},"expected":[],"forbidden":["source","derived"]}
+    ]},
+    {"now":1000,"steps":[
+      {"op":"put","record":{"id":"japanese","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"地域","value":"横浜"}},
+      {"op":"put","record":{"id":"accent","subject":{"type":"project","id":"alpha"},"kind":"fact","key":"menu","value":"café"}},
+      {"op":"put","record":{"id":"tea","subject":{"type":"project","id":"alpha"},"kind":"preference","key":"beverage","value":"green tea"}},
+      {"op":"restart"},
+      {"op":"check","name":"Japanese original text survives sessions","category":"multilingual-literal","options":{"subject":{"type":"project","id":"alpha"},"query":"横浜","locale":"ja"},"expected":["japanese"]},
+      {"op":"check","name":"accented original text survives sessions","category":"multilingual-literal","options":{"subject":{"type":"project","id":"alpha"},"query":"café","locale":"fr"},"expected":["accent"]},
+      {"op":"check","name":"cross-language meaning needs a separately measured retriever","category":"cross-language","tier":"challenge","options":{"subject":{"type":"project","id":"alpha"},"query":"ما هو المشروب المفضل","locale":"ar"},"expected":["tea"]}
+    ]},
+    {"now":1000,"steps":[
+      {"op":"put","record":{"id":"coffee","subject":{"type":"project","id":"alpha"},"kind":"preference","key":"coffee","value":"espresso"}},
+      {"op":"put","record":{"id":"standing","subject":{"type":"project","id":"alpha"},"kind":"constraint","key":"documentation-language","value":"Repository prose uses English"}},
+      {"op":"check","name":"literal preference lookup works","category":"literal","options":{"subject":{"type":"project","id":"alpha"},"query":"coffee"},"expected":["coffee"]},
+      {"op":"check","name":"paraphrase without lexical overlap is not assumed solved","category":"paraphrase","tier":"challenge","options":{"subject":{"type":"project","id":"alpha"},"query":"morning refreshment"},"expected":["coffee"]},
+      {"op":"check","name":"standing constraint needs an explicit context policy","category":"standing-constraint","tier":"challenge","task":{"includeStanding":true},"options":{"subject":{"type":"project","id":"alpha"},"query":"implement pagination widget"},"expected":["standing"]}
+    ]}
+  ]
+}

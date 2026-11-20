@@ -1,12 +1,12 @@
 import {assertMemoryFields as fields,normalizeSubject,sameSubject,isCurrentMemory,normalizeExperienceValue} from './records.js';
-const INPUT_FIELDS=new Set(['id','subject','key','task','context','attempt','result','conditions','outcome','verified','evidenceId','observedAt','validFrom','expiresAt','replaceId','expectedRevision','derivedFrom','assertion']);
+const INPUT_FIELDS=new Set(['id','subject','key','task','context','attempt','result','conditions','outcome','verified','evidenceId','observedAt','validFrom','expiresAt','replaceId','expectedRevision','derivedFrom','assertion','origin']);
 export function experienceInput(input){
   fields(input,INPUT_FIELDS,'experience report');
   const value=normalizeExperienceValue({task:input.task,context:input.context===undefined?null:input.context,
     attempt:input.attempt,result:input.result,conditions:input.conditions===undefined?[]:input.conditions});
   const memory={subject:input.subject,kind:'episode',key:input.key,value,source:'host',
     experience:{outcome:input.outcome,verified:input.verified===undefined?false:input.verified}};
-  for(const key of ['id','evidenceId','observedAt','validFrom','expiresAt','replaceId','expectedRevision','derivedFrom','assertion'])if(input[key]!==undefined)memory[key]=input[key];
+  for(const key of ['id','evidenceId','observedAt','validFrom','expiresAt','replaceId','expectedRevision','derivedFrom','assertion','origin'])if(input[key]!==undefined)memory[key]=input[key];
   return memory;
 }
 export function selectExperiences(records,options,now){

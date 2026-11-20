@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 import {isMainModule} from '../src/main.js';
+import {compareTrialsCommand} from './compare-trials.mjs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {createSharedSpace,revokeSharedAgent,inspectSharedSpace} from '../adapters/agent/sharing.js';
+import {prepareSharedAgentBundle} from '../adapters/agent/shared-bundle.js';
+import {withSharedOwnerCommand} from '../adapters/agent/shared-owner.js';
+import {agentHandoffCommand} from '../adapters/agent/handoff.js';
+import {agentExperienceCommand} from '../adapters/agent/experience.js';
 import {agentManagementCommand} from '../adapters/agent/manage.js';
 import {openAgentMemory} from '../adapters/agent/store.js';
 import {agentBackupCommand,identityFromBackup} from '../adapters/agent/backup.js';
@@ -17,8 +23,13 @@ export async function connectCommand(args){
     if(!/^--[a-z-]+$/.test(rest[i])||rest[i+1]===undefined||Object.hasOwn(options,rest[i].slice(2)))throw new TypeError('expected unique --name value options');
     options[rest[i].slice(2)]=rest[i+1];
   }
-  const allowed={doctor:['binding'],explain:['binding','scope','query','memory','limit','locale'],'review-preview':['binding','scope','requests','decision','reason','out'],'review-apply':['binding','plan'],'forget-preview':['binding','scope','memory','revision','out'],'forget-apply':['binding','plan'],list:[],prepare:['host','out','project','user','access','storage','locale','embedding-provider','embedding-model','embedding-endpoint','embedding-key-env','backend','identity-from'],backup:['binding','out'],'restore-preview':['binding','backup','out'],'restore-apply':['binding','backup','plan'],apply:['bundle','target'],undo:['bundle'],inspect:['binding','scope','candidate','status','limit','after'],review:['binding','scope','candidate','revision','decision','reason']};
+  const allowed={'compare-trials':['input','out'],'maintenance-preview':['binding','scope','limit','out'],'maintenance-apply':['binding','plan'],"experience-reuse":['binding','scope','input'],"experience-propose":['binding','scope','input'],"experience-feedback":['binding','scope','input'],"experience-retire":['binding','scope','input'],'share-create':['out','type','id'],'share-grant':['policy','host','contributor','access','expires-at','locale','out'],'share-revoke':['policy','grant'],'share-status':['policy'],'handoff-export':['binding','scope','notes','out'],'handoff-open':['binding','scope','file'],doctor:['binding'],explain:['binding','scope','query','memory','limit','locale'],'review-preview':['binding','scope','requests','decision','reason','out'],'review-apply':['binding','plan'],'forget-preview':['binding','scope','memory','revision','out'],'forget-apply':['binding','plan'],list:[],prepare:['host','out','project','user','access','storage','locale','embedding-provider','embedding-model','embedding-endpoint','embedding-key-env','backend','identity-from'],backup:['binding','out'],'restore-preview':['binding','backup','out'],'restore-apply':['binding','backup','plan'],apply:['bundle','target'],undo:['bundle'],inspect:['binding','scope','candidate','status','limit','after'],review:['binding','scope','candidate','revision','decision','reason']};
   if(!Object.hasOwn(allowed,action)||Object.keys(options).some(k=>!allowed[action].includes(k)))throw new TypeError('usage: persona-memory-connect list | prepare | apply | undo | inspect | review (see docs/agent-integration.md)');
+  if(action==='compare-trials')return compareTrialsCommand(options);
+  if(action==='share-create')return createSharedSpace({out:options.out===undefined?undefined:path.resolve(options.out),subject:{type:options.type??'project',id:options.id}});
+  if(action==='share-grant')return prepareSharedAgentBundle({policy:options.policy===undefined?undefined:path.resolve(options.policy),host:options.host,contributor:options.contributor,out:options.out===undefined?undefined:path.resolve(options.out),...(options.access===undefined?{}:{access:options.access}),...(options.locale===undefined?{}:{locale:options.locale}),...(options['expires-at']===undefined?{}:{expiresAt:Number(options['expires-at'])})});
+  if(action==='share-revoke')return revokeSharedAgent({policy:options.policy===undefined?undefined:path.resolve(options.policy),grantId:options.grant});
+  if(action==='share-status')return inspectSharedSpace(options.policy===undefined?undefined:path.resolve(options.policy));
   if(action==='list')return HOST_PROFILES;
   if(action==='prepare'){
     let retrieval;
@@ -42,7 +53,13 @@ export async function connectCommand(args){
   }
   if(!options.binding)throw new TypeError('--binding required');
   const binding=readBinding(path.resolve(options.binding));
-  if(['doctor','explain','review-preview','review-apply','forget-preview','forget-apply'].includes(action))return agentManagementCommand(action,binding,options);
+  if(binding.sharing&&action!=='review'&&!action.startsWith('experience-'))return withSharedOwnerCommand(binding,action,options,()=>runBoundCommand(action,binding,options));
+  return runBoundCommand(action,binding,options);
+}
+async function runBoundCommand(action,binding,options){
+  if(action.startsWith('experience-'))return agentExperienceCommand(action,binding,options);
+  if(['handoff-export','handoff-open'].includes(action))return agentHandoffCommand(action,binding,options);
+  if(['doctor','explain','review-preview','review-apply','forget-preview','forget-apply','maintenance-preview','maintenance-apply'].includes(action))return agentManagementCommand(action,binding,options);
   if(['backup','restore-preview','restore-apply'].includes(action)){
     if(action==='restore-apply'&&!options.plan)throw new TypeError('--plan required');
     return agentBackupCommand(action,binding,options);
@@ -58,7 +75,7 @@ export async function connectCommand(args){
   const owner=createAgentSession(pm,{...binding,access:'review'});
   return owner.call('memory_review',{scope:options.scope,candidateId:options.candidate,expectedRevision:Number(options.revision),decision:options.decision,...(options.reason===undefined?{}:{reason:options.reason})});
 }
-function printableJSON(value){
+export function printableJSON(value){
   return JSON.stringify(value,null,2).replace(/[\u2028\u2029\u202a-\u202e\u2066-\u2069]/g,char=>'\\u'+char.charCodeAt(0).toString(16).padStart(4,'0'));
 }
 if(isMainModule(import.meta.url)){

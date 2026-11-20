@@ -1,10 +1,12 @@
 // Bounded, local retrieval. External relevance is data supplied by the host, never a callback.
 import {normalizeLocale,dictionaryWords} from './locale.js';
-import {MEMORY_KINDS,normalizeSubject,memoryIdentifier,sameSubject,isCurrentMemory,assertMemoryFields} from './records.js';
+import {MEMORY_KINDS,normalizeSubject,memoryIdentifier,sameSubject,isCurrentMemory,assertMemoryFields,memoryArray} from './records.js';
 
 const SOURCES=['manual','user','host','rule','model','import'];
 const SEARCH_FIELDS=new Set(['subject','subjects','query','kinds','keys','sources','observedAfter','observedBefore','limit','maxCandidates','minScore','relevance','now','locale']);
 const CONTEXT_FIELDS=new Set([...SEARCH_FIELDS].filter(key=>key!=='limit').concat(['budget','maxRecords','tokenBudget','countTokens']));
+const TASK_CONTEXT_FIELDS=new Set([...CONTEXT_FIELDS].filter(key=>key!=='subjects'&&key!=='relevance').concat(['facets','includeStanding']));
+const MAX_TASK_FACETS=4, MAX_FACET_MATCHES=16, MAX_STANDING_MATCHES=8, MAX_TASK_CANDIDATES=64;
 const STOP=new Set(['a','an','the','is','are','what','when','how','do','does','i','you','my','please','can','could','should','to','of','and','for','it','be',
   '的','了','吗','呢','我','你','他','她','是','和','与','在','这个','那个','什么','怎么','如何','我们','你们','他们','请问','一下','是否','可以','现在','时候']);
 const CJK=/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
@@ -120,6 +122,57 @@ export function normalizeMemoryContext(options={},defaultBudget=700){
     if(typeof options.countTokens!=='function')throw new TypeError('tokenBudget requires a tokenizer');
   }else if(options.countTokens!==undefined && typeof options.countTokens!=='function')throw new TypeError('invalid tokenizer');
   return {search,budget,maxRecords,tokenBudget,countTokens:options.countTokens,locale:search.locale};
+}
+export function normalizeTaskMemoryContext(options,defaultBudget){
+  assertMemoryFields(options,TASK_CONTEXT_FIELDS,'task memory options');
+  const {facets,includeStanding=false,...context}=options;
+  if(typeof includeStanding!=='boolean')throw new TypeError('includeStanding must be boolean');
+  const settings=normalizeMemoryContext(context,defaultBudget);
+  const {search}=settings;
+  if(search.subjects[0].type==='user')throw new TypeError('task memory requires a project or task subject');
+  // Bound each pass independently of any larger ordinary search limit.
+  const base={...search,limit:MAX_FACET_MATCHES,maxCandidates:Math.min(search.maxCandidates,1000)};
+  const extra=facets===undefined?[]:memoryArray(facets,'task query facets',MAX_TASK_FACETS);
+  const queries=search.query?[search.query,...extra]:extra;
+  if(!queries.length||queries.length>MAX_TASK_FACETS)throw new RangeError('provide one to four task queries');
+  const passes=new Map();
+  for(const raw of queries){
+    if(typeof raw!=='string'||raw.length>1024||!raw.trim())throw new TypeError('invalid task query facet');
+    const query=raw.trim(),queryText=normalized(query,base.locale);
+    if(!passes.has(queryText))passes.set(queryText,{...base,query,queryText,terms:[...tokenize(queryText,true,base.locale)]});
+  }
+  const standing=includeStanding&&(base.kinds===undefined||base.kinds.includes('constraint'))?
+    {...base,kinds:['constraint'],query:'',queryText:'',terms:[],limit:MAX_STANDING_MATCHES}:null;
+  return {...settings,passes:[...passes.values()],standing};
+}
+export function retrieveTaskMemories(records,settings,now){
+  const facets=settings.passes.map(pass=>retrieveMemories(records,pass,now));
+  const standing=settings.standing&&retrieveMemories(records,settings.standing,now);
+  const standingIds=standing?.matches.map(match=>match.record.id)??[];
+  const standingSet=new Set(standingIds),selected=new Map();
+  const passes=standing?[standing,...facets]:facets;
+  let duplicates=0;
+  // Give standing constraints and each query a chance to contribute at every rank.
+  for(let rank=0;rank<MAX_FACET_MATCHES;rank++){
+    for(const pass of passes){
+      const match=pass.matches[rank];
+      if(!match)continue;
+      const id=match.record.id,previous=selected.get(id);
+      if(previous){
+        duplicates++;
+        // Keep query match details if this record was first found as standing data.
+        if(previous.method==='filter'&&match.method!=='filter')selected.set(id,match);
+      }else selected.set(id,match);
+    }
+  }
+  const matches=[...selected.values()].slice(0,MAX_TASK_CANDIDATES).map(match=>standingSet.has(match.record.id)?
+    {...match,reasons:[...match.reasons,'standing-constraint']}:match);
+  const diagnostics=({matches:rows,...details})=>details;
+  return {result:{...facets[0],matches},selection:{
+    candidateIds:matches.map(match=>match.record.id),standingIds,
+    facets:facets.map(diagnostics),standing:standing?diagnostics(standing):null,
+    duplicates,unionOmitted:selected.size-matches.length,
+  }};
 }
 export function retrieveMemories(records,options,now){
   const {subjects,kinds,keys,sources,observedAfter,observedBefore,maxCandidates,queryText,terms,relevance,minScore}=options;

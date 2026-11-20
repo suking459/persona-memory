@@ -1,6 +1,6 @@
 # Write quality and corrections — 1.2 local development
 
-中文概览：派生记忆显式引用来源；来源更正或过期后不再召回旧归纳，遗忘会级联清理相关历史和候选。重复/不同值提示只帮助审阅，不自动判真。当前未发布。
+Derived memory explicitly references its sources. Correction or expiry invalidates old summaries; forgetting cascades through relevant history and candidates. Duplicate/different-value hints assist review, never establish truth. Introduced during local 1.2 development.
 
 ## Explicit sources for derived memory
 

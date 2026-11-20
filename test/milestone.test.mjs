@@ -48,7 +48,7 @@ test('tag evidence version prevents acknowledging removed and recreated tags',()
 test('visitor-only context works, maxPeople and zero budget apply to all rows',()=>{
   const {pm}=memory();
   for(const userId of ['a','b'])for(let i=0;i<2;i++)pm.ingest(message({userId,mentionsSelf:false}));
-  assert.match(pm.buildBlock({chatId:'room',userIds:['a']}),/来过 2 次/);
+  assert.match(pm.buildBlock({chatId:'room',userIds:['a']}),/Visited 2 times/);
   assert.equal(pm.buildContext({chatId:'room',userIds:['a','b'],maxPeople:1}).people.length,1);
   assert.equal(pm.buildBlock({chatId:'room',userIds:['a'],budget:0}),'');
 });
@@ -124,7 +124,7 @@ test('persistence upgrades v1, restores exact scope, and preserves corrupt origi
     const {pm}=memory();pm.ingest(message({text:'好累'}));const v1=pm.export();v1.schemaVersion=1;delete v1.scope;delete v1.tagScope;
     const restored=new PersonaMemory(withLoadRule({storage:dir,clock:()=>start}));restored.import(v1);restored.flush();
     const read=new PersonaMemory(withLoadRule({storage:dir,clock:()=>start}));assert.equal(read.getProfile('room','u').tags[0].tag,'最近很累');
-    assert.equal(read.export().schemaVersion,6);
+    assert.equal(read.export().schemaVersion,8);
     const file=path.join(dir,'default.json');fs.writeFileSync(file,'{bad');
     assert.throws(()=>new PersonaMemory(withLoadRule({storage:dir})),/original file preserved/);
     assert.equal(fs.readFileSync(file,'utf8'),'{bad');

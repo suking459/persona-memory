@@ -1,154 +1,108 @@
 # persona-memory
 
-**面向用户、项目和任务的通用记忆库。** 支持有范围的检索、纠错、时间版本、候选审阅和可选关系状态。JavaScript / TypeScript，核心零运行时依赖。
+**Host-independent memory for users, projects and tasks.** Typed records, scoped retrieval, corrections, temporal versions, reviewed learning and optional relationship state. JavaScript / TypeScript; zero runtime dependencies in the core.
 
-Host-independent agent memory: typed records, scoped retrieval, temporal versions, reviewed learning, and optional relationship state.
+Applications own model calls, identity, authorization and task execution. The library stores, selects, updates, expires and confirms the use of memory. Core operations require no model key; optional extractors and embedding services run only when explicitly invoked by the host.
 
-这是一个可嵌入应用的 Node.js 组件。应用负责模型调用、身份授权和业务执行，库负责记忆的保存、选择、更新、过期与使用确认。核心不需要模型密钥；接入外部抽取器时由应用主动调用。
+Use the SDK inside an application, or connect an Agent to the separate local MCP process. Owner commands handle review and recovery. A skill can guide that workflow; persistence and permissions are implemented by the library/service. Host-native memory remains separate. See the [long-term memory research](docs/2.0-MEMORY-RESEARCH.md) and [2.0 adoption plan](docs/2.0-RESEARCH-ADOPTION.md).
 
-## 可以用在哪里
+## Where it fits
 
-| 用途 | 可以保存和使用的内容 | 接入方负责什么 |
-|---|---|---|
-| 个人/办公助手 | 用户偏好、长期要求、临时状态 | 用户授权、实际模型调用 |
-| 编程/项目助手 | 项目规范、技术决定、任务状态、带条件的处理经验 | 确认代码/任务结果，按项目选择记忆 |
-| 客服与业务助手 | 客户偏好、已确认事项、工单状态和下一步约束 | 身份权限、工单和订单等业务真值 |
-| 游戏 NPC、社区与陪伴机器人 | 角色状态、事件、关系维度、沟通风格 | 剧情/事件确认、平台连接 |
-| 多工具或多个 agent 协作 | 明确映射的项目/任务记录和有界上下文 | 工具执行、跨主体授权、写入冲突处理 |
+| Application | Memory | Host responsibilities |
+| --- | --- | --- |
+| Personal and office assistants | Preferences, lasting requirements, temporary state | User consent and model calls |
+| Coding and project assistants | Constraints, decisions, task checkpoints, conditional experience | Verify task results and select the correct project |
+| Support and business assistants | Confirmed customer facts, ticket status and next actions | Identity, access and authoritative business systems |
+| NPCs and community bots | Character state, events, relationship dimensions and style | Game events and platform connectivity |
+| Multiple agents or tools | Explicitly shared project/task records and bounded handoffs | Owner-controlled sharing, execution and conflict handling |
 
-完整场景、组合方式和接入选择见 [用途与选型](docs/use-cases.md)。
+See [use cases](docs/use-cases.md) and the [API](docs/API.md).
 
-## 1.5 的能力
+## Release versions
 
-新增：默认候选/独立审阅的 Agent 通道、来源纠错失效、可选语义检索、可选原生 SQLite、完整备份恢复、doctor/解释/批量预览，以及接入包自带的中英管理入口。
+**1.5.0** introduced scoped Agent capture and separate owner review, provenance invalidation, optional semantic retrieval, optional native SQLite, full backup/restore and owner diagnostics/previews.
 
-**默认行为变化**：不再内置情绪/健康词表或亲疏口吻，档位显示为中性编号；宿主明确给出判断，自定义规则与旧数据保留。见 [迁移](docs/1.5-POLICY-MIGRATION.md)。核心由本项目需求驱动、AI 辅助实现；来源核查有明确范围，不宣称全网完全原创。
+**2.0.0** adds task handoffs, owner-controlled local sharing, reviewed experience reuse, local measurement, bounded maintenance, task-aware context and reviewed consolidation. Hosts using the SDK can also opt into a casual-chat character through an explicit chat entry. Local work snapshots use **schema 8** and read schemas 1–7. Published 1.5 uses schema 6. Back up before upgrading. See [upgrade and rollback](docs/2.0-MIGRATION.md) and the [host acceptance matrix](docs/AGENT-ACCEPTANCE.md).
 
+**1.5 changes default behavior:** built-in emotion/health word lists and relationship wording were replaced with host-provided judgments and neutral numeric bands. Custom rules and existing data remain supported. Read the [policy migration guide](docs/1.5-POLICY-MIGRATION.md). Implementation is maintainer-directed and AI-assisted; the [origin review](docs/1.5-ORIGIN-REVIEW.md) has explicit limits and makes no worldwide originality guarantee.
 
-- **明确的主体与类型**：user / project / task；preference、fact、constraint、decision、episode、state 六种记忆，支持 JSON 值、来源和证据编号。项目事实独立于关系评分。
-- **有范围的检索**：按主体、类型、来源、字段与时间筛选，使用本地词法匹配和可解释排序；返回选中/省略原因，约束处理量和上下文长度。
-- **纠错与时间**：明确替代和修订前置条件；保留有限版本，支持未来生效、过期和“在某时已知什么”的查询。
-- **受控学习**：外部抽取结果先形成有期限候选，可接受、拒绝、修订；可显式开启只接纳新字段的有限策略。任务经验保留适用条件和宿主确认信息。
-- **可靠存储与搬运**：JSON 文件、内存快照、自定义异步存储；默认文件锁和内容修订检查，选择性导出、映射预览与整批导入。
-- **可选关系状态**：真实互动、熟悉程度/信任维度、可纠正标签、过期/衰减与本地风格统计；社群、陪伴、客服、NPC 四套预设。
-- **实际使用确认**：查看或预览不增加使用次数；一次成功模型调用按 turnId 确认，重试有界去重，组合上下文可原子确认。
-- **数据管理**：应用/频道范围、删除主体、清空、维护、诊断、快照迁移；失败保留原状态或原文件，不静默覆盖坏数据。
+## Capabilities
 
-当前快照为 schema 6，支持读取并迁移 schema 1–5。升级与回退见 [迁移说明](docs/migration.md)。
+- **Typed subjects and records:** user / project / task; preference, fact, constraint, decision, episode and state. JSON values, source labels, evidence IDs and optional dependencies. Project facts do not affect relationship scores.
+- **Scoped retrieval:** filter by subject, type, source, key and time; bounded local lexical ranking with selection/omission reasons. Optional semantic retrieval remains a separate explicit service.
+- **Correction and time:** explicit replacement, revision preconditions, bounded history, future activation, expiry and valid-time/known-time queries.
+- **Reviewed learning:** expiring proposals with accept/reject/revise operations; optional bounded acceptance of new fields. Experience retains conditions, outcomes and caller evidence assertions.
+- **Storage and recovery:** JSON files, memory snapshots, custom asynchronous stores and optional SQLite. File locking, content revisions, selective transfer previews and full snapshot recovery.
+- **Optional relationship state:** real interactions, configurable dimensions, correctable tags, expiry/decay and local style statistics; community, companion, support and NPC presets.
+- **Use confirmation:** previewing does not increase use counts. Confirm successful consumption with a turn ID; retries are bounded and overlapping contexts can be confirmed atomically.
+- **2.0 features:** [task context](docs/retrieval.md#task-context), [handoff](docs/handoff.md), [sharing](docs/sharing.md), [experience reuse](docs/experience-reuse.md), [measurement and maintenance](docs/measurement-maintenance.md), [reviewed consolidation](docs/consolidation.md) and [casual-chat character](docs/character.md).
+- **Research-based evaluation:** [independent synthetic long-term traces](docs/long-term-evaluation.md) separate complete retrieved/rendered evidence, correction, expiry, abstention and scope from semantic/standing-context challenges. No external benchmark or model-quality score is claimed.
 
-## Agent 接入
+## Installation
 
-使用 [中英接入流程](docs/agent-operations.md) 准备本机接入包，生成配置不自动修改宿主。指定 Windows Codex CLI 与 DSH headless 版本已有真实模型生命周期测试；其他九类配置和桌面入口的边界见 [验收矩阵](docs/AGENT-ACCEPTANCE.md)。无需安装订阅所有厂商产品。
-
-## 安装
-
-稳定版 1.5.0（默认关系策略含不兼容变化，请先读 [迁移说明](docs/1.5-POLICY-MIGRATION.md)）：
-
-~~~sh
-npm install persona-memory@1.5.0
-~~~
-
-GitHub 固定标签源码：
+Review the migration guide, then install the version you want. If you have the 2.0.0 release archive, install from the local file:
 
 ```sh
-npm install "github:suking459/persona-memory#v1.5.0"
+npm install ./persona-memory-2.0.0.tgz
 ```
 
-也可以从 [GitHub Release](https://github.com/suking459/persona-memory/releases/tag/v1.5.0) 下载 persona-memory-1.5.0.tgz 后：
+For published copies, pin the npm version or the matching GitHub tag:
 
 ```sh
-npm install ./persona-memory-1.5.0.tgz
+npm install persona-memory@2.0.0
+npm install "github:suking459/persona-memory#v2.0.0"
 ```
 
-1.0.0 仍可固定安装用于旧默认行为；已发布旧版本和原许可保持原样。1.5.0 经所有者明确选择作为稳定版本发布，但并非对旧默认策略完全兼容，请固定版本并先验证迁移。部署选择维护中的 Node LTS。Node 18/20 保留兼容测试，具体范围见 [接入与验证](docs/integrations.md)。
+For applications that need the 1.5 integration checkpoint, install `persona-memory@1.5.0` or obtain its [release archive](https://github.com/suking459/persona-memory/releases/tag/v1.5.0). Version 1.0.0 covers historical default behavior and license terms. Use a maintained Node runtime for deployments. See [integrations](docs/integrations.md) for compatibility results.
 
-## 最小示例：项目记忆与上下文
+## Minimal project-memory example
 
-将下面保存为 example.mjs，然后 node example.mjs：
+Save as `example.mjs`, then run `node example.mjs`:
 
 ```js
 import { PersonaMemory } from 'persona-memory';
 
-const pm = new PersonaMemory({
-  storage: './data',
-  scope: 'my-assistant',
-});
+const pm = new PersonaMemory({ storage: './data', scope: 'my-assistant' });
 const project = { type: 'project', id: 'my-project' };
-
 pm.putMemory({
-  id: 'response-format-v1', // 稳定 ID 允许相同内容安全重试
+  id: 'response-format-v1', // A stable ID permits retries with identical content.
   subject: project,
   kind: 'constraint',
-  key: '回答格式',
-  value: '使用中文，先说结论，再给必要细节',
+  key: 'response-format',
+  value: 'Lead with the outcome, then give the necessary details.',
   source: 'user',
   evidenceId: 'settings-1',
 });
-
 const context = pm.buildMemoryContext({
-  subject: project,
-  query: '回答格式',
-  budget: 1600,
+  subject: project, query: 'response-format', locale: 'en', budget: 1600,
 });
 console.log(context.text);
 pm.flush();
 ```
 
-应用将 context.text 作为参考资料交给实际模型。成功使用后可调用 pm.confirmContext(context, {turnId:'unique-turn-id'})，再保存；单纯打印、查看或请求失败不确认。上下文内文字不获得执行或授权地位。
+Provide `context.text` to the model as reference data. After actual successful consumption, call `pm.confirmContext(context, {turnId:'unique-turn-id'})` and persist. Printing, previewing and failed requests do not count as use. Retrieved text never grants execution authority.
 
-未配置 storage 时纯内存运行。JSON flush 是同步磁盘操作；冲突返回明确错误，由应用处理后显式重试。自定义异步存储使用 PersonaMemory.open、persist、reload。详见 [API](docs/API.md)、[检索与模型桥](docs/retrieval.md) 和 [时间与存储](docs/time-storage.md)。
+Without storage the instance runs in memory. JSON `flush` is synchronous; the application handles explicit conflict errors and bounded retries. Custom asynchronous stores use `PersonaMemory.open`, `persist` and `reload`. See [typed memory](docs/typed-memory.md), [retrieval](docs/retrieval.md), [time/storage](docs/time-storage.md) and [reviewed learning](docs/learning.md).
 
-## 接入方式
+## Agent integration
 
-| 方式 | 入口 | 说明 |
-|---|---|---|
-| Node.js / TypeScript | PersonaMemory | 应用直接记录、检索、确认与保存 |
-| HTTP | persona-memory-http | 其他语言调用；默认仅回环地址，可配置 Bearer，管理写入需显式开启 |
-| MCP stdio | persona-memory-mcp | 按需查询与关系消息记录；应用仍需组织完整记录流程 |
-| 审阅 CLI | persona-memory-review | 用 JSON 请求查看、接受、拒绝、修订候选和检查经验 |
-| OneBot / Discord | adapters/onebot、adapters/discord | 平台消息规范化；Discord 有离线解析和 bot 示例 |
-| 通用模型桥 / LangChain | adapters/memory、adapters/langchain | 显式把上下文传给模型或 Runnable，成功后确认 |
-| LlamaIndex TS | adapters/llamaindex | 可选历史兼容桥接；不作为核心依赖 |
+Prepare an isolated connection bundle using the [connection and operations guide](docs/agent-operations.md). Generation does not apply host settings. Specific Windows Codex CLI and DSH headless versions have real-model lifecycle evidence; nine other generated host profiles and desktop interfaces retain explicit experimental boundaries in the [acceptance matrix](docs/AGENT-ACCEPTANCE.md). Users need not install or subscribe to every vendor's product.
 
-MCP/HTTP 配置与框架的已验证版本见 [接入说明](docs/integrations.md)。HTTP 管理服务需要宿主配置授权，scope/subject 选择不等于访问控制。
+Repository documentation, comments, examples and default presentation use English. Stored content retains its original language; explicit localized output and [multilingual regression fixtures](docs/multilingual.md) remain supported. See the [language policy](docs/REPOSITORY-LANGUAGE.md).
 
-## 示例与开发验证
-
-克隆仓库后：
-
-```sh
-npm ci --ignore-scripts --no-audit --no-fund
-npm run example:memory
-npm run example:retrieval
-npm run example:time-storage
-npm run example:learning
-npm run demo
-# 规则演示：http://127.0.0.1:7788
-```
-
-demo 展示社群、陪伴、客服、NPC 的状态变化与上下文，不需要密钥。可选框架的示例依赖仅用于开发，不进入核心运行时依赖。
+## Examples and validation
 
 ```sh
 npm test
 npm run typecheck
-npm run evaluate
-npm run evaluate:retrieval
-npm run evaluate:learning
+npm run example:memory
+npm run example:retrieval
+npm run example:learning
+npm run demo
 ```
 
-已完成 Windows 六个、Ubuntu 五个运行时组合的本地验收，覆盖坏编码、超量输入、迟到结果、写入竞争、真实进程中断和离线安装。Linux 本地验收使用隔离 TCG 虚拟机及明确的测试等待倍率；生产期限不变。实际矩阵、次数和边界见 [加固记录](docs/1.0-HARDENING.md)；本次发布的远程检查见 [Actions](https://github.com/suking459/persona-memory/actions/workflows/ci.yml)。
+The local demo is a rule-based illustration, not a model-quality benchmark. Examples use synthetic data. See [cookbook](docs/cookbook.md), [tuning](docs/tuning.md), [evaluation](docs/evaluation.md), [storage/recovery](docs/storage-backup.md) and [owner management](docs/owner-management.md). Exact test environments and version boundaries are recorded in the milestone validation reports; passing tests is not a guarantee against unknown defects.
 
-## 边界
+## License and origin
 
-- 检索为有界词法检索；向量检索、完整文档 RAG、跨平台身份自动合并、完整事件溯源、SQLite 和后台任务执行引擎不在 1.0 范围。
-- 规则与来源标签不证明事实真实；候选抽取器、业务结果和经验确认由接入应用提供。核心不自动后台学习或调用付费模型。
-- 默认文件存储验证了本地文件和遵守同一协议的写者；网络文件系统、断电持久性与外部编辑器不在该保证内。Node --permission 的 fsync 限制见存储说明。
-- 确定性样例和跨系统测试不代表真实模型准确率、长期平台兼容或任何环境下零 bug。没有宣称实时 Discord 或 QQA 集成已经验证。
-
-## 资料
-
-[API](docs/API.md) · [通用记忆](docs/typed-memory.md) · [检索](docs/retrieval.md) · [时间/存储](docs/time-storage.md) · [受控学习](docs/learning.md) · [六个配方](docs/cookbook.md) · [参数预设](docs/tuning.md) · [迁移](docs/migration.md) · [1.0 发布说明](docs/releases/1.0.0.md)
-
-设计取舍与历史复核见 [路线](docs/ROADMAP.md)、[设计](docs/DESIGN.md)、[研究记录](docs/RESEARCH-20261029.md)。
-
-MIT。当前版本由本项目维护，代码演进、历史参考和来源复核边界见 [NOTICE](NOTICE.md) 与 [本轮复核报告](docs/1.5-ORIGIN-REVIEW.md)，许可证见 [LICENSE](LICENSE)。不把公开思想、兼容接口或全部历史声明为排他原创。
+[MIT](LICENSE). Read [NOTICE](NOTICE.md) for historical references, current distribution boundaries and third-party obligations. Published history and previously granted license rights are preserved. See [source status](docs/1.5-SOURCE-STATUS.md) and the [file-level origin matrix](docs/1.5-ORIGIN-MATRIX.md).

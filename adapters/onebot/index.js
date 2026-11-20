@@ -1,13 +1,15 @@
-// OneBot v11 适配器（QQ / SnowLuma / NapCat / go-cqhttp 等）
+// OneBot v11 adapter (QQ / SnowLuma / NapCat / go-cqhttp and others)
 //
-// 用法：
+// Usage:
 //   import { parseOneBot } from 'persona-memory/adapters/onebot';
 //   const msg = parseOneBot(event, { selfId: 123456 });
 //   if (msg) pm.ingest(msg);
 //
-// 只处理 message 事件，其他事件返回 null。
+// Handles message events only; returns null for other event types.
 
-/** 从 OneBot 消息段里抽出纯文本 + @ 列表 + 回复目标 */
+/** Extract plain text, mentions and reply target from OneBot message segments. */
+// Compatibility placeholders participate in legacy linguistic evidence checks.
+// Keep them as source-language resources; translating them changes attribution.
 export function parseSegments(segments, selfId) {
   const parts = [];
   let mentionsSelf = false;
@@ -48,10 +50,10 @@ export function parseSegments(segments, selfId) {
 }
 
 /**
- * OneBot 事件 → ChatMessage
- * @param {object} event 原始事件
+ * OneBot event to ChatMessage
+ * @param {object} event Raw event
  * @param {{selfId?: number|string, replyToSelfId?: Set<string>}} opts
- *        replyToSelfId：自己发过的消息 id 集合（用来判断"回复的是不是 bot"）
+ *        replyToSelfId: IDs sent by this bot, used to identify replies to the bot.
  */
 export function parseOneBot(event, opts = {}) {
   if (!event || event.post_type !== 'message') return null;

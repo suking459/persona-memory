@@ -1,122 +1,78 @@
-# 通用记忆：主体、类型与保存规则
+# Typed memory: subjects, kinds and storage rules
 
-适用于 1.0，快照 schema 5，兼容迁移 schema 1–4。候选审阅见 [受控学习](learning.md)，时间、版本和存储见 [时间与存储](time-storage.md)。
-
-通用记忆独立于关系档案。保存项目事实不会创建用户档案，也不改变亲疏分数。可由调用方明确写入，也可通过宿主提供的抽取器生成待审候选；按问题检索与预算上下文见 [检索说明](retrieval.md)。
-
-## 开始使用
+Typed records are independent from relationship profiles: a project fact creates no person and changes no social score. Trusted callers can write explicitly; host extraction should normally produce reviewed candidates. This checkout uses schema 8; see [learning](learning.md), [retrieval](retrieval.md) and [time/storage](time-storage.md).
 
 ```js
 import {PersonaMemory} from 'persona-memory';
-
 const pm=new PersonaMemory({scope:'my-app'});
 const project={type:'project',id:'project-a'};
-
 const first=pm.putMemory({
-  id:'release-requirement-1', // 可选；稳定的调用方 ID 可用于安全重试
-  subject:project,
-  kind:'constraint',
-  key:'release',
+  id:'release-requirement-1', // Stable caller ID for identical-content retries.
+  subject:project,kind:'constraint',key:'release',
   value:{version:'1.0',requires:['tests','migration']},
-  source:'user',
-  evidenceId:'explicit-instruction-1',
+  source:'user',evidenceId:'explicit-instruction-1',
 });
-
 console.log(pm.getMemory(first.id));
 console.log(pm.listMemories({subject:project,kind:'constraint'}));
 ```
 
-用户、项目和任务都使用同一接口。可运行 npm run example:memory，同时查看个人偏好、项目要求和学习计划。
+Run `npm run example:memory` for user, project and task examples.
 
-## 主体与作用域
+## Subject and instance scope
 
-subject 的 type 为 user、project 或 task，id 是调用方明确给出的标识；可选 chatId 表示更窄的会话范围。三个字段共同确定主体。不同 type 的相同 id 是不同主体。
+A subject is `{type:'user'|'project'|'task',id,chatId?}`. All fields match exactly; identical IDs of different types identify different subjects. Persona/application scope isolation still applies. The library guesses neither identity nor project associations. Typed-record chat scope is explicit and does not change implicitly with social `tagScope`.
 
-实例原有的 persona/scope 隔离继续生效。库不猜测跨平台身份，也不根据内容自动把两个项目合并。通用记录的 chatId 由调用方显式选择，不受标签 tagScope 配置隐式改变。
+`listMemories` requires one complete subject. An absent `chatId` selects shared records for that exact subject; it does not mix in channel-specific rows, or vice versa. Subject selection is not authorization.
 
-listMemories 必须指定一个完整 subject。未指定 chatId 代表该主体在当前实例中的共享记录，查询不会自动混入带 chatId 的记录；反过来同样如此。
+## Kinds and lifetimes
 
-## 类型与默认寿命
+| Kind | Intended content | Default lifetime |
+| --- | --- | --- |
+| preference | Explicit preference | Until replacement/deletion |
+| fact | Sourced factual assertion | Until replacement/deletion |
+| constraint | Project/task requirement | Until replacement/deletion |
+| decision | Adopted decision | Until replacement/deletion |
+| episode | Context, attempt and result of an event | 90 days |
+| state | Temporary current state | 48 hours |
 
-| kind | 内容 | 默认寿命 |
-|---|---|---|
-| preference | 明确偏好，如语言、格式 | 保留到替换或删除 |
-| fact | 有来源的事实陈述 | 保留到替换或删除 |
-| constraint | 项目/任务约束 | 保留到替换或删除 |
-| decision | 已作出的决定 | 保留到替换或删除 |
-| episode | 一次经历的背景、尝试、结果 | 90 天 |
-| state | 当前临时状态 | 48 小时 |
+Per-record `expiresAt` overrides defaults: null disables time expiry, a number is a millisecond timestamp. `stateMemoryTtlHours` and `episodeMemoryTtlDays` allow zero. Expiry cannot precede creation/effective time. Lack of model use does not delete lasting records; repeated inspection does not establish truth. `source` is provenance, including for model assertions.
 
-expiresAt 可以逐条覆盖默认值；null 表示不按时间过期，数值表示毫秒时间戳。stateMemoryTtlHours、episodeMemoryTtlDays 调整对应默认寿命，允许 0。不得写入早于本次创建时间的截止时间。
+## Input limits
 
-长期记录不会因为没有被模型使用而消失；也不会因为被反复查看就变得更真实。source 是出处，不是事实真伪判断；model 来源同样需要调用方负责验证。
+Values support null, booleans, finite numbers, strings, dense arrays and plain JSON objects. False, zero and empty strings are preserved. Limits: 16 KiB/value, 1024 nodes, depth 8, 128 entries/object or array, 8192 UTF-16 code units/string. Functions, dates, BigInt, NaN, Infinity, cycles, sparse arrays, getters, undefined and prototype-pollution fields fail explicitly.
 
-## 内容边界
+Subject IDs, keys, record IDs and evidence IDs are nonempty strings of at most 256 UTF-16 units. Sources: manual (default), user, host, rule, model, import.
 
-value 允许 null、布尔、有限数字、字符串、数组和普通 JSON 对象。false、0、空字符串会被保留。
+## Replacement, revisions and retries
 
-单条值最多 16 KiB、1024 个节点、8 层嵌套；单个数组/对象最多 128 项、字符串最多 8192 个 UTF-16 代码单元。函数、日期对象、BigInt、NaN、Infinity、循环引用、稀疏数组、getter、undefined 和原型污染字段会被拒绝，而非被悄悄序列化成别的内容。
-
-subject/key/id/evidenceId 为非空字符串，最多 256 个 UTF-16 代码单元。记录来源 source 支持 manual、user、host、rule、model、import；默认 manual。
-
-## 明确替换与安全重试
-
-同一 subject+kind+key 只能有一个 current 记录。仍有效的记录不会被新写入静默覆盖：
+There is one latest head per subject/kind/key. A live field is not silently overwritten:
 
 ```js
 const second=pm.putMemory({
-  subject:project,kind:'constraint',key:'release',
-  replaceId:first.id,
-  value:{version:'1.0',requires:['tests','migration','clean-install']},
-  source:'user',
+  subject:project,kind:'constraint',key:'release',replaceId:first.id,
+  expectedRevision:first.revision,
+  value:{version:'1.0',requires:['tests','migration','clean-install']},source:'user',
 });
 ```
 
-新记录有新的 id，并引用 supersedes；旧记录标记为 superseded，记录 supersededBy，仍保留原值与来源。跨主体、跨类型、跨字段或针对过时版本的替换返回 ERR_MEMORY_CONFLICT，不改变状态。
+The new ID references `supersedes`; the old record retains its value/source and records `supersededBy`. Wrong subject/kind/key, stale heads and revision mismatches return `ERR_MEMORY_CONFLICT` without mutation. Future activation uses effective intervals rather than latest-head status alone.
 
-提供相同 id 重试相同内容会返回已有记录，不延长寿命，不增加修订或历史。相同 id 对应不同内容时明确冲突。重试已经被替换的旧 id 也不会重新激活旧值。没有提供 id 的重复新建会产生新 ID，因此对当前字段仍需明确 replaceId。
+Identical content with the same ID returns the retained record without renewing time, revision or history. Different content conflicts. Retrying a superseded ID does not reactivate it. Without an ID, a new call creates a fresh ID and still needs explicit replacement for an existing live field. An expired retained observation can be superseded in the same slot. Clocks cannot move behind the prior update.
 
-已过期但尚未清理的临时记录可以被同字段新观察取代；同样保留替代关系。更新时钟不能早于旧记录的最后更新时间。
+Pruned IDs remain reserved while retained version links still refer to them. Forgetting the logical field releases those links. Deterministic object-key ordering does not collapse distinct Unicode keys. Idempotency is bounded by retained identity information, not an eternal ledger; use fresh IDs for fresh observations and bounded retry windows.
 
-已清理的 ID 只要仍被保留版本引用，就不能重新绑定到其他内容，返回 ERR_MEMORY_CONFLICT。忘记整个逻辑字段后，这些引用一起消失，才释放编号。对象键使用与运行环境语言无关的确定顺序；不同 Unicode 键不会因排序时被视作相等而误报重试冲突。
+## Reads, history and deletion
 
-幂等保证以仍保留的记录为边界，不是永久的操作日志。ID 记录及其引用均消失后，不再保留对应的去重信息；重试应有明确期限，新观察使用新的唯一 ID。
+`getMemory(id,{includeInactive?,now?})` defaults to an effective, unexpired, dependency-valid record. Retired experiences are excluded. `includeInactive:true` permits explicit inspection. `listMemories({subject,kind?,key?,limit?,includeInactive?,now?})` defaults to 50, maximum 1000, ordered by creation time, revision and ID. Results are detached. `getMemoryAt` provides valid-time/known-time history within retained intervals; `now` alone is not a full historical query.
 
-这是显式替代的基础，不是自然语言冲突识别、未来生效计划或历史时间查询；后续 0.8 再补这些能力。现阶段不要用 now 参数模拟完整 as-of 查询。
+`forgetMemory(id)` deletes all retained versions of the identifiable logical field and its transitive derived fields/related candidates, preventing older values from reappearing. A pruned ID can identify a field through surviving links. If neither ID nor links remain, it returns zero rather than guessing. Use a retained version from a filtered inactive-inclusive list when necessary. Preview owner deletion with [management](owner-management.md).
 
-## 查询与删除
+`deleteSubject` deletes the exact typed subject without guessing related identities or deleting separate social profiles. `deleteUser` also removes typed user records; chat-specific deletion preserves unscoped/shared user records. Identically named projects/tasks are unaffected. References hidden inside arbitrary JSON and external copies remain the host's responsibility. `clear` removes the whole instance; persist after deletion.
 
-getMemory(id,{includeInactive?,now?}) 默认隐藏过期、被替代或相对 now 尚未创建的记录。includeInactive=true 可按 ID 检查原值。
+## Capacity and migration
 
-listMemories({subject,kind?,key?,limit?,includeInactive?,now?}) 支持明确类型/字段过滤，默认最多 50 条，最大 1000 条。按创建时间、新修订和 ID 确定顺序。返回值都与内部引用分离，不会因修改查询结果而改写存储。
+`maintain` removes expired records and reports `memoriesExpired`; retained superseded versions never automatically become current. `maxMemories` defaults to 10,000, hard maximum 100,000, including history. Overflow raises `ERR_MEMORY_CAPACITY`; valuable lasting records are not silently evicted. Replacement also needs room for its new version.
 
-forgetMemory(id) 会删除可由该 ID 识别的 subject+kind+key 的所有保留版本及对应变化摘要，不让旧值重新出现。记录本身已过期清理，但仍被相邻版本引用时，也能识别这个逻辑字段。
+`diagnostics().memories` counts records. Filtered `history({subject})` stores change summaries, not value bodies. Whole snapshots also obey `maxSnapshotBytes`; a failed oversized write preserves the previous file.
 
-如果 ID 及其所有直接引用都已被清理，返回 removed=0，不猜测它属于哪个字段。若要按已知逻辑字段清理历史，先 listMemories({subject,kind,key,includeInactive:true,limit:1})，再对返回的任一保留版本调用 forgetMemory。deleteSubject(subject) 删除这个完整主体的所有通用记录，不猜测关联主体，也不删除独立的关系档案。
-
-deleteUser(userId) 同时删除该用户的旧关系数据和 type=user 的通用记录。指定 chatId 时，只删除该频道的通用记录，保留未指定频道的共享记录。其他项目/任务即使同名也不受影响；任意 JSON 内容中的个人信息引用需由宿主按其数据模型管理。
-
-clear() 清空当前实例全部关系数据与通用记忆。删除后需 flush 才落盘；外部备份和调用方另存的日志不在本库控制范围内。
-
-## 维护与容量
-
-maintain() 清理到期记录，并在返回值中增加 memoriesExpired。已被替代但未到期的版本暂留作有限容量内的检查，不自动变成当前值。
-
-maxMemories 默认 10000、硬上限 100000，包含当前与保留的旧版本。满额明确抛 ERR_MEMORY_CAPACITY，不偷偷删除长期事实；需要忘记旧内容、维护到期项或明确提高上限后再写。替换保留一个新版本，也需要容量。
-
-diagnostics().memories 给出总记录数。history({subject}) 可看对应变化摘要，不保存 value 原文。整份快照仍受 maxSnapshotBytes 限制，超限写入保留上一个有效文件。
-
-## 数据兼容
-
-新快照为 schemaVersion=5，包含 memories 和 candidates。schema 1/2 的通用记录从空集合开始，schema 3/4 按迁移规则升级；不会猜测旧标签应该转换成哪种事实。
-
-schema 5 完整校验内容、当前字段唯一性、替代关系和容量后才替换内存。缺失的历史节点可以是正常过期，但它的所有保留引用必须指向同一字段、修订和前后关系；互相矛盾的引用会拒绝。记录集合的 getter、隐藏条目和 Symbol 键会拒绝，不通过序列化静默丢弃。无效导入不修改现有状态。旧代码拒绝 schema 5，避免只认识关系数据的实现忽略新记录后写回造成丢失。
-
-升级前备份，回滚使用升级前快照；不要让旧实现写新文件。JSON 文件用独占锁与内容修订拒绝冲突，可接入自定义异步存储；并发边界见 time-storage.md。
-
-通用模型桥、HTTP 通用记忆管理与 MCP 读取工具见 retrieval.md；HTTP 管理写入需显式开启权限，受控抽取和候选学习见 learning.md。关系框架桥保持可选组合。
-
-
-## 时间语义
-
-当前快照为 schema 5，保留显式生效区间。原来的 status=current 现在明确表示最新提交版本头；默认读取和检索按生效区间选择，未来版本不会提前覆盖旧值。新增 validFrom/validUntil、expectedRevision、有限版本保留与异步存储。历史仅保留可用片段，不能保证永久去重或完整时间回放。见 [时间与存储](time-storage.md)。
+Schema 1/2 migrate with no typed records; schema 3 immediate-replacement semantics map to explicit intervals. Later schemas add candidates, dependencies, origins and experience metadata. Schema 8 validates all content, head uniqueness, version links, graph structure and capacity before replacing state. Missing nodes can reflect pruning, but surviving references must agree on slot/revision/chronology. Hidden/accessor/symbol collection entries fail. Old clients reject newer schemas: retain pre-upgrade backups and never let old code write new files. See [migration](migration.md) and [time/storage](time-storage.md).

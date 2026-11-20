@@ -1,46 +1,33 @@
-# 升级到 1.0
+# Upgrade and rollback
 
-1.0 使用快照 schema 5，支持迁移 schema 1、2、3、4。GitHub 源码和 npm registry 是独立发布渠道；先确认实际安装版本，再升级。
+Confirm the installed version/channel before upgrading. GitHub and npm are separate publication channels. Published 1.0 uses schema 5; published 1.5 uses schema 6; this local 1.8 checkout uses schema 8 and reads schemas 1–7. See the [1.5 policy migration](1.5-POLICY-MIGRATION.md) for changed defaults and [experience reuse](experience-reuse.md) for local schema 8 additions.
 
-## 升级步骤
+## Upgrade steps
 
-1. 停止所有会写入同一份快照的旧进程，备份原数据及旧代码/包版本。
-2. 使用相同 persona、scope、tagScope 打开备份副本，核对档案、通用记忆和时间记录。
-3. 构造/加载成功后才调用 flush 或 persist 保存新格式；保留升级前的独立备份。
-4. 再切换正式应用。损坏、歧义或未知格式会明确失败，原文件保留，不用空状态覆盖。
+1. Stop all old writers for the same store. Back up original data and the old code/package.
+2. Open a backup copy using the same persona, scope and tagScope. Inspect profiles, typed records and time intervals.
+3. Persist the new format only after successful validation, keeping an independent pre-upgrade backup.
+4. Switch the application. Corrupt, ambiguous and unknown formats fail explicitly; never replace them with empty state.
 
-旧 schema 1 使用默认 user 共享标签语义。切换 tagScope 或 scope 需要明确搬运，不能静默把共享标签复制到每个频道。没有 scope 时保留旧 persona 文件命名；非空 scope 使用 scope 与 persona 的组合摘要。
+Schema 1 defaults to user-shared tags. Changing tagScope/scope requires explicit migration rather than copying shared tags into every channel. Empty scope retains legacy persona naming; nonempty scope uses a combined digest. Schemas 1/2 start with empty typed records/candidates; schema 3 immediate replacement maps to effective intervals; schema 4 retains intervals, schema 5 adds candidates/host experience, schema 6 dependencies, schema 7 origins and schema 8 reviewed/model experiences/lifecycle. Field gates prevent downgrading by editing a header.
 
-schema 1/2 的通用记忆与候选从空集合开始；schema 3 的即时替代数据迁移到显式时间区间；schema 4 保留时间语义并增加空候选池。schema 5 包含独立 candidates，宿主经验的确认元数据在此格式中保留。
+## Behavioral checks
 
-## 调用行为
+- Context APIs preview only. Confirm actual successful consumption, then persist. Inspection does not increase use counts.
+- Self messages are ignored; ambient social scoring is off by default. Explicit scoreAmbient changes eligibility, not truth.
+- Daily quotas default to UTC; configure timeZone for the intended calendar. Independent decay anchors do not reconstruct interaction history already lost by older implementations.
+- Updates use replaceId and optional expectedRevision. Latest head and currently effective value can differ for future plans.
+- Lock/content revision conflicts need inspection and explicit reload/retry. No automatic merge or lock stealing occurs.
+- Asynchronous stores use open/persist/reload; flush on async-only storage fails. Memory mutation and durable commit are distinct stages.
+- Complete labels/advice count toward context budgets, so English presentation or longer guidance may fit fewer items. Inspect omissions rather than assuming fixed output counts.
+- Default independent policy removes built-in emotion/health word lists and relationship wording. Host judgments/custom rules and original stored text remain available. Support state is host-authored.
+- Stale tags cannot be repeatedly promoted by old use counts. setTag advice is a string, at most 2000 UTF-16 units. Repair invalid data explicitly on an isolated copy.
+- Import/reload validate all encoded bytes, depth 32 and 2,000,000 nodes without executing getters/toJSON; individual values have smaller bounds.
+- Disk/HTTP/MCP/CLI reject malformed UTF-8; snapshot paths must be regular files. Loopback Host/Origin and stdio backpressure checks remain enforced.
+- Node permission modes denying fsync cause explicit JSON-save failure, not a skipped durability step.
 
-- buildBlock/buildContext 是纯预览。只有真实模型调用成功使用后才 confirmContext/confirmContexts，再保存。旧代码若依赖查看时增加计数，需要调整。
-- 机器人自己的消息忽略。默认不对旁观消息计算社交分；需要旧行为可显式设置 scoreAmbient=true。
-- talkDailyCap/perMessageCap 生效；每日额度默认 UTC，需要中国自然日可配置 Asia/Shanghai。
-- 维护使用独立衰减锚点。旧实现已经覆盖的真实互动时间无法反推出丢失的历史。
-- 同一字段更新需要 replaceId，可附 expectedRevision。status=current 是版本头，实际生效值按 validFrom/validUntil 选择。
-- 文件写入通过独占锁和内容修订拒绝冲突。ERR_STORE_CONFLICT 需先处理本地变化，再明确 reload 或重试；不自动合并或抢锁。
-- 自定义异步存储用 PersonaMemory.open/persist/reload；flush 对纯异步存储会明确报错。内存修改和持久化提交是两个阶段。
+## Rollback and transfer
 
-详见 [API](API.md)、[时间/存储](time-storage.md) 和 [受控学习](learning.md)。
+Old writers reject newer schemas. Restore old code **and its pre-upgrade snapshot**; do not edit schemaVersion or let old code write a new file. Historical queries only inspect retained intervals and cannot recover physically removed data. Full recovery uses snapshot backups with the same identity; selective transfer carries current values through explicit mappings/previews and refuses unresolved conflicts or dependency loss.
 
-## 状态与内容校验
-
-- 上下文计入完整标签及 advice，同一预算可能容纳更少条目。存在状态建议时省略可能冲突的通用关系语气。
-- support 预设默认关闭通用社交词表和关系语气，业务状态与建议由应用明确设置。
-- 陈旧标签不会凭旧使用次数反复晋升；没有新证据时会降级并过期。
-- setTag/advice 必须为字符串且不超过 2000 个 UTF-16 代码单元。坏数据需在独立副本中由宿主明确整理，不静默截断。
-- 词法规则对明确第三方、疑问、条件和否定保守处理；不提供任意指代、时间或业务真实性推断。
-- 完整 import 和异步 reload 限制全部编码字节、32 层、2,000,000 节点，不执行 getter/toJSON。值另有更小的单条上限。
-- 磁盘与 HTTP/MCP/CLI 拒绝非法 UTF-8；快照路径须为普通文件，拒绝符号链接、设备与 FIFO。
-- HTTP 的 Host 必须匹配回环地址和实际端口；反向代理需设置正确后端 Host。MCP 输出阻塞时暂停后续处理。
-- Node --permission 下 fsync 被禁用，内置 JSON 保存会明确拒绝；不会跳过刷盘冒充成功。
-
-## 回退与数据搬运
-
-旧写者会拒绝 schema 5。回退需恢复旧代码和升级前快照，不能只修改 schemaVersion 或把新文件交给旧代码写。
-
-getMemoryAt 仅查询仍保留的历史片段；维护、删除和版本裁剪后的内容不能凭历史时间恢复。完整恢复用 export/import；跨主体搬运当前值用 exportMemories、previewMemoryImport、applyMemoryImport，必须明确映射主体和处理冲突。
-
-本地确定性迁移、旧写者保护、异常退出与跨系统验证见 [加固记录](1.0-HARDENING.md)。它们不提供对任意历史坏文件、网络盘或断电场景的自动修复保证。
+See [API](API.md), [time/storage](time-storage.md), [learning](learning.md), [storage recovery](storage-backup.md) and [historical hardening](1.0-HARDENING.md). Recorded tests do not guarantee automatic repair of arbitrary corrupt history, network filesystems or power-loss scenarios.

@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.0.0
+
+- Persistent consolidation checks its loaded snapshot revision before using source text and rejects competing updates. Character snapshots rotate by byte size as well as count. The SDK snapshot stores support typed character snapshots.
+
+- Explicit task context combines bounded query facets and current standing project or task constraints. The synthetic evidence suite measures retrieval and actual rendered context separately.
+- Reviewed consolidation creates pending summaries tied to selected, current source revisions. Originals remain available and source changes invalidate derivatives.
+- Hosts using the SDK can opt into a separate casual-chat character with decaying mood and evidence-backed preferences. Ambiguous and task-bearing turns go to the work handler.
+
+- Add opt-in task context to the SDK and Agent MCP. Combine bounded lexical query facets and current scoped constraints in one budgeted response, with separate omission diagnostics and explicit confirmation of use.
+
+- Review ten memory papers and eight host memory contracts; record native-memory coexistence and staged adoption rather than automatically importing another memory framework.
+- Add independently authored long-term lifecycle/evidence-set evaluation, explicit unsolved challenges, payload/budget checks and negative controls. No new runtime memory behavior, model calls, third-party implementation or benchmark score.
+
+- Integrated sharing/review/correction/handoff/experience/maintenance and private isolation/revocation tests across restarts.
+- Synthetic upgrade/recovery fixtures generated with the actual published 1.0 and 1.5 packages; old readers refuse schema 8 without changing bytes.
+- Refreshed eleven official configuration references and corrected the DSH custom service-name bound; live vendor acceptance remains separately scoped.
+- English repository convention in local instructions, public guide and CI check. See docs/2.0-VALIDATION.md and docs/2.0-MIGRATION.md. No automatic release.
+
+### Internal 1.9 checkpoint
+
+- Bounded caller-reported scalar metrics and paired comparisons, explicit scoped maintenance preview/apply, and common owner-output protection for plans/backups/handoffs. No automatic telemetry, cleanup or publication. See [usage](docs/measurement-maintenance.md).
+
+### English repository presentation
+
+- Public documentation, examples, comments and default relationship/demo presentation use English; added a repository language check and continuing language policy.
+- Preserve stored source-language content, explicit locale resources, linguistic rules and multilingual fixtures. Retained OneBot compatibility placeholders after reproducing an attribution change caused by translating them.
+- Refresh stale overview/version statements while keeping historical evidence and copyright boundaries. No schema migration, release-history rewrite or intermediate publication.
+
 ## 1.5.0 — 2026-11-02
 
 Consolidates 1.1–1.5 work. Owner selected stable 1.5.0 with explicit incompatible-default and source-review disclosures. Pin your dependency and read the migration guide; do not assume unchanged 1.0 default relationship behavior. Published 1.0.0 history and its license rights are preserved.
