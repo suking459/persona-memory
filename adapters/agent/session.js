@@ -1,6 +1,7 @@
 // Independently written scoped Agent boundary; no host settings or model calls.
 import {lockSharedBinding,assertSharedStore} from './shared-policy.js';
 import {createTaskHandoff,openTaskHandoff} from '../../src/handoff.js';
+import {readConsolidationSources,proposeMemoryConsolidation} from '../../src/consolidation.js';
 import {createMemoryMetrics,MEMORY_OPERATIONS} from '../../src/metrics.js';
 import {proposeExperience,proposeExperienceFeedback,proposeExperienceRetirement,reuseExperiences} from '../../src/experience-reuse.js';
 import {createSemanticRetriever,createHttpEmbedder} from '../semantic/index.js';
@@ -21,7 +22,9 @@ const define=(name,description,properties,required,readOnly=true,destructive=fal
 const handoffCheckpoint=schema({goal:{type:'string',maxLength:2000},completed:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},pending:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},blockers:{type:'array',maxItems:32,items:{type:'string',maxLength:512}},nextSteps:{type:'array',maxItems:32,items:{type:'string',maxLength:512}}},['goal','completed','pending','blockers','nextSteps']);
 const experienceConditions={type:'array',maxItems:16,items:{type:'string',maxLength:256}};
 const taskContext=schema({facets:{type:'array',maxItems:4,items:{type:'string',minLength:1,maxLength:1024}},includeStanding:{type:'boolean'}});
+const consolidationSources=(pinned)=>({type:'array',minItems:2,maxItems:32,items:schema({id:text,revision:integer(Number.MAX_SAFE_INTEGER),fingerprint:{type:'string',pattern:'^[a-f0-9]{64}$'}},pinned?['id','revision','fingerprint']:['id','revision'])});
 const READ=[
+  define('memory_consolidation_sources','Read current in-scope source records and fingerprints for a bounded consolidation proposal.',{scope,sources:consolidationSources(false)},['scope','sources']),
   define('memory_metrics','Inspect this connection/scope scalar measurements. Caller-reported, ephemeral and not proof of task quality.',{scope},['scope']),
   define('memory_experience_reuse','Inspect reviewed experiences under explicit condition labels. Eligibility is not evidence verification or permission to execute.',{scope,conditions:experienceConditions,limit:integer(32),includeNeedsReview:{type:'boolean'}},['scope','conditions']),
   define('memory_handoff_prepare','Prepare a bounded task checkpoint using approved references. Text is unverified data; never executes tasks.',{scope,checkpoint:handoffCheckpoint,references:{type:'array',maxItems:16,items:schema({id:text,revision:integer(Number.MAX_SAFE_INTEGER)},['id','revision'])},ttlHours:{type:'number',exclusiveMinimum:0,maximum:720}},['scope','checkpoint','references']),
@@ -34,6 +37,7 @@ const READ=[
   define('memory_candidates','List proposed memories in one bound scope; these are not approved facts.',{scope,status:{enum:['pending','accepted','rejected']},limit:integer(32)},['scope']),
 ];
 const CAPTURE=[
+  define('memory_consolidation_propose','Propose sourced summaries for owner review. Each summary references two or more selected source records. Source records remain intact.',{scope,sources:consolidationSources(true),evidenceId:text,summaries:{type:'array',maxItems:16,items:schema({key:text,text:{type:'string',maxLength:4000},reason:{type:'string',maxLength:1000},sourceIds:{type:'array',minItems:2,maxItems:16,items:text}},['key','text','reason','sourceIds'])}},['scope','sources','evidenceId','summaries'],false),
   define('memory_measure','Record actual host-measured scalars for this connection/scope. Never guess tokens, success or elapsed time. No text or telemetry is accepted.',{scope,operation:{enum:MEMORY_OPERATIONS},durationMs:{type:'number',minimum:0,maximum:86400000},success:{type:'boolean'},inputTokens:{type:'integer',minimum:0,maximum:1000000000},outputTokens:{type:'integer',minimum:0,maximum:1000000000},bytes:{type:'integer',minimum:0,maximum:1000000000}},['scope','operation','durationMs','success'],false),
   define('memory_experience_propose','Propose an experience for review. verified=true requires owner review access and evidence; ordinary approval does not verify model reports.',{scope,key:text,task:text,context:{},attempt:text,result:text,conditions:experienceConditions,outcome:{enum:['success','failure','mixed','unknown']},verified:{type:'boolean'},evidenceId:text,reason:text},['scope','key','task','attempt','result','conditions','outcome','evidenceId','reason'],false),
   define('memory_experience_feedback','Propose task feedback with evidence and an exact experience revision. attest=true requires owner review access; no feedback is automatically approved.',{scope,id:text,expectedRevision:integer(Number.MAX_SAFE_INTEGER),trialId:text,outcome:{enum:['helped','not-helpful','failed','not-applicable']},conditions:experienceConditions,note:text,evidenceId:text,attest:{type:'boolean'}},['scope','id','expectedRevision','trialId','outcome','conditions','evidenceId'],false),
@@ -112,6 +116,12 @@ export function createAgentSession(pm,raw){
       assertSharedStore(pm,sharedLease);
       let result,mutated=false;
       switch(name){
+        case 'memory_consolidation_sources':return readConsolidationSources(pm,{subject,sources:a.sources});
+        case 'memory_consolidation_propose':{
+          result=proposeMemoryConsolidation(pm,{subject,sources:a.sources,evidenceId:a.evidenceId,summaries:a.summaries,...(sharedLease?{origin:sharedLease.origin}:{})});
+          mutated=result.candidates.length>0;
+          break;
+        }
         case 'memory_metrics':return metricsFor(a.scope).summary();
         case 'memory_measure':{const {scope:alias,...sample}=a;return metricsFor(alias).record(sample);}
         case 'memory_maintenance_preview':return keepPreview(await previewMemoryMaintenance(pm,{subject,...(a.limit===undefined?{}:{limit:a.limit})}));

@@ -81,6 +81,44 @@ export interface TaskMemoryContext extends RecordMemoryContext {
   };
 }
 export interface ContextConfirmation {confirmed:boolean;duplicate?:boolean;tagCount:number;memoryCount:number}
+export interface ConsolidationSource {id:string;revision:number;fingerprint?:string}
+export interface PinnedConsolidationSource extends ConsolidationSource {fingerprint:string}
+export interface ConsolidationSummary {key:string;text:string;reason:string;sourceIds:string[]}
+export interface ConsolidationDraft {subject:MemorySubject;evidenceId:string;sources:PinnedConsolidationSource[];summaries:ConsolidationSummary[]}
+export function readConsolidationSources(pm:PersonaMemory,options:{subject:MemorySubject;sources:ConsolidationSource[]}):{sources:PinnedConsolidationSource[];records:MemoryRecord[]};
+export function proposeMemoryConsolidation(pm:PersonaMemory,options:ConsolidationDraft&{origin?:MemoryOrigin}):{candidates:MemoryCandidate[];evidenceVerified:false};
+export function createMemoryConsolidator(pm:PersonaMemory,options:{subject:MemorySubject;timeoutMs?:number}):{
+  draft(input:{evidenceId:string;sources:ConsolidationSource[]},summarize:(input:{subject:MemorySubject;records:MemoryRecord[]},options:{signal:AbortSignal})=>ConsolidationSummary[]|Promise<ConsolidationSummary[]>):Promise<ConsolidationDraft>;
+};
+export type CharacterReaction='positive'|'negative'|'neutral';
+export type CharacterMood='pleased'|'subdued'|'neutral';
+export interface CharacterObservation {id:string;sessionId:string;topic:string;reaction:CharacterReaction;channel:'chat'|'approved-milestone';at:number}
+export interface CharacterPreference {topic:string;preference:'likes'|'dislikes';sessions:number;evidenceIds:string[];updatedAt:number}
+export interface CharacterState {id:string;frozen:boolean;mood:CharacterMood;preferences:CharacterPreference[];events:CharacterObservation[]}
+export interface CharacterChange {changed:boolean;status:'recorded'|'active'|'duplicate'|'forgotten'|'frozen'|'unavailable'|'corrected'|'reset'}
+export interface CharacterProfile {
+  inspect():Promise<CharacterState>;
+  record(event:CharacterObservation):Promise<CharacterChange>;
+  setFrozen(frozen:boolean):Promise<CharacterChange>;
+  correct(id:string,changes:{topic?:string;reaction?:CharacterReaction}):Promise<CharacterChange>;
+  forget(id:string):Promise<CharacterChange>;
+  reset():Promise<CharacterChange>;
+}
+export interface CharacterSnapshot {
+  format:'persona-memory/character';version:1;id:string;frozen:boolean;watermark:number;events:CharacterObservation[];removed:string[];
+}
+export interface CharacterSnapshotStore {
+  read():Promise<{snapshot:CharacterSnapshot|null;revision:string|null}>;
+  write(snapshot:CharacterSnapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
+}
+export function openCharacterProfile(options:{id:string;clock?:()=>number}&(
+  {file?:string;store?:never}|{store:CharacterSnapshotStore;file?:never}
+)):Promise<CharacterProfile>;
+export function createCharacterTurnRouter<WorkInput,WorkResult,ChatResult>(options:{
+  profile:Pick<CharacterProfile,'inspect'>;
+  runWork:(input:{text:string;workInput?:WorkInput})=>WorkResult;
+  runChat:(input:{text:string;character:{mood:CharacterMood;preferences:Pick<CharacterPreference,'topic'|'preference'>[]}})=>ChatResult;
+}):(input:{mode?:'work'|'chat';hasTask?:boolean;text:string;workInput?:WorkInput})=>Promise<Awaited<WorkResult>|Awaited<ChatResult>>;
 export interface PersonaMemoryConfig {
   dailyGainCap?:number;talkDailyCap?:number;decayPerDay?:number;perMessageCap?:number;
   tagTtlHours?:number;maxTagsPerPerson?:number;attentionWindowSec?:number;

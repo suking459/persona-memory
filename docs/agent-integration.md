@@ -1,6 +1,6 @@
 # Agent integration — local 1.x development
 
-This guide describes the stable 1.5.0 Agent entry. Local handoff/sharing/experience additions require the unpublished checkout; they are not included in npm 1.5.0. [Language support and limitations](multilingual.md)
+This guide describes the stable 1.5.0 Agent entry. The unpublished 2.0 release candidate includes [task context](retrieval.md#task-context), [reviewed consolidation](consolidation.md), handoff, sharing and experience. [Language support and limitations](multilingual.md)
 
 ## Purpose
 

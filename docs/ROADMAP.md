@@ -17,7 +17,7 @@ The owner selected local 1.1–1.4 development, an optional 1.5 midpoint release
 | 1.7 | Owner-controlled local sharing and origins | Completed locally |
 | 1.8 | Conditional experience feedback and retirement | Completed locally; Windows and Linux validation recorded |
 | 1.9 | Measurements, paired comparisons, bounded maintenance | Completed locally; current Windows/Linux and offline package checks passed |
-| 2.0 | Integrated validation, migration/recovery, packaging and documentation | Research evaluation and opt-in task context implemented locally. Consolidation and host/model validation follow. |
+| 2.0 | Integrated validation, migration/recovery, packaging and documentation | Local `2.0.0-rc.1` includes research evaluation, opt-in task context, reviewed consolidation and a casual-chat character SDK. Model-quality trials and independent release review remain pending. |
 
 See the [nine-point design](1.0-2.0-ROADMAP.md), [host acceptance](AGENT-ACCEPTANCE.md), [1.8 validation](1.8-VALIDATION.md) and [1.9 specification](1.9-MEASUREMENT-SPEC.md).
 

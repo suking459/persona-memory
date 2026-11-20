@@ -246,6 +246,32 @@ test('retrying a proposal already accepted reports its existing review state acc
   const retry=await session.call('memory_propose',proposal());
   assert.equal(retry.candidate.status,'accepted');assert.equal(retry.approved,true);
 });
+
+test('MCP consolidation stays scoped, survives restart awaiting review and rejects stale evidence',async t=>{
+  const {dir,binding,pm}=setup(t);
+  const put=(id,subject)=>pm.putMemory({id,subject,kind:'fact',key:id,value:'Synthetic review evidence'});
+  const first=put('first',binding.subjects.project),second=put('second',binding.subjects.project);
+  const privateRecord=put('private',binding.subjects.personal);pm.flush();
+  const refs=[first,second].map(({id,revision})=>({id,revision}));
+  const file=path.join(dir,'binding.json');fs.writeFileSync(file,JSON.stringify(binding));
+  const a=await client(t,file);
+  const call=(connection,name,args)=>connection.request('tools/call',{name,arguments:{scope:'project',...args}}).then(reply=>reply.result);
+  const invisible=await call(a,'memory_consolidation_sources',{sources:[refs[0],{id:privateRecord.id,revision:privateRecord.revision}]});
+  assert.equal(invisible.isError,true);
+  const read=await call(a,'memory_consolidation_sources',{sources:refs});
+  const result=await call(a,'memory_consolidation_propose',{sources:read.structuredContent.sources,evidenceId:'summary-evidence',
+    summaries:[{key:'summary/design',text:'Reviewed source combination',reason:'Synthetic review fixture',sourceIds:refs.map(ref=>ref.id)}]});
+  const [candidate]=result.structuredContent.candidates;
+  assert.equal(candidate.status,'pending');await a.close();
+  const b=await client(t,file);
+  const revise=await call(b,'memory_propose',{scope:'project',kind:'fact',key:'first',value:'Updated evidence',evidenceId:'update',reason:'Owner correction fixture'});
+  const next=revise.structuredContent.candidate;
+  assert.equal((await call(b,'memory_review',{candidateId:next.id,expectedRevision:next.revision,decision:'accept'})).isError,undefined);
+  const rejected=await call(b,'memory_review',{candidateId:candidate.id,expectedRevision:candidate.revision,decision:'accept'});
+  assert.equal(rejected.isError,true);
+  assert.equal((await call(b,'memory_recall',{})).structuredContent.matches.some(match=>match.record.key==='summary/design'),false);
+  await b.close();
+});
 test('a volatile core cannot claim the durable binding is active',t=>{
   const {binding}=setup(t);
   assert.throws(()=>createAgentSession(new PersonaMemory({persona:binding.persona,scope:binding.namespace}),binding),/persistent/);

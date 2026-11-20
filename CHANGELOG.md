@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased — local 2.0 integration candidate
+## Unreleased — 2.0.0-rc.1
+
+- Explicit task context combines bounded query facets and current standing project or task constraints. The synthetic evidence suite measures retrieval and actual rendered context separately.
+- Reviewed consolidation creates pending summaries tied to selected, current source revisions. Originals remain available and source changes invalidate derivatives.
+- Hosts using the SDK can opt into a separate casual-chat character with decaying mood and evidence-backed preferences. Ambiguous and task-bearing turns go to the work handler.
 
 - Add opt-in task context to the SDK and Agent MCP. Combine bounded lexical query facets and current scoped constraints in one budgeted response, with separate omission diagnostics and explicit confirmation of use.
 

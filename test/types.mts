@@ -4,7 +4,16 @@ import {createMemoryBridge} from 'persona-memory/adapters/memory';
 import {parseDiscord} from 'persona-memory/adapters/discord';
 import {createLangChainBridge} from 'persona-memory/adapters/langchain';
 import {createLlamaIndexBridge} from 'persona-memory/adapters/llamaindex';
+import {createCharacterTurnRouter,createMemoryConsolidator,openCharacterProfile,proposeMemoryConsolidation} from 'persona-memory';
 const pm=new PersonaMemory({scope:'test',config:createPreset('npc',{affinityContext:false}),clock:()=>100});
+async function extendedTypes(){
+  const profile=await openCharacterProfile({id:'character',file:'private-character.json'});
+  const router=createCharacterTurnRouter({profile,runWork:({text})=>text,runChat:({character})=>character.mood});
+  await router({mode:'chat',hasTask:false,text:'Hello'});
+  const consolidator=createMemoryConsolidator(pm,{subject:{type:'project',id:'work'}});
+  const draft=await consolidator.draft({evidenceId:'join',sources:[{id:'a',revision:1},{id:'b',revision:1}]},()=>[]);
+  proposeMemoryConsolidation(pm,draft);
+}
 pm.ingest({chatId:'room',userId:'u',text:'hi',directedToBot:true,eventId:'one'});
 const context=pm.buildContext({chatId:'room',userIds:['u']});
 pm.confirmContext(context,{turnId:'one'});
