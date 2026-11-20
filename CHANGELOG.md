@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased — 2.0.0-rc.1
+## Unreleased — 2.0.0-rc.3
+
+- Persistent consolidation checks its loaded snapshot revision before using source text and rejects competing updates. Character snapshots rotate by byte size as well as count. The SDK snapshot stores support typed character snapshots.
 
 - Explicit task context combines bounded query facets and current standing project or task constraints. The synthetic evidence suite measures retrieval and actual rendered context separately.
 - Reviewed consolidation creates pending summaries tied to selected, current source revisions. Originals remain available and source changes invalidate derivatives.

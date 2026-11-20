@@ -49,6 +49,21 @@ function validateState(snapshot,id){
   return {...data,events,removed};
 }
 
+function boundObservations(state,preserve){
+  const sizes=state.events.map(event=>Buffer.byteLength(JSON.stringify(event))+1);
+  let count=state.events.length,bytes=Buffer.byteLength(JSON.stringify({...state,events:[]}))+sizes.reduce((total,size)=>total+size,0);
+  const discarded=new Set();
+  for(let index=0;(count>limit||bytes>byteLimit)&&index<state.events.length;index++){
+    const event=state.events[index];
+    if(event.id===preserve||event.at===state.watermark)continue;
+    discarded.add(event.id);
+    count--;
+    bytes-=sizes[index];
+  }
+  if(count>limit||bytes>byteLimit)throw new RangeError('too many observations at this timestamp');
+  state.events=state.events.filter(event=>!discarded.has(event.id));
+}
+
 function describe(state,at){
   const topics=new Map(),recentSessions=new Map();
   for(const event of state.events){
@@ -97,12 +112,13 @@ export async function openCharacterProfile(options){
     return {state:snapshot===null?structuredClone(empty):validateState(snapshot,id),revision};
   }
   await read();
-  async function update(change){
+  async function update(change,preserve){
     const {state,revision}=await read();
     const now=timestamp(clock());
     if(now<state.watermark)throw new RangeError('character clock moved backwards');
     const result=change(state,now);
     if(!result.changed)return result;
+    boundObservations(state,preserve);
     const snapshot=validateState(state,id);
     const saved=await store.write(snapshot,{expectedRevision:revision});
     checkRevision(saved.revision,{empty:false});
@@ -125,13 +141,11 @@ export async function openCharacterProfile(options){
         if(state.removed.includes(hash(event.id)))return {changed:false,status:'forgotten'};
         if(state.frozen)return {changed:false,status:'frozen'};
         if(event.at>now||event.at<state.watermark||now-event.at>=retention)throw new RangeError('observation time is stale or in the future');
-        if(state.events.length===limit&&event.at===state.events[0].at)throw new RangeError('too many observations at this timestamp');
         state.events=state.events.filter(item=>now-item.at<retention);
         state.events.push(event);
-        state.events=state.events.slice(-limit);
         state.watermark=event.at;
         return {changed:true,status:'recorded'};
-      });
+      },event.id);
     },
     setFrozen(frozen){
       if(typeof frozen!=='boolean')throw new TypeError('frozen must be boolean');
@@ -152,7 +166,7 @@ export async function openCharacterProfile(options){
         state.events[index]=next;
         state.watermark=now;
         return {changed:true,status:'corrected'};
-      });
+      },id);
     },
     forget(eventId){
       const id=memoryIdentifier(eventId,'character observation ID');

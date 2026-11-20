@@ -85,8 +85,8 @@ export interface ConsolidationSource {id:string;revision:number;fingerprint?:str
 export interface PinnedConsolidationSource extends ConsolidationSource {fingerprint:string}
 export interface ConsolidationSummary {key:string;text:string;reason:string;sourceIds:string[]}
 export interface ConsolidationDraft {subject:MemorySubject;evidenceId:string;sources:PinnedConsolidationSource[];summaries:ConsolidationSummary[]}
-export function readConsolidationSources(pm:PersonaMemory,options:{subject:MemorySubject;sources:ConsolidationSource[]}):{sources:PinnedConsolidationSource[];records:MemoryRecord[]};
-export function proposeMemoryConsolidation(pm:PersonaMemory,options:ConsolidationDraft&{origin?:MemoryOrigin}):{candidates:MemoryCandidate[];evidenceVerified:false};
+export function readConsolidationSources(pm:PersonaMemory,options:{subject:MemorySubject;sources:ConsolidationSource[]}):Promise<{sources:PinnedConsolidationSource[];records:MemoryRecord[]}>;
+export function proposeMemoryConsolidation(pm:PersonaMemory,options:ConsolidationDraft&{origin?:MemoryOrigin}):Promise<{candidates:MemoryCandidate[];evidenceVerified:false}>;
 export function createMemoryConsolidator(pm:PersonaMemory,options:{subject:MemorySubject;timeoutMs?:number}):{
   draft(input:{evidenceId:string;sources:ConsolidationSource[]},summarize:(input:{subject:MemorySubject;records:MemoryRecord[]},options:{signal:AbortSignal})=>ConsolidationSummary[]|Promise<ConsolidationSummary[]>):Promise<ConsolidationDraft>;
 };
@@ -107,10 +107,7 @@ export interface CharacterProfile {
 export interface CharacterSnapshot {
   format:'persona-memory/character';version:1;id:string;frozen:boolean;watermark:number;events:CharacterObservation[];removed:string[];
 }
-export interface CharacterSnapshotStore {
-  read():Promise<{snapshot:CharacterSnapshot|null;revision:string|null}>;
-  write(snapshot:CharacterSnapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
-}
+export type CharacterSnapshotStore=SnapshotStore<CharacterSnapshot>;
 export function openCharacterProfile(options:{id:string;clock?:()=>number}&(
   {file?:string;store?:never}|{store:CharacterSnapshotStore;file?:never}
 )):Promise<CharacterProfile>;
@@ -240,21 +237,21 @@ export interface MemoryImportPreview {
     action:'add'|'same'|'update'|'conflict';reason?:string;currentId?:string;currentRevision?:number;current?:MemoryValue}[];
 }
 export interface MemoryImportResult {added:number;updated:number;unchanged:number;pruned:number;recordIds:string[]}
-export interface SnapshotStore {
-  read():Promise<{snapshot:MemorySnapshot|null;revision:string|null}>;
-  write(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
+export interface SnapshotStore<Snapshot=MemorySnapshot> {
+  read():Promise<{snapshot:Snapshot|null;revision:string|null}>;
+  write(snapshot:Snapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
 }
-export declare class MemorySnapshotStore implements SnapshotStore {
-  constructor(options?:{snapshot?:MemorySnapshot|null;maxBytes?:number});
-  read():Promise<{snapshot:MemorySnapshot|null;revision:string|null}>;
-  write(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
+export declare class MemorySnapshotStore<Snapshot extends MemorySnapshot|CharacterSnapshot=MemorySnapshot> implements SnapshotStore<Snapshot> {
+  constructor(options?:{snapshot?:Snapshot|null;maxBytes?:number});
+  read():Promise<{snapshot:Snapshot|null;revision:string|null}>;
+  write(snapshot:Snapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
 }
-export declare class JsonFileStore implements SnapshotStore {
+export declare class JsonFileStore<Snapshot extends MemorySnapshot|CharacterSnapshot=MemorySnapshot> implements SnapshotStore<Snapshot> {
   constructor(options:{file:string;maxBytes?:number});readonly file:string;readonly maxBytes:number;
-  readSync():{snapshot:MemorySnapshot|null;revision:string|null};
-  writeSync(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):{revision:string};
-  read():Promise<{snapshot:MemorySnapshot|null;revision:string|null}>;
-  write(snapshot:MemorySnapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
+  readSync():{snapshot:Snapshot|null;revision:string|null};
+  writeSync(snapshot:Snapshot,options:{expectedRevision:string|null}):{revision:string};
+  read():Promise<{snapshot:Snapshot|null;revision:string|null}>;
+  write(snapshot:Snapshot,options:{expectedRevision:string|null}):Promise<{revision:string}>;
 }
 
 export type CandidateStatus='pending'|'accepted'|'rejected';

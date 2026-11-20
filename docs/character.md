@@ -43,7 +43,7 @@ Use stable IDs and short labels. The host may explicitly approve a work mileston
 
 - A short-lived mood uses one latest reaction per recent session. Its influence decays with a 45-minute half-life and expires after four hours.
 - A preference requires at least three distinct sessions with non-neutral reactions and a lead of at least two votes. Repeated messages in one session contribute one reaction per topic. Evidence can change or reverse a preference.
-- The profile stores at most 128 observations in a dedicated snapshot. The last 90 days are eligible for expression. Reads do not prune disk data. `inspect` returns retained eligible observations and supporting IDs so the owner can review them.
+- The profile stores up to 128 observations and 64 KiB in a dedicated snapshot. Writes evict the oldest eligible observations when the byte or count bound is reached. The last 90 days are eligible for expression. Reads do not prune disk data. `inspect` returns retained eligible observations and supporting IDs so the owner can review them.
 - `setFrozen(true)` pauses observations while retaining owner controls. Use `correct`, `forget` or `reset` to change or clear evidence. Forgotten IDs have bounded replay protection. An isolated file or compare-and-swap store preserves state across restarts and refuses conflicting writes. Without a file or store the profile is in-memory.
 
 Guest character histories and work-memory snapshots have separate storage formats. Keep private character files outside the repository contents you distribute. The app chooses when to opt in, preserve a profile across sessions, or remove the dedicated file under its own data-retention policy.

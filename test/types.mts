@@ -4,15 +4,17 @@ import {createMemoryBridge} from 'persona-memory/adapters/memory';
 import {parseDiscord} from 'persona-memory/adapters/discord';
 import {createLangChainBridge} from 'persona-memory/adapters/langchain';
 import {createLlamaIndexBridge} from 'persona-memory/adapters/llamaindex';
-import {createCharacterTurnRouter,createMemoryConsolidator,openCharacterProfile,proposeMemoryConsolidation} from 'persona-memory';
+import {createCharacterTurnRouter,createMemoryConsolidator,openCharacterProfile,proposeMemoryConsolidation,type CharacterSnapshot} from 'persona-memory';
 const pm=new PersonaMemory({scope:'test',config:createPreset('npc',{affinityContext:false}),clock:()=>100});
 async function extendedTypes(){
   const profile=await openCharacterProfile({id:'character',file:'private-character.json'});
+  await openCharacterProfile({id:'volatile',store:new MemorySnapshotStore<CharacterSnapshot>()});
+  await openCharacterProfile({id:'persisted',store:new JsonFileStore<CharacterSnapshot>({file:'private-custom-character.json'})});
   const router=createCharacterTurnRouter({profile,runWork:({text})=>text,runChat:({character})=>character.mood});
   await router({mode:'chat',hasTask:false,text:'Hello'});
   const consolidator=createMemoryConsolidator(pm,{subject:{type:'project',id:'work'}});
   const draft=await consolidator.draft({evidenceId:'join',sources:[{id:'a',revision:1},{id:'b',revision:1}]},()=>[]);
-  proposeMemoryConsolidation(pm,draft);
+  await proposeMemoryConsolidation(pm,draft);
 }
 pm.ingest({chatId:'room',userId:'u',text:'hi',directedToBot:true,eventId:'one'});
 const context=pm.buildContext({chatId:'room',userIds:['u']});
@@ -38,6 +40,8 @@ createLangChainBridge(pm,{chatId:'r',userId:'u'}).invoke({text:'hi',turnId:'t'},
 createLlamaIndexBridge(pm,{chatId:'r',userId:'u',memory:{async add(){},async get(){return []}}});
 
 const asyncMemory=await PersonaMemory.open({store:new MemorySnapshotStore()});
+const literalStore=new MemorySnapshotStore({snapshot:{schemaVersion:8,persona:'test',sessions:{},tags:{},visitors:{},memories:{},candidates:{}}});
+await PersonaMemory.open({store:literalStore});
 asyncMemory.putMemory({subject:{type:'task',id:'t'},kind:'state',key:'phase',value:'ready',validFrom:100,expectedRevision:0});
 await asyncMemory.persist();await asyncMemory.reload();
 const fileStore=new JsonFileStore({file:'./test-data.json'});await fileStore.read();

@@ -96,3 +96,22 @@ test('character storage refuses work snapshots and concurrent writers cannot sil
   assert.equal(result.find(r=>r.status==='rejected').reason.code,'ERR_STORE_CONFLICT');
   assert.equal((await profile.inspect()).events.length,1);
 });
+
+test('large multilingual observations keep rotating under the snapshot byte cap and retain forgotten IDs',async()=>{
+  let now=0;
+  const backing=new MemorySnapshotStore(),profile=await openCharacterProfile({id:'bounded',store:backing,clock:()=>now});
+  const event=i=>observation('記'.repeat(92)+i,'語'.repeat(92)+i,now,'positive','旅'.repeat(96));
+  for(let index=1;index<=150;index++){
+    ++now;
+    assert.equal((await profile.record(event(index))).status,'recorded');
+  }
+  const latest=event(150),inspection=await profile.inspect();
+  assert.ok(inspection.events.length<128);
+  assert.equal(inspection.events.at(-1).id,latest.id);
+  assert.equal(inspection.preferences[0].preference,'likes');
+  ++now;
+  await profile.forget(latest.id);
+  assert.equal((await profile.record({...latest,at:now})).status,'forgotten');
+  assert.ok(Buffer.byteLength(JSON.stringify((await backing.read()).snapshot))<=65536);
+  assert.equal((await profile.record(event(151))).status,'recorded');
+});

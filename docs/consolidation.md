@@ -14,13 +14,15 @@ const draft = await consolidate.draft({
   return summarizeSelectedRecords(records, {signal});
 });
 
-const {candidates} = proposeMemoryConsolidation(memory, draft);
+const {candidates} = await proposeMemoryConsolidation(memory, draft);
 // Review each pending candidate using the normal owner workflow and persist as usual.
 ```
 
 The callback returns an array of `{key, text, reason, sourceIds}` objects. Each summary needs at least two distinct selected source IDs. Return an empty list when dates, speakers, negation or other conditions cannot be preserved. Keep those distinctions in the proposed text and check them at review. The library verifies source identity, freshness and scope. The reviewer judges whether those sources support the wording.
 
 Use 2–32 sources from one subject and up to 16 proposals per batch. The source batch and returned proposals each have a 32 KiB JSON budget. The callback receives a cancellation signal on timeout. Late results cannot write, and source changes between drafting and proposal are detected. Explicit proposal submission is the only write step. Corrections between submission and review are detected again at acceptance. Rejected proposals remain subject to the ordinary candidate lifecycle.
+
+For a persistent SDK instance, each operation checks its loaded store revision before reading records or creating proposals. Drafts check it again before handing records to the callback and before returning. A competing persisted change rejects consolidation with `ERR_STORE_CONFLICT` and preserves local edits. Resolve any local edits and reload before continuing. A source deleted after a callback already received it cannot be withdrawn from that callback.
 
 ## Agent MCP
 

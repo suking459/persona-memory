@@ -116,9 +116,9 @@ export function createAgentSession(pm,raw){
       assertSharedStore(pm,sharedLease);
       let result,mutated=false;
       switch(name){
-        case 'memory_consolidation_sources':return readConsolidationSources(pm,{subject,sources:a.sources});
+        case 'memory_consolidation_sources':return await readConsolidationSources(pm,{subject,sources:a.sources});
         case 'memory_consolidation_propose':{
-          result=proposeMemoryConsolidation(pm,{subject,sources:a.sources,evidenceId:a.evidenceId,summaries:a.summaries,...(sharedLease?{origin:sharedLease.origin}:{})});
+          result=await proposeMemoryConsolidation(pm,{subject,sources:a.sources,evidenceId:a.evidenceId,summaries:a.summaries,...(sharedLease?{origin:sharedLease.origin}:{})});
           mutated=result.candidates.length>0;
           break;
         }
