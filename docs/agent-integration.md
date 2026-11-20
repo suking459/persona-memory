@@ -1,6 +1,6 @@
-# Agent integration — local 1.x development
+# Agent integration
 
-This guide describes the stable 1.5.0 Agent entry. The unpublished 2.0 release candidate includes [task context](retrieval.md#task-context), [reviewed consolidation](consolidation.md), handoff, sharing and experience. [Language support and limitations](multilingual.md)
+This guide describes the scoped Agent entry. Version 2.0 adds [task context](retrieval.md#task-context), [reviewed consolidation](consolidation.md), handoff, sharing and experience. [Language support and limitations](multilingual.md)
 
 ## Purpose
 
@@ -21,7 +21,7 @@ Windows absolute paths also work, for example D:/my-project. The parent of --out
 
 The bundle includes binding.json, host-specific configuration and WORKFLOW.md. Keep the bundle at its original location: generated commands reference absolute installation and binding paths. storage is a directory, not a JSON filename. --backend sqlite opts into native SQLite on Node 22.13+; JSON still supports Node 18. --storage can select a stable directory; otherwise data belongs to the new bundle. --user owner-id optionally adds a separately bound personal subject. --access defaults to capture; read and review must be selected explicitly.
 
-Profiles exist for codex, dsh, claude-code, workbuddy, gemini-cli, qwen-code, kimi-code, codebuddy, iflow, vscode-copilot and cursor. Each profile records an official reference. Codex CLI 0.166.0-alpha.5.1 has passed five real-model lifecycle scenarios on Windows. DSH headless 0.2.1-rc.5 has also passed its native-client pipeline and five real-model lifecycle cases using the official API; other target/model/UI combinations need their own acceptance. See [versioned acceptance](AGENT-ACCEPTANCE.md) for current evidence; configuration generation alone remains experimental.
+Profiles exist for codex, dsh, claude-code, workbuddy, gemini-cli, qwen-code, kimi-code, codebuddy, iflow, vscode-copilot and cursor. Each profile records an official reference. See [versioned acceptance](AGENT-ACCEPTANCE.md) for the tested Codex CLI and DSH headless paths and the status of the other host profiles.
 
 DSH uses a local Cordis bundle. WorkBuddy uses a local custom connector with mcp.json, metadata, icon and workflow. Neither is a portable or marketplace-published package.
 

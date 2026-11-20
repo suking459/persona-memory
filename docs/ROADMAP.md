@@ -1,6 +1,6 @@
 # Roadmap and release boundaries
 
-Published stable release: 1.5.0; v1.0.0 remains a historical baseline. Current local development: 2.0 integration candidate on `work/1.6-development`. The library is the product; the web demo is auxiliary.
+Version 1.5.0 is the published midpoint checkpoint. Version 1.0.0 provides the historical baseline. The 2.0 line delivers the integrated library. The web demo is auxiliary.
 
 ## 1.0 to 2.0
 
@@ -17,7 +17,7 @@ The owner selected local 1.1–1.4 development, an optional 1.5 midpoint release
 | 1.7 | Owner-controlled local sharing and origins | Completed locally |
 | 1.8 | Conditional experience feedback and retirement | Completed locally; Windows and Linux validation recorded |
 | 1.9 | Measurements, paired comparisons, bounded maintenance | Completed locally; current Windows/Linux and offline package checks passed |
-| 2.0 | Integrated validation, migration/recovery, packaging and documentation | Local `2.0.0-rc.3` includes research evaluation, opt-in task context, reviewed consolidation and a casual-chat character SDK. Model-quality trials and independent release review remain pending. |
+| 2.0 | Integrated validation, migration/recovery, packaging and documentation | Local `2.0.0` release build. The scoped Codex and DSH model trials, optional character SDK trials and candidate review findings are recorded in the host acceptance matrix and release evidence. Publication requires owner approval. |
 
 See the [nine-point design](1.0-2.0-ROADMAP.md), [host acceptance](AGENT-ACCEPTANCE.md), [1.8 validation](1.8-VALIDATION.md) and [1.9 specification](1.9-MEASUREMENT-SPEC.md).
 

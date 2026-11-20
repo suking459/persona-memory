@@ -18,11 +18,11 @@ Use the SDK inside an application, or connect an Agent to the separate local MCP
 
 See [use cases](docs/use-cases.md) and the [API](docs/API.md).
 
-## Stable release and local development
+## Release versions
 
-**1.5.0 is the published stable release.** It adds scoped Agent capture and separate owner review, provenance invalidation, optional semantic retrieval, optional native SQLite, full backup/restore and owner diagnostics/previews.
+**1.5.0** introduced scoped Agent capture and separate owner review, provenance invalidation, optional semantic retrieval, optional native SQLite, full backup/restore and owner diagnostics/previews.
 
-The current checkout contains an **unpublished 2.0 release candidate** with task handoffs, owner-controlled local sharing, reviewed experience reuse, local measurement and bounded maintenance. It also adds task-aware context, reviewed consolidation and an optional character profile for casual chat. Local work snapshots use **schema 8** and read schemas 1–7. Published 1.5 uses schema 6. Back up before upgrading. See [upgrade and rollback](docs/2.0-MIGRATION.md) and the [host configuration audit](docs/2.0-HOST-CONFIGURATION-AUDIT.md).
+**2.0.0** adds task handoffs, owner-controlled local sharing, reviewed experience reuse, local measurement, bounded maintenance, task-aware context and reviewed consolidation. Hosts using the SDK can also opt into a casual-chat character through an explicit chat entry. Local work snapshots use **schema 8** and read schemas 1–7. Published 1.5 uses schema 6. Back up before upgrading. See [upgrade and rollback](docs/2.0-MIGRATION.md) and the [host acceptance matrix](docs/AGENT-ACCEPTANCE.md).
 
 **1.5 changes default behavior:** built-in emotion/health word lists and relationship wording were replaced with host-provided judgments and neutral numeric bands. Custom rules and existing data remain supported. Read the [policy migration guide](docs/1.5-POLICY-MIGRATION.md). Implementation is maintainer-directed and AI-assisted; the [origin review](docs/1.5-ORIGIN-REVIEW.md) has explicit limits and makes no worldwide originality guarantee.
 
@@ -35,30 +35,25 @@ The current checkout contains an **unpublished 2.0 release candidate** with task
 - **Storage and recovery:** JSON files, memory snapshots, custom asynchronous stores and optional SQLite. File locking, content revisions, selective transfer previews and full snapshot recovery.
 - **Optional relationship state:** real interactions, configurable dimensions, correctable tags, expiry/decay and local style statistics; community, companion, support and NPC presets.
 - **Use confirmation:** previewing does not increase use counts. Confirm successful consumption with a turn ID; retries are bounded and overlapping contexts can be confirmed atomically.
-- **2.0 release candidate:** [task context](docs/retrieval.md#task-context), [handoff](docs/handoff.md), [sharing](docs/sharing.md), [experience reuse](docs/experience-reuse.md), [measurement and maintenance](docs/measurement-maintenance.md), [reviewed consolidation](docs/consolidation.md) and [casual-chat character](docs/character.md).
+- **2.0 features:** [task context](docs/retrieval.md#task-context), [handoff](docs/handoff.md), [sharing](docs/sharing.md), [experience reuse](docs/experience-reuse.md), [measurement and maintenance](docs/measurement-maintenance.md), [reviewed consolidation](docs/consolidation.md) and [casual-chat character](docs/character.md).
 - **Research-based evaluation:** [independent synthetic long-term traces](docs/long-term-evaluation.md) separate complete retrieved/rendered evidence, correction, expiry, abstention and scope from semantic/standing-context challenges. No external benchmark or model-quality score is claimed.
 
 ## Installation
 
-Pin the stable release and review migration before changing an existing installation:
+Review the migration guide, then install the version you want. If you have the 2.0.0 release archive, install from the local file:
 
 ```sh
-npm install persona-memory@1.5.0
+npm install ./persona-memory-2.0.0.tgz
 ```
 
-Or install the fixed GitHub tag:
+For published copies, pin the npm version or the matching GitHub tag:
 
 ```sh
-npm install "github:suking459/persona-memory#v1.5.0"
+npm install persona-memory@2.0.0
+npm install "github:suking459/persona-memory#v2.0.0"
 ```
 
-The [GitHub Release](https://github.com/suking459/persona-memory/releases/tag/v1.5.0) also provides a tarball:
-
-```sh
-npm install ./persona-memory-1.5.0.tgz
-```
-
-Version 1.0.0 remains available for its historical default behavior and license terms. Use a maintained Node runtime for deployments; compatibility-test results and their limits are recorded in [integrations](docs/integrations.md). No intermediate development milestone is automatically published.
+For applications that need the 1.5 integration checkpoint, install `persona-memory@1.5.0` or obtain its [release archive](https://github.com/suking459/persona-memory/releases/tag/v1.5.0). Version 1.0.0 covers historical default behavior and license terms. Use a maintained Node runtime for deployments. See [integrations](docs/integrations.md) for compatibility results.
 
 ## Minimal project-memory example
 

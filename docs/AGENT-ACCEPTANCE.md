@@ -1,5 +1,17 @@
 # Agent host acceptance
 
+## 2.0 scope
+
+| Surface | Verified path | Public integration |
+| --- | --- | --- |
+| Codex CLI 0.169.1 on Windows | Isolated native MCP lifecycle and five guided memory cases with the real model. The original control timeout is retained and its targeted retry passed. | Scoped project memory through the generated MCP configuration |
+| DeepSeek Harness 0.2.2-rc.3 headless on Windows | Isolated native MCP lifecycle and five enabled/disabled pairs through the official API. | Scoped project memory through the generated Cordis configuration |
+| Optional character with the SDK | Six real-model turns per host. Opposing preferences were expressed in casual chat. The two work turns per host used identical inputs and read-only permissions and returned the same project value. | Application-owned explicit chat entry, separate histories and structured, authorized observations |
+
+The model cases cover current-rule precedence, multi-source recall, multilingual corrections, excluded data and use of a reviewed summary. The native MCP lifecycle covers review, restart, correction, forgetting, handoff and revocation. The paired trial compares access to persona-memory with its disabled baseline. Native long-term-memory quality and inference-based task detection carry no quality claims. Generated profiles for other hosts retain their experimental status.
+
+## 1.5 historical evidence
+
 Historical test date: 2026-11-01, local 1.5 candidate. Exact entry/version/layer matters; generated configuration and protocol success are not real-model sessions. Later 1.6–2.0 features have no new host/model certification from these results.
 
 | Host | Tested entry | Native client | Real model | Unverified |

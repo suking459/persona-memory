@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — 2.0.0-rc.3
+## 2.0.0
 
 - Persistent consolidation checks its loaded snapshot revision before using source text and rejects competing updates. Character snapshots rotate by byte size as well as count. The SDK snapshot stores support typed character snapshots.
 
